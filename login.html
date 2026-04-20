@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="hero"><h2>PPT Bookkeeping & Tax Portal</h2><div>Admin and client login for bookkeeping, tax workflow, invoices, and documents.</div></div>
+<div class="card">
+  <h3 class="section-title">Sign In</h3>
+  <form method="post">
+    <div style="display:grid;gap:12px">
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button class="btn" type="submit">Login</button>
+    </div>
+  </form>
+  <div class="footer-note">
+    Admin demo: admin@pinnacleperformancetax.com / ChangeMe123!<br>
+    Client demo: client@example.com / Client123!
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid-2">
+  <div class="card"><h3 class="section-title">Add Client</h3>
+    <form method="post"><div class="grid-3">
+      <input name="name" placeholder="Client name" required>
+      <input name="business_name" placeholder="Business name">
+      <input name="email" placeholder="Email">
+      <input name="phone" placeholder="Phone">
+      <input name="address" placeholder="Address">
+      <select name="client_type"><option>Individual</option><option>Business</option></select>
+      <select name="status"><option>Active</option><option>Lead</option><option>Archived</option></select>
+    </div><div style="margin-top:12px"><textarea name="notes" placeholder="Notes"></textarea></div><button class="btn" type="submit">Save Client</button></form>
+  </div>
+  <div class="card"><h3 class="section-title">Client List</h3>
+    <table><thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Status</th></tr></thead><tbody>
+      {% for row in clients %}<tr><td>{{ row.name }}<div class="muted">{{ row.business_name or '' }}</div></td><td>{{ row.client_type }}</td><td>{{ row.email }}</td><td><span class="badge">{{ row.status }}</span></td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+{% endblock %}

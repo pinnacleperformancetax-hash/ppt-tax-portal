@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid-2">
+{% if current_user.role=='admin' %}
+<div class="card"><h3 class="section-title">Create Tax Return</h3><form method="post"><div class="grid-3">
+<select name="client_id" required><option value="">Client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<input name="tax_year" placeholder="Tax year" required>
+<input name="service_type" placeholder="Service type" required>
+<select name="status"><option>In Progress</option><option>Waiting on Client</option><option>Review</option><option>Completed</option><option>Filed</option></select>
+<input type="date" name="due_date">
+<input name="fee" placeholder="Fee">
+</div><div style="margin-top:12px"><textarea name="notes" placeholder="Notes"></textarea></div><button class="btn" type="submit">Save Return</button></form></div>
+{% endif %}
+<div class="card"><h3 class="section-title">Tax Return Tracker</h3><table><thead><tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Fee</th></tr></thead><tbody>
+{% for row in returns %}<tr><td>{{ row.client_name }}</td><td>{{ row.tax_year }}</td><td>{{ row.service_type }}</td><td><span class="badge">{{ row.status }}</span></td><td>{{ row.fee|currency }}</td></tr>{% else %}<tr><td colspan="5">No returns found.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid-2">
+<div class="card"><h3 class="section-title">{{ 'Upload / Request Document' if current_user.role=='admin' else 'Upload Document' }}</h3><form method="post" enctype="multipart/form-data"><div class="grid-3">
+{% if current_user.role=='admin' %}<select name="client_id" required><option value="">Client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>{% endif %}
+<input name="document_name" placeholder="Document name" required>
+<input name="tax_year" placeholder="Tax year">
+<select name="status"><option>Received</option><option>Requested</option><option>Missing</option></select>
+<input type="file" name="file">
+</div><div style="margin-top:12px"><textarea name="notes" placeholder="Notes"></textarea></div><button class="btn" type="submit">Save Document</button></form></div>
+<div class="card"><h3 class="section-title">Document Tracker</h3><table><thead><tr><th>Client</th><th>Document</th><th>Status</th><th>File</th></tr></thead><tbody>
+{% for row in documents %}<tr><td>{{ row.client_name }}</td><td>{{ row.document_name }}<div class="muted">{{ row.tax_year or '' }}</div></td><td><span class="badge {% if row.status!='Received' %}warning{% endif %}">{{ row.status }}</span></td><td>{% if row.file_path %}<a href="/{{ row.file_path }}" target="_blank">Open</a>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="4">No documents yet.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

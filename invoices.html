@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid-2">
+{% if current_user.role=='admin' %}
+<div class="card"><h3 class="section-title">Create Invoice</h3><form method="post"><div class="grid-3">
+<select name="client_id" required><option value="">Client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<input name="invoice_number" placeholder="Invoice number" required>
+<input type="date" name="issue_date" required>
+<input type="date" name="due_date">
+<input name="amount" placeholder="Amount" required>
+<select name="status"><option>Unpaid</option><option>Paid</option><option>Partial</option><option>Past Due</option></select>
+</div><div style="margin-top:12px"><input name="payment_link" placeholder="Payment link"><textarea name="description" placeholder="Description"></textarea></div><button class="btn" type="submit">Save Invoice</button></form></div>
+{% endif %}
+<div class="card"><h3 class="section-title">Invoices</h3><table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th><th>Payment</th></tr></thead><tbody>
+{% for row in invoices %}<tr><td>{{ row.invoice_number }}<div class="muted">{{ row.issue_date }}</div></td><td>{{ row.client_name }}</td><td><span class="badge {% if row.status!='Paid' %}warning{% endif %}">{{ row.status }}</span></td><td>{{ row.amount|currency }}</td><td>{% if row.payment_link %}<a href="{{ row.payment_link }}" target="_blank">Pay</a>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="5">No invoices yet.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

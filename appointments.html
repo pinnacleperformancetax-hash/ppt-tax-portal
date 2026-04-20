@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="grid-2">
+{% if current_user.role=='admin' %}
+<div class="card"><h3 class="section-title">Schedule Appointment</h3><form method="post"><div class="grid-3">
+<select name="client_id"><option value="">Client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<input name="title" placeholder="Title" required>
+<input type="datetime-local" name="start_at" required>
+<input type="datetime-local" name="end_at" required>
+<input name="location" placeholder="Location">
+<input name="meeting_link" placeholder="Meeting link">
+<select name="status"><option>Scheduled</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select>
+</div><div style="margin-top:12px"><textarea name="notes" placeholder="Notes"></textarea></div><button class="btn" type="submit">Save Appointment</button></form></div>
+{% endif %}
+<div class="card"><h3 class="section-title">Appointments</h3><table><thead><tr><th>When</th><th>Title</th><th>Client</th><th>Status</th></tr></thead><tbody>
+{% for row in appointments %}<tr><td>{{ row.start_at }}</td><td>{{ row.title }}<div class="muted">{{ row.location or '' }}</div></td><td>{{ row.client_name or '—' }}</td><td><span class="badge">{{ row.status }}</span></td></tr>{% else %}<tr><td colspan="4">No appointments scheduled.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

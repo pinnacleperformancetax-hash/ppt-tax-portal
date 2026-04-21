@@ -128,15 +128,17 @@ def money(value) -> float:
 def init_db() -> None:
     ensure_dirs()
     db = sqlite3.connect(DB_PATH)
-    
+
+    # Locate schema file correctly
     schema_path = BASE_DIR / 'schema.sql'
-    
-if not schema_path.exists():
-    schema_path = Path('schema.sql')
-    
-    with open (schema_path, 'r', encoding=utf-8) as f:
+    if not schema_path.exists():
+        schema_path = Path('schema.sql')
+
+    # Run schema
+    with open(schema_path, 'r', encoding='utf-8') as f:
         db.executescript(f.read())
-        
+
+    # Default categories
     categories = [
         ('Tax Preparation Income', 'income'),
         ('Bookkeeping Income', 'income'),
@@ -147,15 +149,34 @@ if not schema_path.exists():
         ('Travel', 'expense'),
         ('Meals', 'expense'),
     ]
-    for name, kind in categories:
-        db.execute('INSERT OR IGNORE INTO categories(name, kind) VALUES(?, ?)', (name, kind))
 
-    admin = db.execute("SELECT id FROM users WHERE email='admin@pinnacleperformancetax.com'").fetchone()
+    # Insert categories safely
+    for name, kind in categories:
+        db.execute(
+            'INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)',
+            (name, kind)
+        )
+
+    # Create default admin if not exists
+    admin = db.execute(
+        "SELECT id FROM users WHERE email=?",
+        ('admin@pinnacleperformancetax.com',)
+    ).fetchone()
+
     if not admin:
         db.execute(
-            'INSERT INTO users(name, email, password_hash, role) VALUES(?, ?, ?, ?)',
-            ('PPT Admin', 'admin@pinnacleperformancetax.com', generate_password_hash('ChangeMe123!', method='pbkdf2:sha256'), 'admin')
+            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            (
+                'PPT Admin',
+                'admin@pinnacleperformancetax.com',
+                generate_password_hash('Temp123!', method='pbkdf2:sha256'),
+                'admin'
+            )
         )
+
+    db.commit()
+    db.close()
+    
 
     existing_clients = db.execute('SELECT COUNT(*) FROM clients').fetchone()[0]
     if existing_clients == 0:

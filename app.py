@@ -153,22 +153,16 @@ def init_db() -> None:
             (name, kind)
         )
 
-    admin = db.execute(
-        "SELECT id FROM users WHERE email=?",
-        ('admin@pinnacleperformancetax.com',)
-    ).fetchone()
-
-    if not admin:
-   db.execute(
-    "INSERT OR IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
-    (
-        'PPT Admin',
-        'admin@pinnacleperformancetax.com',
-        generate_password_hash('Admin123!', method='pbkdf2:sha256'),
-        'admin'
-    )
-)
-
+  if not admin:
+      db.execute(
+        "INSERT OR IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+        (
+            'PPT Admin',
+            'admin@pinnacleperformancetax.com',
+            generate_password_hash('Admin123!', method='pbkdf2:sha256'),
+            'admin'
+        )
+      )
     existing_clients = db.execute(
         'SELECT COUNT(*) FROM clients'
     ).fetchone()[0]

@@ -100,3 +100,6 @@ CREATE TABLE IF NOT EXISTS appointments (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(client_id) REFERENCES clients(id)
 );
+INSERT INTO users (name, email, password_hash, role)
+VALUES ('Timeeka Billups', 'pinnacleperformancetax@gmail.com',
+'$2b$12$KIXQ4JQyQyW5G5Z2Z2Z2uOZ2Z2Z2Z2Z2Z2Z2Z2Z2Z2Z2Z2Z2', 'admin');

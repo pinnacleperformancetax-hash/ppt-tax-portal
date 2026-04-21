@@ -37,8 +37,8 @@ BRAND = {
 }
 
 app = Flask(__name__)
-UPLOAD_DR = BASE_DIR / 'static' / 'uploads'
-BD_PATH = BASE_DIR / 'ppt_portal.db
+UPLOAD_DIR = BASE_DIR / 'static' / 'uploads'
+DB_PATH = INSTANCE_DIR / 'ppt_portal.db'
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ppt-change-this-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 

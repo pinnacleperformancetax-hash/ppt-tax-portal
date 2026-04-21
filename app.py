@@ -125,22 +125,17 @@ def money(value) -> float:
         return round(float(value or 0), 2)
     except Exception:
         return 0.0
-
-
 def init_db() -> None:
     ensure_dirs()
     db = sqlite3.connect(DB_PATH)
 
-    # Locate schema file correctly
     schema_path = BASE_DIR / 'schema.sql'
     if not schema_path.exists():
         schema_path = Path('schema.sql')
 
-    # Run schema
     with open(schema_path, 'r', encoding='utf-8') as f:
         db.executescript(f.read())
 
-    # Default categories
     categories = [
         ('Tax Preparation Income', 'income'),
         ('Bookkeeping Income', 'income'),
@@ -152,14 +147,12 @@ def init_db() -> None:
         ('Meals', 'expense'),
     ]
 
-    # Insert categories safely
     for name, kind in categories:
         db.execute(
             'INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)',
             (name, kind)
         )
 
-    # Create default admin if not exists
     admin = db.execute(
         "SELECT id FROM users WHERE email=?",
         ('admin@pinnacleperformancetax.com',)
@@ -176,48 +169,28 @@ def init_db() -> None:
             )
         )
 
-    db.commit()
-    db.close()
-    
+    existing_clients = db.execute(
+        'SELECT COUNT(*) FROM clients'
+    ).fetchone()[0]
 
-    existing_clients = db.execute('SELECT COUNT(*) FROM clients').fetchone()[0]
     if existing_clients == 0:
         db.execute(
-            '''INSERT INTO clients(name, business_name, email, phone, client_type, status, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)''',
-            ('Sample Client', 'Sample Business LLC', 'client@example.com', '478-555-0110', 'Business', 'Active', 'Demo client record')
+            """INSERT INTO clients
+            (name, business_name, email, phone, client_type, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                'Sample Client',
+                'Sample Business LLC',
+                'client@example.com',
+                '478-555-0110',
+                'Business',
+                'Active',
+                'Demo client record'
+            )
         )
-        client_id = db.execute('SELECT id FROM clients ORDER BY id DESC LIMIT 1').fetchone()[0]
-        db.execute(
-            'INSERT INTO users(name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)',
-            ('Sample Client', 'client@example.com', generate_password_hash('Client123!', method='pbkdf2:sha256'), 'client', client_id)
-        )
-        db.execute(
-            '''INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
-               VALUES (?, ?, ?, (SELECT id FROM categories WHERE name='Bookkeeping Income' LIMIT 1), ?, ?, ?)''',
-            (datetime.now().date().isoformat(), 'Monthly bookkeeping retainer', 'income', client_id, 450.00, 'Demo income')
-        )
-        db.execute(
-            '''INSERT INTO tax_returns(client_id, tax_year, service_type, status, due_date, fee, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)''',
-            (client_id, str(datetime.now().year - 1), '1040 + Schedule C', 'Waiting on Client', f'{datetime.now().year}-04-15', 375.00, 'Awaiting final documents')
-        )
-        db.execute(
-            '''INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description, payment_link)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-            (client_id, 'PPT-1001', datetime.now().date().isoformat(), datetime.now().date().isoformat(), 375.00, 'Unpaid', 'Tax prep invoice', 'https://www.pinnacleperformancetax.com')
-        )
-        db.execute(
-            '''INSERT INTO appointments(client_id, title, start_at, end_at, location, notes)
-               VALUES (?, ?, ?, ?, ?, ?)''',
-            (client_id, 'Tax review call', f'{datetime.now().date()}T14:00', f'{datetime.now().date()}T14:30', 'Phone', 'Demo appointment')
-        )
-        db.execute(
-            '''INSERT INTO documents(client_id, document_name, original_filename, tax_year, status, notes)
-               VALUES (?, ?, ?, ?, ?, ?)''',
-            (client_id, 'W-2', 'sample_w2.pdf', str(datetime.now().year - 1), 'Requested', 'Upload pending')
-        )
+
     db.commit()
+    db.close()
     db.close()
 
 

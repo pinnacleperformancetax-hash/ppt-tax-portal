@@ -229,7 +229,6 @@ def init_route():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    init_db()
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':

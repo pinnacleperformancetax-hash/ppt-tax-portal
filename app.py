@@ -152,17 +152,30 @@ def init_db() -> None:
             'INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)',
             (name, kind)
         )
-    if not admin:
-      db.execute(
-        "INSERT OR IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+    admin = db.execute(
+    "SELECT id FROM users WHERE email=?",
+    ('admin@pinnacleperformancetax.com',)
+).fetchone()
+
+if admin:
+    db.execute(
+        "UPDATE users SET password_hash=?, role='admin', name='PPT Admin' WHERE email=?",
+        (
+            generate_password_hash('Admin123!', method='pbkdf2:sha256'),
+            'admin@pinnacleperformancetax.com'
+        )
+    )
+else:
+    db.execute(
+        "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
         (
             'PPT Admin',
             'admin@pinnacleperformancetax.com',
             generate_password_hash('Admin123!', method='pbkdf2:sha256'),
             'admin'
         )
-      )
-    existing_clients = db.execute(
+    )
+      
         'SELECT COUNT(*) FROM clients'
     ).fetchone()[0]
 

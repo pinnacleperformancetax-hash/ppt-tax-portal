@@ -160,7 +160,7 @@ def init_db() -> None:
 
     if not admin:
         db.execute(
-            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            "INSERT OR INGORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
             (
                 'PPT Admin',
                 'admin@pinnacleperformancetax.com',
@@ -213,7 +213,7 @@ def init():
 
     # Create login user
     db.execute("""
-        INSERT INTO users (name, email, password_hash, role, client_id)
+        INSERT OR IGNORE INTO users (name, email, password_hash, role, client_id)
         VALUES (?, ?, ?, ?, ?)
     """, ('Sample Client', 'client@example.com', generate_password_hash('Client123!'), 'client', client_id))
 

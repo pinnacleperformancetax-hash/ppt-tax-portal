@@ -164,7 +164,7 @@ def init_db() -> None:
             (
                 'PPT Admin',
                 'admin@pinnacleperformancetax.com',
-                generate_password_hash('Temp123!', method='pbkdf2:sha256'),
+                generate_password_hash('Admin123!', method='pbkdf2:sha256'),
                 'admin'
             )
         )

@@ -194,7 +194,16 @@ else:
                 'Demo client record'
             )
         )
-
+    db.execute(
+    "INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)",
+    (
+        'Test Login',
+        'test@ppt.com',
+        generate_password_hash('test123', method='pbkdf2:sha256'),
+        'client',
+        1
+    )
+)
     db.commit()
     db.close()
     db.close()

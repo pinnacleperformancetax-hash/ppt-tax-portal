@@ -195,9 +195,32 @@ def init_db() -> None:
 
 
 @app.route('/init')
-def init_route():
-    init_db()
-    return redirect(url_for('login'))
+def init():
+    db = get_db()
+
+    # Create tables
+    db.executescript(open('schema.sql').read())
+
+    # Create sample client
+    db.execute("""
+        INSERT INTO clients (name, business_name, email, phone, client_type, status, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, ('Sample Client', 'Sample Business LLC', 'client@example.com', '478-555-0110', 'Business', 'Active', 'Test client'))
+
+    client_id = db.execute("SELECT id FROM clients ORDER BY id DESC LIMIT 1").fetchone()[0]
+
+    from werkzeug.security import generate_password_hash
+
+    # Create login user
+    db.execute("""
+        INSERT INTO users (name, email, password_hash, role, client_id)
+        VALUES (?, ?, ?, ?, ?)
+    """, ('Sample Client', 'client@example.com', generate_password_hash('Client123!'), 'client', client_id))
+
+    db.commit()
+    db.close()
+
+    return "INIT COMPLETE - You can now log in"
 
 
 @app.route('/login', methods=['GET', 'POST'])

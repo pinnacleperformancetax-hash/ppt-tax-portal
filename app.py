@@ -152,8 +152,7 @@ def init_db() -> None:
             'INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)',
             (name, kind)
         )
-
-  if not admin:
+    if not admin:
       db.execute(
         "INSERT OR IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
         (

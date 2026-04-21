@@ -128,11 +128,15 @@ def money(value) -> float:
 def init_db() -> None:
     ensure_dirs()
     db = sqlite3.connect(DB_PATH)
+    
     schema_path = BASE_DIR / 'schema.sql'
+    
 if not schema_path.exists():
     schema_path = Path('schema.sql')
+    
     with open (schema_path, 'r', encoding=utf-8) as f:
         db.executescript(f.read())
+        
     categories = [
         ('Tax Preparation Income', 'income'),
         ('Bookkeeping Income', 'income'),

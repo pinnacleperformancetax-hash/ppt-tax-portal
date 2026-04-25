@@ -176,7 +176,7 @@ else:
         )
     )
       
-        'SEexisting_clients = db.execute(
+    'SEexisting_clients = db.execute(
     'SELECT COUNT(*) FROM clients'
 ).fetchone()[0]
 

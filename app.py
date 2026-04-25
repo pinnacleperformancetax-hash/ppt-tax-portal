@@ -130,10 +130,7 @@ def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, defin
 def init_db() -> None:
     ensure_dirs()
 
-
     db = sqlite3.connect(DB_PATH)
-
-    
 
     schema_path = BASE_DIR / "schema.sql"
     if not schema_path.exists():

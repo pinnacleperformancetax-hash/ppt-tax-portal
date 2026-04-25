@@ -253,8 +253,7 @@ def init():
 
     return "INIT COMPLETE - You can now log in"
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:

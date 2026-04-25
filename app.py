@@ -176,8 +176,9 @@ else:
         )
     )
       
-        'SELECT COUNT(*) FROM clients'
-    ).fetchone()[0]
+        'SEexisting_clients = db.execute(
+    'SELECT COUNT(*) FROM clients'
+).fetchone()[0]
 
     if existing_clients == 0:
         db.execute(
@@ -202,6 +203,8 @@ else:
         generate_password_hash('test123', method='pbkdf2:sha256'),
         'client',
         1
+    )
+)
     )
 )
     db.commit()

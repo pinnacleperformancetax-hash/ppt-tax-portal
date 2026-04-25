@@ -157,28 +157,40 @@ def init_db() -> None:
     ('admin@pinnacleperformancetax.com',)
 ).fetchone()
 
-if admin:
-    db.execute(
-        "UPDATE users SET password_hash=?, role='admin', name='PPT Admin' WHERE email=?",
-        (
-            generate_password_hash('Admin123!', method='pbkdf2:sha256'),
-            'admin@pinnacleperformancetax.com'
+def init_db():
+    ensure_dirs()
+    db = sqlite3.connect(DB_PATH)
+
+    schema_path = BASE_DIR / 'schema.sql'
+    if not schema_path.exists():
+        schema_path = Path('schema.sql')
+
+    with open(schema_path, 'r', encoding='utf-8') as f:
+        db.executescript(f.read())
+
+    # --- CREATE ADMIN USER ---
+    admin = db.execute(
+        "SELECT * FROM users WHERE email=?",
+        ('admin@pinnacleperformancetax.com',)
+    ).fetchone()
+
+    if not admin:
+        db.execute(
+            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            (
+                'PPT Admin',
+                'admin@pinnacleperformancetax.com',
+                generate_password_hash('Admin123!', method='pbkdf2:sha256'),
+                'admin'
+            )
         )
-    )
-else:
-    db.execute(
-        "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
-        (
-            'PPT Admin',
-            'admin@pinnacleperformancetax.com',
-            generate_password_hash('Admin123!', method='pbkdf2:sha256'),
-            'admin'
-        )
-    )
-      
-        'SELECT COUNT(*) FROM clients'
+
+    # --- CHECK IF CLIENTS EXIST ---
+    existing_clients = db.execute(
+        "SELECT COUNT(*) FROM clients"
     ).fetchone()[0]
 
+    # --- INSERT SAMPLE CLIENT ---
     if existing_clients == 0:
         db.execute(
             """INSERT INTO clients
@@ -194,17 +206,21 @@ else:
                 'Demo client record'
             )
         )
-    db.execute(
-    "INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)",
-    (
-        'Test Login',
-        'test@ppt.com',
-        generate_password_hash('test123', method='pbkdf2:sha256'),
-        'client',
-        1
-    )
-)
+
+        # --- CREATE TEST CLIENT LOGIN ---
+        db.execute(
+            "INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)",
+            (
+                'Test Login',
+                'test@ppt.com',
+                generate_password_hash('test123', method='pbkdf2:sha256'),
+                'client',
+                1
+            )
+        )
+
     db.commit()
+    db.close()
     db.close()
     db.close()
 

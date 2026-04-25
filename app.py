@@ -59,7 +59,6 @@ def close_db(_error=None):
     if db is not None:
         db.close()
 
-
 @app.context_processor
 def inject_brand():
     return {"brand": BRAND, "year": datetime.now().year}

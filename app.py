@@ -240,7 +240,6 @@ def init():
 
     client_id = db.execute("SELECT id FROM clients ORDER BY id DESC LIMIT 1").fetchone()[0]
 
-    from werkzeug.security import generate_password_hash
 
     # Create login user
     db.execute("""

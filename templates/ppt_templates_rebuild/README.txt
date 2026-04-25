@@ -1,0 +1,1 @@
+Upload the entire templates folder to GitHub, commit, then redeploy on Render.

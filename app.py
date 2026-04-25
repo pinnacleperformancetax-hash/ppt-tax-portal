@@ -1,4 +1,4 @@
-from __future__ import annotations
+=from __future__ import annotations
 
 import csv
 import io
@@ -253,7 +253,8 @@ def init():
 
     return "INIT COMPLETE - You can now log in"
 
-
+@app.route('/login', methods=['GET', 'POST'])
+def login():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:

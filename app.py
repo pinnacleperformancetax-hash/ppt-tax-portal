@@ -355,11 +355,11 @@ def clients():
 def crm():
     rows = query_db("SELECT * FROM clients ORDER BY created_at DESC, id DESC")
     return render_template("clients.html", clients=rows)
-    
-    @app.route("/transactions", methods=["GET", "POST"])
+
+
+@app.route("/transactions", methods=["GET", "POST"])
 @login_required
-def transactions():
-    if request.method == "POST" and current_user.role == "admin":
+def transactions():    if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",

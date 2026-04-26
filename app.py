@@ -349,9 +349,14 @@ def clients():
         return redirect(url_for("clients"))
     rows = query_db("SELECT * FROM clients ORDER BY created_at DESC, id DESC")
     return render_template("clients.html", clients=rows)
-
-
-@app.route("/transactions", methods=["GET", "POST"])
+    
+@app.route("/crm")
+@login_required
+def crm():
+    rows = query_db("SELECT * FROM clients ORDER BY created_at DESC, id DESC")
+    return render_template("clients.html", clients=rows)
+    
+    @app.route("/transactions", methods=["GET", "POST"])
 @login_required
 def transactions():
     if request.method == "POST" and current_user.role == "admin":

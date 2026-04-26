@@ -1,1 +1,67 @@
-{% extends "base.html" %}{% block content %}<h1>CRM Leads</h1><p class="sub">Track tax, bookkeeping, and accounting prospects.</p><div class="card"><h2>Add New Lead</h2><form method="POST"><div class="grid"><div><label>Name</label><input type="text" name="name" required></div><div><label>Phone</label><input type="text" name="phone"></div><div><label>Email</label><input type="email" name="email"></div><div><label>Status</label><select name="status"><option>New</option><option>Contacted</option><option>Follow-Up</option><option>Converted</option><option>Lost</option></select></div><div><label>Source</label><select name="source"><option>Facebook</option><option>Google</option><option>Referral</option><option>Walk-in</option><option>Website</option><option>Other</option></select></div><div><label>Follow-up Date</label><input type="date" name="follow_up_date"></div></div><label>Notes</label><textarea name="notes" rows="3"></textarea><button>Save Lead</button></form></div><div class="card"><h2>Lead Pipeline</h2><table><tr><th>Name</th><th>Contact</th><th>Status</th><th>Source</th><th>Follow-up</th><th>Update</th></tr>{% for lead in leads %}<tr><td>{{ lead.name }}</td><td>{{ lead.phone }}<br>{{ lead.email }}</td><td>{{ lead.status }}</td><td>{{ lead.source }}</td><td>{{ lead.follow_up_date }}</td><td><form method="POST" action="{{ url_for('update_crm_lead', lead_id=lead.id) }}"><select name="status">{% for status in ['New','Contacted','Follow-Up','Converted','Lost'] %}<option value="{{ status }}" {% if lead.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select><input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}"><textarea name="notes" rows="2">{{ lead.notes or '' }}</textarea><button>Update</button></form></td></tr>{% else %}<tr><td colspan="6">No leads yet.</td></tr>{% endfor %}</table></div>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+
+<h1>CRM Leads</h1>
+<p class="sub">Track tax, bookkeeping, and accounting prospects.</p>
+
+<!-- STATS DASHBOARD -->
+<div class="card">
+  <h3>Overview</h3>
+  <p>Total Leads: {{ stats.total if stats else 0 }}</p>
+  <p>New: {{ stats.new if stats else 0 }}</p>
+  <p>Contacted: {{ stats.contacted if stats else 0 }}</p>
+  <p>Converted: {{ stats.converted if stats else 0 }}</p>
+</div>
+
+<!-- ADD LEAD -->
+<div class="card">
+  <h2>Add New Lead</h2>
+  <form method="POST">
+    <input name="name" placeholder="Name">
+    <input name="phone" placeholder="Phone">
+    <input name="email" placeholder="Email">
+    <input name="source" placeholder="Source">
+    <input type="date" name="follow_up_date">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <button type="submit">Save Lead</button>
+  </form>
+</div>
+
+<!-- PIPELINE -->
+<div class="card">
+  <h2>Lead Pipeline</h2>
+
+  {% for lead in leads %}
+  <div style="border-bottom:1px solid #ccc; padding:10px 0;">
+
+    <strong>{{ lead.name }}</strong><br>
+    {{ lead.phone }} | {{ lead.email }}<br>
+    Status: {{ lead.status }}<br>
+    Source: {{ lead.source }}<br>
+    Follow-Up: {{ lead.follow_up_date }}
+
+    <!-- UPDATE -->
+    <form method="POST" action="/crm/{{ lead.id }}/update">
+      <select name="status">
+        <option {% if lead.status=='New' %}selected{% endif %}>New</option>
+        <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
+        <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
+      </select>
+      <input type="date" name="follow_up_date" value="{{ lead.follow_up_date }}">
+      <input name="notes" value="{{ lead.notes }}">
+      <button type="submit">Update</button>
+    </form>
+
+    <!-- CONVERT -->
+    <form method="POST" action="/crm/{{ lead.id }}/convert">
+      <button type="submit" style="background:green;color:white;">
+        Convert to Client
+      </button>
+    </form>
+
+  </div>
+  {% endfor %}
+
+</div>
+
+{% endblock %}

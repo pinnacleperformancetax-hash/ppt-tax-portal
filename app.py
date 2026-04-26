@@ -474,10 +474,13 @@ def documents():
 @login_required
 @admin_required
 def crm():
+
+    # CREATE LEAD
     if request.method == "POST":
         execute_db(
-            """INSERT INTO crm_leads(name, phone, email, status, source, follow_up_date, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO crm_leads
+            (name, phone, email, status, source, follow_up_date, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("name"),
                 request.form.get("phone"),
@@ -490,10 +493,23 @@ def crm():
         )
         flash("CRM lead saved.", "success")
         return redirect(url_for("crm"))
+
+    # DASHBOARD COUNTS
+    stats = query_db("""
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status='New' THEN 1 ELSE 0 END) as new,
+            SUM(CASE WHEN status='Contacted' THEN 1 ELSE 0 END) as contacted,
+            SUM(CASE WHEN status='Converted' THEN 1 ELSE 0 END) as converted
+        FROM crm_leads
+    """, one=True)
+
     rows = query_db("SELECT * FROM crm_leads ORDER BY created_at DESC, id DESC")
-    return render_template("crm.html", leads=rows)
+
+    return render_template("crm.html", leads=rows, stats=stats)
 
 
+# UPDATE LEAD
 @app.route("/crm/<int:lead_id>/update", methods=["POST"])
 @login_required
 @admin_required
@@ -503,15 +519,49 @@ def update_crm_lead(lead_id):
            SET status=?, follow_up_date=?, notes=?, updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
         (
-            request.form.get("status") or "New",
+            request.form.get("status"),
             request.form.get("follow_up_date"),
             request.form.get("notes"),
             lead_id,
         ),
     )
+
     flash("CRM lead updated.", "success")
     return redirect(url_for("crm"))
 
+
+# 🔥 CONVERT LEAD TO CLIENT
+@app.route("/crm/<int:lead_id>/convert", methods=["POST"])
+@login_required
+@admin_required
+def convert_lead(lead_id):
+
+    lead = query_db("SELECT * FROM crm_leads WHERE id=?", (lead_id,), one=True)
+
+    if not lead:
+        flash("Lead not found.", "danger")
+        return redirect(url_for("crm"))
+
+    # INSERT INTO CLIENTS
+    execute_db(
+        """INSERT INTO clients (name, email, phone, status)
+           VALUES (?, ?, ?, ?)""",
+        (
+            lead["name"],
+            lead["email"],
+            lead["phone"],
+            "Active",
+        ),
+    )
+
+    # MARK LEAD AS CONVERTED
+    execute_db(
+        "UPDATE crm_leads SET status='Converted' WHERE id=?",
+        (lead_id,),
+    )
+
+    flash("Lead converted to client.", "success")
+    return redirect(url_for("crm"))
 
 @app.route("/invoices", methods=["GET", "POST"])
 @login_required

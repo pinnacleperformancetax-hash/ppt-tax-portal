@@ -359,7 +359,8 @@ def crm():
 
 @app.route("/transactions", methods=["GET", "POST"])
 @login_required
-def transactions():    if request.method == "POST" and current_user.role == "admin":
+def transactions():   
+    if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",

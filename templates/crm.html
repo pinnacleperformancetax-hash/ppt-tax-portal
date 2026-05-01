@@ -4,23 +4,21 @@
 <h1>CRM Leads</h1>
 <p class="sub">Track tax, bookkeeping, and accounting prospects.</p>
 
-<!-- STATS DASHBOARD -->
 <div class="card">
   <h3>Overview</h3>
-  <p>Total Leads: {{ stats.total if stats else 0 }}</p>
-  <p>New: {{ stats.new if stats else 0 }}</p>
-  <p>Contacted: {{ stats.contacted if stats else 0 }}</p>
-  <p>Converted: {{ stats.converted if stats else 0 }}</p>
+  <p><strong>Total Leads:</strong> {{ stats.total if stats else 0 }}</p>
+  <p><strong>New:</strong> {{ stats.new if stats else 0 }}</p>
+  <p><strong>Contacted:</strong> {{ stats.contacted if stats else 0 }}</p>
+  <p><strong>Converted:</strong> {{ stats.converted if stats else 0 }}</p>
 </div>
 
-<!-- ADD LEAD -->
 <div class="card">
   <h2>Add New Lead</h2>
   <form method="POST">
     <input name="name" placeholder="Name">
     <input name="phone" placeholder="Phone">
     <input name="email" placeholder="Email">
-    <input name="source" placeholder="Source">
+    <input name="source" placeholder="Source: Facebook, Referral, Google, Walk-in">
     <input type="date" name="follow_up_date">
     <textarea name="notes" placeholder="Notes"></textarea>
     <button type="submit">Save Lead</button>
@@ -28,52 +26,78 @@
 </div>
 
 <div class="card">
-<h2>Lead Pipeline</h2>
+  <h2>Lead Pipeline</h2>
 
-<table style="width:100%; border-collapse: collapse; margin-top:15px;">
-  <thead>
-    <tr style="background:#f5f5f5;">
-      <th style="padding:10px;">Name</th>
-      <th>Contact</th>
-      <th>Status</th>
-      <th>Follow-Up</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
+  <table style="width:100%; border-collapse:collapse; margin-top:15px;">
+    <thead>
+      <tr style="background:#f4f6f8;">
+        <th style="padding:10px; text-align:left;">Name</th>
+        <th style="padding:10px; text-align:left;">Contact</th>
+        <th style="padding:10px; text-align:left;">Status</th>
+        <th style="padding:10px; text-align:left;">Follow-Up</th>
+        <th style="padding:10px; text-align:left;">Actions</th>
+      </tr>
+    </thead>
 
-  <tbody>
-    {% for lead in leads %}
-    <tr style="border-bottom:1px solid #ddd;">
-      <td style="padding:10px;">{{ lead.name }}</td>
+    <tbody>
+      {% for lead in leads %}
+      <tr style="border-bottom:1px solid #ddd;">
+        <td style="padding:10px;">
+          <strong>{{ lead.name }}</strong><br>
+          <small>{{ lead.source }}</small>
+        </td>
 
-      <td>
-        {{ lead.phone }}<br>
-        {{ lead.email }}
-      </td>
+        <td style="padding:10px;">
+          {{ lead.phone }}<br>
+          {{ lead.email }}
+        </td>
 
-      <td>{{ lead.status }}</td>
+        <td style="padding:10px;">
+          {% if lead.status == 'Converted' %}
+            <span style="color:green; font-weight:bold;">Converted</span>
+          {% else %}
+            {{ lead.status }}
+          {% endif %}
+        </td>
 
-      <td>{{ lead.follow_up_date }}</td>
+        <td style="padding:10px;">
+          {{ lead.follow_up_date or 'No date set' }}
+        </td>
 
-      <td>
-        <form method="POST" action="/crm/{{ lead.id }}/update" style="margin-bottom:5px;">
-          <select name="status">
-            <option {% if lead.status=='New' %}selected{% endif %}>New</option>
-            <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
-            <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
-          </select>
-          <input type="date" name="follow_up_date">
-          <button type="submit">Update</button>
-        </form>
+        <td style="padding:10px;">
+          <form method="POST" action="/crm/{{ lead.id }}/update" style="margin-bottom:6px;">
+            <select name="status">
+              <option {% if lead.status=='New' %}selected{% endif %}>New</option>
+              <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
+              <option {% if lead.status=='Consultation Booked' %}selected{% endif %}>Consultation Booked</option>
+              <option {% if lead.status=='Filed' %}selected{% endif %}>Filed</option>
+              <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
+              <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
+            </select>
 
-        <form method="POST" action="/crm/{{ lead.id }}/convert">
-          <button style="background:#28a745; color:white;">Convert</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+            <input type="date" name="follow_up_date" value="{{ lead.follow_up_date }}">
+            <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
+            <button type="submit">Update</button>
+          </form>
 
+          {% if lead.status != 'Converted' %}
+          <form method="POST" action="/crm/{{ lead.id }}/convert">
+            <button type="submit" style="background:#28a745; color:white;">
+              Convert to Client
+            </button>
+          </form>
+          {% else %}
+            <span style="color:green; font-weight:bold;">✓ Client</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" style="padding:15px;">No leads yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+
 {% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Returns</h1>
+{% if current_user.role == 'admin' %}
+<div class="card">
+<form method="POST" class="grid grid-3">
+  <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+  <input name="tax_year" placeholder="Tax year">
+  <input name="service_type" placeholder="Service type">
+  <input name="status" placeholder="Status">
+  <input type="date" name="due_date">
+  <input name="fee" placeholder="Fee">
+  <input name="notes" placeholder="Notes">
+  <button>Create Return</button>
+</form>
+</div>
+{% endif %}
+<div class="card">
+<table>
+<tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Fee</th></tr>
+{% for row in returns %}
+<tr><td>{{ row.client_name }}</td><td>{{ row.tax_year }}</td><td>{{ row.service_type }}</td><td>{{ row.status }}</td><td>{{ row.due_date }}</td><td>{{ row.fee|currency }}</td></tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Documents</h1>
+<div class="card">
+<form method="POST" enctype="multipart/form-data" class="grid grid-2">
+  {% if current_user.role == 'admin' %}
+  <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+  {% endif %}
+  <input name="document_name" placeholder="Document name">
+  <input type="file" name="file">
+  <input name="tax_year" placeholder="Tax year">
+  <input name="status" placeholder="Status" value="Received">
+  <textarea name="notes" placeholder="Notes"></textarea>
+  <button>Save Document</button>
+</form>
+</div>
+<div class="card">
+<table>
+<tr><th>Client</th><th>Name</th><th>File</th><th>Year</th><th>Status</th></tr>
+{% for row in documents %}
+<tr><td>{{ row.client_name }}</td><td>{{ row.document_name }}</td><td>{{ row.original_filename }}</td><td>{{ row.tax_year }}</td><td>{{ row.status }}</td></tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Bookkeeping</h1>
+{% if current_user.role == 'admin' %}
+<div class="card">
+<form method="POST" class="grid grid-3">
+  <input type="date" name="date">
+  <input name="description" placeholder="Description">
+  <select name="type"><option>income</option><option>expense</option></select>
+  <select name="category_id">{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+  <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+  <input name="amount" placeholder="Amount">
+  <input name="notes" placeholder="Notes">
+  <button>Add Transaction</button>
+</form>
+</div>
+{% endif %}
+<div class="card">
+<a class="btn btn-soft" href="{{ url_for('export_transactions') }}">Export CSV</a>
+<table>
+<tr><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th>Client</th><th>Amount</th></tr>
+{% for row in transactions %}
+<tr><td>{{ row.date }}</td><td>{{ row.description }}</td><td>{{ row.type }}</td><td>{{ row.category_name }}</td><td>{{ row.client_name }}</td><td>{{ row.amount|currency }}</td></tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

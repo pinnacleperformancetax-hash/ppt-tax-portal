@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="sub">Business overview and client activity.</p>
+
+<div class="grid grid-4">
+  <div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div>
+  <div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div>
+  <div class="metric"><span>Balance</span><strong>{{ balance|currency }}</strong></div>
+  <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices }}</strong></div>
+</div>
+
+<div class="grid grid-3" style="margin-top:16px;">
+  <div class="metric"><span>Pending Docs</span><strong>{{ pending_docs }}</strong></div>
+  <div class="metric"><span>Tax Returns</span><strong>{{ tax_returns }}</strong></div>
+  <div class="metric"><span>Appointments</span><strong>{{ appointments }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Recent Transactions</h2>
+  <table>
+    <tr><th>Date</th><th>Description</th><th>Client</th><th>Amount</th></tr>
+    {% for row in recent_transactions %}
+    <tr><td>{{ row.date }}</td><td>{{ row.description }}</td><td>{{ row.client_name }}</td><td>{{ row.amount|currency }}</td></tr>
+    {% else %}
+    <tr><td colspan="4">No transactions yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Appointments</h1>
+{% if current_user.role == 'admin' %}
+<div class="card">
+<form method="POST" class="grid grid-3">
+  <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+  <input name="title" placeholder="Title">
+  <input type="datetime-local" name="start_at">
+  <input type="datetime-local" name="end_at">
+  <input name="location" placeholder="Location">
+  <input name="meeting_link" placeholder="Meeting link">
+  <input name="status" placeholder="Status">
+  <input name="notes" placeholder="Notes">
+  <button>Add Appointment</button>
+</form>
+</div>
+{% endif %}
+<div class="card">
+<table>
+<tr><th>Client</th><th>Title</th><th>Start</th><th>End</th><th>Status</th></tr>
+{% for row in appointments %}
+<tr><td>{{ row.client_name }}</td><td>{{ row.title }}</td><td>{{ row.start_at }}</td><td>{{ row.end_at }}</td><td>{{ row.status }}</td></tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}

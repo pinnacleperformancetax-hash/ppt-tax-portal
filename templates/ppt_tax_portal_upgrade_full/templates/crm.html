@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>CRM Leads</h1>
+<p class="sub">Track tax, bookkeeping, and accounting prospects.</p>
+
+<div class="crm-overview">
+  <div class="metric">
+    <span>Total Leads</span>
+    <strong>{{ stats.total if stats else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>New</span>
+    <strong>{{ stats.new if stats and stats.new else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>Contacted</span>
+    <strong>{{ stats.contacted if stats and stats.contacted else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>Converted</span>
+    <strong>{{ stats.converted if stats and stats.converted else 0 }}</strong>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Add New Lead</h2>
+  <form method="POST" class="grid grid-2">
+    <input name="name" placeholder="Name" required>
+    <input name="phone" placeholder="Phone">
+    <input name="email" placeholder="Email">
+    <input name="source" placeholder="Source: Facebook, Referral, Google, Walk-in">
+    <input type="date" name="follow_up_date">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div>
+      <button type="submit">Save Lead</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Lead Pipeline</h2>
+
+  {% for lead in leads %}
+  <div class="lead-card">
+    <div class="lead-top">
+      <div>
+        <div class="lead-name">{{ lead.name }}</div>
+        <div class="lead-source">{{ lead.source or "No source listed" }}</div>
+      </div>
+      {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
+      <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
+    </div>
+
+    <div class="lead-details">
+      <div><small>Phone</small>{{ lead.phone or "—" }}</div>
+      <div><small>Email</small>{{ lead.email or "—" }}</div>
+      <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+      <div><small>Notes</small>{{ lead.notes or "—" }}</div>
+    </div>
+
+    <div class="lead-actions">
+      <form method="POST" action="/crm/{{ lead.id }}/update">
+        <select name="status">
+          <option {% if lead.status=='New' %}selected{% endif %}>New</option>
+          <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
+          <option {% if lead.status=='Consultation Booked' %}selected{% endif %}>Consultation Booked</option>
+          <option {% if lead.status=='Filed' %}selected{% endif %}>Filed</option>
+          <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
+          <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
+        </select>
+        <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
+        <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
+        <button type="submit">Update</button>
+      </form>
+    </div>
+
+    {% if lead.status != 'Converted' %}
+    <form method="POST" action="/crm/{{ lead.id }}/convert" style="margin-top:10px;">
+      <button type="submit">Convert to Client</button>
+    </form>
+    {% else %}
+      <div class="client-badge">✓ Client</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p>No leads yet.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

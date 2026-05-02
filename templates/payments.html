@@ -1,25 +1,61 @@
 {% extends "base.html" %}
-
 {% block content %}
+
 <h1>Payments</h1>
 
 <div class="card">
-    <h2>Make a Payment</h2>
-    <p>Select an invoice and complete payment using Clover.</p>
+  <h2>Make a Payment</h2>
 
-    <form method="POST">
-        <label>Invoice ID</label>
-        <input type="text" name="invoice_id" placeholder="Enter invoice ID">
+  <form method="POST">
 
-        <label>Amount</label>
-        <input type="text" name="amount" placeholder="$0.00">
+    <label>Select Invoice</label>
+    <select name="invoice_id" required>
+      <option value="">-- Select Invoice --</option>
+      {% for invoice in invoices %}
+        <option value="{{ invoice.id }}">
+          #{{ invoice.id }} - ${{ invoice.amount }} ({{ invoice.client_name }})
+        </option>
+      {% endfor %}
+    </select>
 
-        <button type="submit" class="btn">Pay with Clover</button>
-    </form>
+    <label>Amount</label>
+    <input type="text" name="amount" readonly id="amount-field">
+
+    <button type="submit">Pay with Clover</button>
+
+  </form>
 </div>
 
 <div class="card">
-    <h2>Payment History</h2>
+  <h2>Payment History</h2>
+
+  {% if payments %}
+    <table>
+      <tr>
+        <th>Invoice</th>
+        <th>Amount</th>
+        <th>Date</th>
+      </tr>
+
+      {% for p in payments %}
+      <tr>
+        <td>#{{ p.invoice_id }}</td>
+        <td>${{ p.amount }}</td>
+        <td>{{ p.date }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
     <p>No payments recorded yet.</p>
+  {% endif %}
 </div>
+
+<script>
+document.querySelector("select[name='invoice_id']").addEventListener("change", function() {
+    const selected = this.options[this.selectedIndex].text;
+    const amount = selected.match(/\$(\d+)/);
+    document.getElementById("amount-field").value = amount ? amount[1] : "";
+});
+</script>
+
 {% endblock %}

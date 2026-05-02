@@ -131,6 +131,18 @@ def safe_payment_link(link: str) -> str:
     return link
 
 
+
+def normalize_payment_link(value: str) -> str:
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if value.startswith("http://"):
+        value = "https://" + value[len("http://"):]
+    if not value.startswith("https://"):
+        return ""
+    return value
+
+
 def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     try:
         existing = [row[1] for row in db.execute(f"PRAGMA table_info({table})").fetchall()]
@@ -334,6 +346,14 @@ def init_db() -> None:
         add_column_if_missing(db, "invoices", col, definition)
     add_column_if_missing(db, "clients", "address", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
+    for col, definition in [
+        ("payment_provider", "TEXT DEFAULT 'Clover'"),
+        ("clover_link", "TEXT"),
+        ("payment_notes", "TEXT"),
+        ("paid_at", "TEXT"),
+    ]:
+        add_column_if_missing(db, "invoices", col, definition)
+
 
     clean_and_seed_categories(db)
 
@@ -627,9 +647,9 @@ def invoices():
 def payments():
     if request.method == "POST":
         invoice_id = request.form.get("invoice_id")
-        payment_link = safe_payment_link(request.form.get("payment_link") or "")
-        payment_notes = request.form.get("payment_notes") or ""
-        action = request.form.get("action") or "save"
+        amount = money(request.form.get("amount"))
+        payment_link = normalize_payment_link(request.form.get("clover_link") or request.form.get("payment_link"))
+        action = request.form.get("action") or "pay"
 
         if not invoice_id:
             flash("Please select an invoice.", "danger")
@@ -645,44 +665,69 @@ def payments():
                 "UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?",
                 (invoice_id,),
             )
-            execute_db(
-                """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
-                   VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
-                (invoice_id, invoice["amount"], invoice["payment_link"] or "", "Marked paid manually"),
-            )
-            flash("Invoice marked paid.", "success")
-            return redirect(url_for("payments"))
-
-        if action == "mark_sent":
-            execute_db(
-                "UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?",
+            existing = query_db(
+                "SELECT id FROM payments WHERE invoice_id=? AND status='Paid' LIMIT 1",
                 (invoice_id,),
+                one=True,
             )
-            flash("Invoice marked sent.", "success")
+            if not existing:
+                execute_db(
+                    """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
+                       VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
+                    (invoice_id, invoice["amount"], invoice["payment_link"] or invoice["clover_link"] or "", "Marked paid after Clover checkout"),
+                )
+
+            income_category = query_db(
+                "SELECT id FROM categories WHERE name='Tax Preparation Income' AND kind='income' LIMIT 1",
+                one=True,
+            )
+            existing_transaction = query_db(
+                "SELECT id FROM transactions WHERE notes=? LIMIT 1",
+                (f"Auto-created from paid invoice #{invoice_id}",),
+                one=True,
+            )
+            if not existing_transaction:
+                execute_db(
+                    """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
+                       VALUES (?, ?, 'income', ?, ?, ?, ?)""",
+                    (
+                        datetime.now().strftime("%Y-%m-%d"),
+                        f"Clover payment for invoice #{invoice['invoice_number'] or invoice_id}",
+                        income_category["id"] if income_category else None,
+                        invoice["client_id"],
+                        invoice["amount"],
+                        f"Auto-created from paid invoice #{invoice_id}",
+                    ),
+                )
+            flash("Invoice marked paid and bookkeeping income recorded.", "success")
             return redirect(url_for("payments"))
 
         if not payment_link:
-            flash("Paste a valid Clover payment link beginning with https://", "danger")
+            payment_link = normalize_payment_link(invoice["payment_link"] or invoice["clover_link"] or "")
+
+        if not payment_link:
+            flash("Paste a valid Clover checkout link beginning with https://", "danger")
             return redirect(url_for("payments"))
 
-        new_status = "Sent" if action == "save_and_send" else (invoice["status"] or "Draft")
+        if amount <= 0:
+            amount = money(invoice["amount"])
+
         execute_db(
             """UPDATE invoices
-               SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status=?
+               SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status='Sent'
                WHERE id=?""",
-            (payment_link, payment_link, payment_notes, new_status, invoice_id),
+            (payment_link, payment_link, "Clover checkout opened from portal", invoice_id),
         )
         execute_db(
             """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
-               VALUES (?, ?, 'Clover', ?, ?, ?)""",
-            (invoice_id, invoice["amount"], payment_link, "Link Saved", payment_notes),
+               VALUES (?, ?, 'Clover', ?, 'Checkout Opened', ?)""",
+            (invoice_id, amount, payment_link, "Client/office sent to Clover checkout"),
         )
-        flash("Clover payment link saved.", "success")
-        return redirect(url_for("payments"))
+        return redirect(payment_link)
 
     invoices_rows = query_db(
         """SELECT i.id, i.invoice_number, i.amount, i.status, i.description, i.payment_link,
-                  i.payment_provider, i.payment_notes, i.created_at,
+                  i.payment_provider, i.payment_notes, i.created_at, i.paid_at, i.clover_link,
                   cl.name AS client_name, cl.email AS client_email
            FROM invoices i
            LEFT JOIN clients cl ON cl.id=i.client_id
@@ -698,8 +743,6 @@ def payments():
     )
     paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
     unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
-    ready_count = query_db("SELECT COUNT(*) c FROM invoices WHERE payment_link IS NOT NULL AND payment_link!='' AND status!='Paid'", one=True)["c"]
-    missing_link_count = query_db("SELECT COUNT(*) c FROM invoices WHERE (payment_link IS NULL OR payment_link='') AND status!='Paid'", one=True)["c"]
 
     return render_template(
         "payments.html",
@@ -707,9 +750,8 @@ def payments():
         payments=payment_rows,
         paid_total=paid_total,
         unpaid_total=unpaid_total,
-        ready_count=ready_count,
-        missing_link_count=missing_link_count,
     )
+
 
 
 @app.route("/invoice/<int:invoice_id>/mark-paid", methods=["POST"])

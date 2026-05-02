@@ -4,15 +4,30 @@
 <h1>CRM Leads</h1>
 <p class="sub">Track prospects, follow-ups, and client conversions.</p>
 
+<!-- METRICS -->
 <div class="crm-overview">
-  <div class="metric"><span>Total Leads</span><strong>{{ stats.total if stats else 0 }}</strong></div>
-  <div class="metric"><span>New</span><strong>{{ stats.new if stats and stats.new else 0 }}</strong></div>
-  <div class="metric"><span>Contacted</span><strong>{{ stats.contacted if stats and stats.contacted else 0 }}</strong></div>
-  <div class="metric"><span>Converted</span><strong>{{ stats.converted if stats and stats.converted else 0 }}</strong></div>
+  <div class="metric">
+    <span>Total Leads</span>
+    <strong>{{ stats.total if stats else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>New</span>
+    <strong>{{ stats.new if stats and stats.new else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>Contacted</span>
+    <strong>{{ stats.contacted if stats and stats.contacted else 0 }}</strong>
+  </div>
+  <div class="metric">
+    <span>Converted</span>
+    <strong>{{ stats.converted if stats and stats.converted else 0 }}</strong>
+  </div>
 </div>
 
+<!-- ADD LEAD -->
 <div class="card">
   <h2>Add New Lead</h2>
+
   <form method="POST" class="grid grid-2">
     <input name="name" placeholder="Lead name" required>
     <input name="phone" placeholder="Phone number">
@@ -20,23 +35,32 @@
     <input name="source" placeholder="Source: Referral, Facebook, Google, Walk-in">
     <input type="date" name="follow_up_date">
     <textarea name="notes" placeholder="Notes"></textarea>
-    <div><button type="submit">Save Lead</button></div>
+
+    <div>
+      <button type="submit">Save Lead</button>
+    </div>
   </form>
 </div>
 
+<!-- PIPELINE -->
 <div class="card">
   <h2>Lead Pipeline</h2>
 
   {% for lead in leads %}
   <div class="lead-card">
+
     <div class="lead-top">
       <div>
         <div class="lead-name">{{ lead.name }}</div>
-        <div class="lead-source">{{ lead.source or "No source listed" }}</div>
+        <div class="lead-source">
+          {{ lead.source or "No source listed" }}
+        </div>
       </div>
 
       {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
-      <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
+      <span class="status-pill status-{{ status_class }}">
+        {{ lead.status or "New" }}
+      </span>
     </div>
 
     <div class="lead-details">
@@ -48,6 +72,7 @@
 
     <div class="lead-actions">
       <form method="POST" action="/crm/{{ lead.id }}/update">
+
         <select name="status">
           <option {% if lead.status=="New" %}selected{% endif %}>New</option>
           <option {% if lead.status=="Contacted" %}selected{% endif %}>Contacted</option>
@@ -59,6 +84,7 @@
 
         <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
         <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
+
         <button type="submit">Update</button>
       </form>
     </div>
@@ -70,7 +96,9 @@
     {% else %}
       <div class="client-badge">✓ Client Converted</div>
     {% endif %}
+
   </div>
+
   {% else %}
     <p>No leads yet.</p>
   {% endfor %}

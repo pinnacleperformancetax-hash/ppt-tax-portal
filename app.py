@@ -647,8 +647,6 @@ def invoices():
 def payments():
     if request.method == "POST":
         invoice_id = request.form.get("invoice_id")
-        amount = money(request.form.get("amount"))
-        payment_link = normalize_payment_link(request.form.get("clover_link") or request.form.get("payment_link"))
         action = request.form.get("action") or "pay"
 
         if not invoice_id:
@@ -660,7 +658,38 @@ def payments():
             flash("Invoice not found.", "danger")
             return redirect(url_for("payments"))
 
+        if action == "save_link":
+            clover_link = normalize_payment_link(request.form.get("clover_link"))
+            if not clover_link:
+                flash("Paste the correct Clover checkout link for this invoice.", "danger")
+                return redirect(url_for("payments"))
+            execute_db(
+                """UPDATE invoices
+                   SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?
+                   WHERE id=?""",
+                (clover_link, clover_link, "Invoice-specific Clover checkout link saved", invoice_id),
+            )
+            flash("Clover checkout link saved to this invoice.", "success")
+            return redirect(url_for("payments"))
+
+        if action == "pay":
+            clover_link = normalize_payment_link(invoice["payment_link"] or invoice["clover_link"] or "")
+            if not clover_link:
+                flash("This invoice needs its own Clover checkout link first.", "danger")
+                return redirect(url_for("payments"))
+            execute_db(
+                """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
+                   VALUES (?, ?, 'Clover', ?, 'Checkout Opened', ?)""",
+                (invoice_id, invoice["amount"], clover_link, "Pay Invoice button opened Clover checkout"),
+            )
+            execute_db(
+                "UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=? AND status!='Paid'",
+                (invoice_id,),
+            )
+            return redirect(clover_link)
+
         if action == "mark_paid":
+            clover_link = normalize_payment_link(invoice["payment_link"] or invoice["clover_link"] or "")
             execute_db(
                 "UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?",
                 (invoice_id,),
@@ -674,7 +703,7 @@ def payments():
                 execute_db(
                     """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
                        VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
-                    (invoice_id, invoice["amount"], invoice["payment_link"] or invoice["clover_link"] or "", "Marked paid after Clover checkout"),
+                    (invoice_id, invoice["amount"], clover_link, "Marked paid after Clover checkout"),
                 )
 
             income_category = query_db(
@@ -702,28 +731,7 @@ def payments():
             flash("Invoice marked paid and bookkeeping income recorded.", "success")
             return redirect(url_for("payments"))
 
-        if not payment_link:
-            payment_link = normalize_payment_link(invoice["payment_link"] or invoice["clover_link"] or "")
-
-        if not payment_link:
-            flash("Paste a valid Clover checkout link beginning with https://", "danger")
-            return redirect(url_for("payments"))
-
-        if amount <= 0:
-            amount = money(invoice["amount"])
-
-        execute_db(
-            """UPDATE invoices
-               SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status='Sent'
-               WHERE id=?""",
-            (payment_link, payment_link, "Clover checkout opened from portal", invoice_id),
-        )
-        execute_db(
-            """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
-               VALUES (?, ?, 'Clover', ?, 'Checkout Opened', ?)""",
-            (invoice_id, amount, payment_link, "Client/office sent to Clover checkout"),
-        )
-        return redirect(payment_link)
+        return redirect(url_for("payments"))
 
     invoices_rows = query_db(
         """SELECT i.id, i.invoice_number, i.amount, i.status, i.description, i.payment_link,
@@ -739,10 +747,11 @@ def payments():
            LEFT JOIN invoices i ON i.id=p.invoice_id
            LEFT JOIN clients cl ON cl.id=i.client_id
            ORDER BY p.created_at DESC, p.id DESC
-           LIMIT 25"""
+           LIMIT 50"""
     )
     paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
     unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    needs_link = query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid' AND (payment_link IS NULL OR payment_link='')", one=True)["c"]
 
     return render_template(
         "payments.html",
@@ -750,67 +759,9 @@ def payments():
         payments=payment_rows,
         paid_total=paid_total,
         unpaid_total=unpaid_total,
+        needs_link=needs_link,
     )
 
-
-
-@app.route("/invoice/<int:invoice_id>/mark-paid", methods=["POST"])
-@login_required
-@admin_required
-def mark_invoice_paid(invoice_id):
-    invoice = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
-    if not invoice:
-        flash("Invoice not found.", "danger")
-        return redirect(url_for("payments"))
-
-    execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?", (invoice_id,))
-
-    existing_payment = query_db(
-        "SELECT id FROM payments WHERE invoice_id=? AND status='Paid' LIMIT 1",
-        (invoice_id,),
-        one=True,
-    )
-    if not existing_payment:
-        execute_db(
-            """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
-               VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
-            (invoice_id, invoice["amount"], invoice["payment_link"] or "", "Marked paid manually"),
-        )
-
-    income_category = query_db(
-        "SELECT id FROM categories WHERE name='Tax Preparation Income' AND kind='income' LIMIT 1",
-        one=True,
-    )
-    existing_transaction = query_db(
-        "SELECT id FROM transactions WHERE notes=? LIMIT 1",
-        (f"Auto-created from paid invoice #{invoice_id}",),
-        one=True,
-    )
-    if not existing_transaction:
-        execute_db(
-            """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
-               VALUES (?, ?, 'income', ?, ?, ?, ?)""",
-            (
-                datetime.now().strftime("%Y-%m-%d"),
-                f"Invoice payment #{invoice['invoice_number'] or invoice_id}",
-                income_category["id"] if income_category else None,
-                invoice["client_id"],
-                invoice["amount"],
-                f"Auto-created from paid invoice #{invoice_id}",
-            ),
-        )
-
-    flash("Invoice marked paid and income recorded.", "success")
-    return redirect(url_for("payments"))
-
-
-@app.route("/invoice/<int:invoice_id>/mark-sent", methods=["POST"])
-@login_required
-@admin_required
-def mark_invoice_sent(invoice_id):
-    execute_db("UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?", (invoice_id,))
-    flash("Invoice marked sent.", "success")
-    return redirect(url_for("payments"))
 
 
 @app.route("/appointments", methods=["GET", "POST"])

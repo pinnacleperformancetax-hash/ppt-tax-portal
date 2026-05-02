@@ -5,56 +5,77 @@
 <title>PPT Portal</title>
 
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#f6f7fb; }
-.sidebar { width:240px; background:#0f172a; color:white; position:fixed; top:0; bottom:0; padding:25px; }
-.sidebar a { display:block; color:white; text-decoration:none; margin:14px 0; font-weight:bold; }
+body { margin:0; font-family:Arial,sans-serif; background:#f6f7fb; color:#111827; }
+.sidebar { width:240px; background:#0f172a; color:white; position:fixed; top:0; bottom:0; left:0; padding:25px; }
+.sidebar h2 { margin:0 0 18px; line-height:1.1; }
+.sidebar p { font-size:13px; color:#d1d5db; margin-bottom:25px; }
+.sidebar a { display:block; color:white; text-decoration:none; margin:10px 0; font-weight:bold; padding:9px 8px; border-radius:8px; }
+.sidebar a:hover { background:rgba(255,255,255,.08); }
 .main { margin-left:260px; padding:30px; }
-.auth { min-height:100vh; display:flex; justify-content:center; align-items:center; }
+.auth { min-height:100vh; display:flex; justify-content:center; align-items:center; padding:30px; }
 .card { background:white; padding:25px; border-radius:14px; box-shadow:0 5px 20px rgba(0,0,0,.08); margin-bottom:20px; }
-button { background:#11823b; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; }
-input, textarea, select { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; }
+button { background:#11823b; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; }
+input, textarea, select { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box; }
+textarea { min-height:80px; }
 .grid { display:grid; gap:12px; }
 .grid-2 { grid-template-columns:1fr 1fr; }
 .crm-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin:20px 0; }
 .metric { background:white; padding:18px; border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
-.metric strong { display:block; font-size:28px; color:#11823b; }
+.metric span { display:block; font-size:11px; font-weight:bold; color:#6b7280; text-transform:uppercase; }
+.metric strong { display:block; font-size:28px; color:#11823b; margin-top:6px; }
 .lead-card { background:white; padding:18px; border-radius:14px; margin-top:15px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
+.lead-top { display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.lead-name { font-size:18px; font-weight:bold; }
+.lead-source { color:#6b7280; font-size:13px; }
+.lead-details { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:12px 0; }
+.lead-details small { display:block; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:11px; }
+.lead-actions form { display:grid; grid-template-columns:1fr 1fr 2fr auto; gap:10px; align-items:center; }
 .status-pill { padding:6px 12px; border-radius:999px; font-size:12px; font-weight:bold; }
-.status-new { background:#e5e7eb; }
-.status-contacted { background:#bfdbfe; }
-.status-converted { background:#bbf7d0; }
-.status-lost { background:#fecaca; }
+.status-new { background:#e5e7eb; color:#374151; }
+.status-contacted { background:#bfdbfe; color:#1d4ed8; }
+.status-consultation-booked { background:#ede9fe; color:#6d28d9; }
+.status-filed { background:#fef3c7; color:#92400e; }
+.status-converted { background:#bbf7d0; color:#166534; }
+.status-lost { background:#fecaca; color:#991b1b; }
+.client-badge { margin-top:12px; font-weight:bold; color:#166534; }
+@media (max-width:900px) {
+  .sidebar { position:relative; width:auto; }
+  .main { margin-left:0; padding:20px; }
+  .crm-overview, .grid-2, .lead-details, .lead-actions form { grid-template-columns:1fr; }
+}
 </style>
 </head>
 
 <body>
 
-{% if not current_user.is_authenticated %}
+{% if request.path == '/login' %}
   <div class="auth">
     {% block content %}{% endblock %}
   </div>
 {% else %}
+  <div class="sidebar">
+    <h2>Pinnacle<br>Performance Tax<br>and Accounting</h2>
+    <p>
+      www.pinnacleperformancetax.com<br>
+      pinnacleperformancetax@gmail.com<br>
+      478-338-1632
+    </p>
 
-<div class="sidebar">
-  <h2>PPT</h2>
-  <p>Pinnacle Performance Tax</p>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/clients">Clients</a>
+    <a href="/transactions">Bookkeeping</a>
+    <a href="/tax_returns">Tax Returns</a>
+    <a href="/documents">Documents</a>
+    <a href="/invoices">Invoices</a>
+    <a href="/appointments">Appointments</a>
+    <a href="/crm">CRM</a>
+    <a href="/settings">Users</a>
+    <a href="/logout">Sign Out</a>
+  </div>
 
-  <a href="/dashboard">Dashboard</a>
-  <a href="/clients">Clients</a>
-  <a href="/transactions">Bookkeeping</a>
-  <a href="/tax_returns">Tax Returns</a>
-  <a href="/documents">Documents</a>
-  <a href="/invoices">Invoices</a>
-  <a href="/appointments">Appointments</a>
-  <a href="/crm">CRM</a>
-  <a href="/settings">Users</a>
-  <a href="/logout">Sign Out</a>
-</div>
-
-<div class="main">
-  {% block content %}{% endblock %}
-</div>
-
+  <div class="main">
+    {% block content %}{% endblock %}
+  </div>
 {% endif %}
 
 </body>

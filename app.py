@@ -7,7 +7,7 @@ import sqlite3
 from functools import wraps
 from pathlib import Path
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import (
     Flask, g, render_template, request, redirect, url_for,
@@ -134,6 +134,25 @@ def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, defin
         pass
 
 
+def today_iso() -> str:
+    return date.today().isoformat()
+
+
+def lead_urgency(follow_up_date: str | None) -> str:
+    if not follow_up_date:
+        return "none"
+    try:
+        follow = datetime.strptime(follow_up_date, "%Y-%m-%d").date()
+    except Exception:
+        return "none"
+    today = date.today()
+    if follow < today:
+        return "overdue"
+    if follow == today:
+        return "today"
+    return "upcoming"
+
+
 def init_db() -> None:
     ensure_dirs()
     db = sqlite3.connect(DB_PATH)
@@ -149,6 +168,9 @@ def init_db() -> None:
         client_type TEXT,
         status TEXT DEFAULT 'Active',
         notes TEXT,
+        portal_status TEXT DEFAULT 'Active',
+        plan TEXT DEFAULT 'Internal',
+        next_billing_date TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -255,6 +277,9 @@ def init_db() -> None:
     """)
 
     add_column_if_missing(db, "clients", "address", "TEXT")
+    add_column_if_missing(db, "clients", "portal_status", "TEXT DEFAULT 'Active'")
+    add_column_if_missing(db, "clients", "plan", "TEXT DEFAULT 'Internal'")
+    add_column_if_missing(db, "clients", "next_billing_date", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
 
     categories = [
@@ -267,43 +292,27 @@ def init_db() -> None:
         ("Travel", "expense"),
         ("Meals", "expense"),
     ]
-
     for name, kind in categories:
         db.execute("INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)", (name, kind))
 
-    admin = db.execute(
-        "SELECT id FROM users WHERE lower(email)=?",
-        ("admin@pinnacleperformancetax.com",),
-    ).fetchone()
-
+    admin = db.execute("SELECT id FROM users WHERE lower(email)=?", ("admin@pinnacleperformancetax.com",)).fetchone()
     if admin:
         db.execute(
             "UPDATE users SET name=?, password_hash=?, role=?, is_active=1 WHERE lower(email)=?",
-            (
-                "PPT Admin",
-                generate_password_hash("ChangeMe123!", method="pbkdf2:sha256"),
-                "admin",
-                "admin@pinnacleperformancetax.com",
-            ),
+            ("PPT Admin", generate_password_hash("ChangeMe123!", method="pbkdf2:sha256"), "admin", "admin@pinnacleperformancetax.com"),
         )
     else:
         db.execute(
             "INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)",
-            (
-                "PPT Admin",
-                "admin@pinnacleperformancetax.com",
-                generate_password_hash("ChangeMe123!", method="pbkdf2:sha256"),
-                "admin",
-                1,
-            ),
+            ("PPT Admin", "admin@pinnacleperformancetax.com", generate_password_hash("ChangeMe123!", method="pbkdf2:sha256"), "admin", 1),
         )
 
     if db.execute("SELECT COUNT(*) FROM clients").fetchone()[0] == 0:
         db.execute(
             """INSERT INTO clients
-            (name, business_name, email, phone, client_type, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            ("Sample Client", "Sample Business LLC", "client@example.com", "478-555-0110", "Business", "Active", "Demo client record"),
+            (name, business_name, email, phone, client_type, status, portal_status, plan, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            ("Sample Client", "Sample Business LLC", "client@example.com", "478-555-0110", "Business", "Active", "Active", "Tax Client", "Demo client record"),
         )
 
     client = db.execute("SELECT id FROM clients WHERE lower(email)=?", ("client@example.com",)).fetchone()
@@ -324,9 +333,7 @@ def init_db() -> None:
     db.close()
 
 
-# PERFORMANCE FIX:
-# Initialize the database once when the app imports, instead of running init_db() on every page load.
-# This fixes the slow Render behavior caused by @app.before_request.
+# Performance-safe init: runs once when the app starts, not every click.
 init_db()
 
 
@@ -370,45 +377,49 @@ def logout():
 @app.route("/")
 @login_required
 def dashboard():
-    client_filter = None if current_user.role == "admin" else current_user.client_id
-    where = "" if client_filter is None else "WHERE client_id = ?"
-    args = () if client_filter is None else (client_filter,)
+    if current_user.role != "admin":
+        client_id = current_user.client_id
+        client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+        tax_rows = query_db("SELECT * FROM tax_returns WHERE client_id=? ORDER BY id DESC", (client_id,))
+        doc_rows = query_db("SELECT * FROM documents WHERE client_id=? ORDER BY created_at DESC", (client_id,))
+        invoice_rows = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY issue_date DESC, id DESC", (client_id,))
+        appointment_rows = query_db("SELECT * FROM appointments WHERE client_id=? ORDER BY start_at ASC, id DESC", (client_id,))
+        unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE client_id=? AND status!='Paid'", (client_id,), one=True)["total"]
+        return render_template(
+            "client_dashboard.html",
+            client=client,
+            tax_returns=tax_rows,
+            documents=doc_rows,
+            invoices=invoice_rows,
+            appointments=appointment_rows,
+            unpaid_total=unpaid_total,
+        )
 
-    income = query_db(f"SELECT COALESCE(SUM(amount),0) total FROM transactions {where} AND type='income'" if where else "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", args if where else (), one=True)["total"]
-    expenses = query_db(f"SELECT COALESCE(SUM(amount),0) total FROM transactions {where} AND type='expense'" if where else "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", args if where else (), one=True)["total"]
-    open_invoices = query_db(f"SELECT COUNT(*) c FROM invoices {where} AND status!='Paid'" if where else "SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", args if where else (), one=True)["c"]
-    pending_docs = query_db(f"SELECT COUNT(*) c FROM documents {where} AND status='Received'" if where else "SELECT COUNT(*) c FROM documents WHERE status='Received'", args if where else (), one=True)["c"]
-    tax_returns_count = query_db(f"SELECT COUNT(*) c FROM tax_returns {where}" if where else "SELECT COUNT(*) c FROM tax_returns", args if where else (), one=True)["c"]
-    appointments_count = query_db(f"SELECT COUNT(*) c FROM appointments {where}" if where else "SELECT COUNT(*) c FROM appointments", args if where else (), one=True)["c"]
-
-    recent_transactions = query_db(
-        f"""SELECT t.*, c.name AS category_name, cl.name AS client_name
-        FROM transactions t
-        LEFT JOIN categories c ON c.id=t.category_id
-        LEFT JOIN clients cl ON cl.id=t.client_id
-        {where}
-        ORDER BY date DESC, id DESC LIMIT 8""",
-        args if where else (),
-    )
-
-    upcoming_appointments = query_db(
-        f"""SELECT a.*, cl.name AS client_name
-        FROM appointments a LEFT JOIN clients cl ON cl.id=a.client_id
-        {where}
-        ORDER BY start_at ASC LIMIT 6""",
-        args if where else (),
-    )
-
+    income = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", one=True)["total"]
+    expenses = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", one=True)["total"]
+    open_invoices = query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", one=True)["c"]
+    unpaid_invoice_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    pending_docs = query_db("SELECT COUNT(*) c FROM documents WHERE status='Received'", one=True)["c"]
+    tax_returns_count = query_db("SELECT COUNT(*) c FROM tax_returns", one=True)["c"]
+    appointments_count = query_db("SELECT COUNT(*) c FROM appointments", one=True)["c"]
     active_clients = query_db("SELECT COUNT(*) c FROM clients WHERE status='Active'", one=True)["c"]
     crm_total = query_db("SELECT COUNT(*) c FROM crm_leads", one=True)["c"]
     crm_new = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='New'", one=True)["c"]
     crm_converted = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='Converted'", one=True)["c"]
-    unpaid_invoice_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    overdue_followups = query_db("SELECT COUNT(*) c FROM crm_leads WHERE follow_up_date < ? AND status!='Converted'", (today_iso(),), one=True)["c"]
 
-    recent_leads = query_db(
-        """SELECT * FROM crm_leads
-        ORDER BY created_at DESC, id DESC
-        LIMIT 6"""
+    recent_leads = query_db("SELECT * FROM crm_leads ORDER BY created_at DESC, id DESC LIMIT 6")
+    recent_transactions = query_db(
+        """SELECT t.*, c.name AS category_name, cl.name AS client_name
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        LEFT JOIN clients cl ON cl.id=t.client_id
+        ORDER BY date DESC, id DESC LIMIT 8"""
+    )
+    upcoming_appointments = query_db(
+        """SELECT a.*, cl.name AS client_name
+        FROM appointments a LEFT JOIN clients cl ON cl.id=a.client_id
+        ORDER BY start_at ASC LIMIT 6"""
     )
 
     return render_template(
@@ -425,6 +436,7 @@ def dashboard():
         crm_new=crm_new,
         crm_converted=crm_converted,
         unpaid_invoice_total=unpaid_invoice_total,
+        overdue_followups=overdue_followups,
         recent_transactions=recent_transactions,
         upcoming_appointments=upcoming_appointments,
         recent_leads=recent_leads,
@@ -437,8 +449,8 @@ def dashboard():
 def clients():
     if request.method == "POST":
         execute_db(
-            """INSERT INTO clients(name, business_name, email, phone, address, client_type, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO clients(name, business_name, email, phone, address, client_type, status, portal_status, plan, next_billing_date, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("name"),
                 request.form.get("business_name"),
@@ -446,7 +458,10 @@ def clients():
                 request.form.get("phone"),
                 request.form.get("address"),
                 request.form.get("client_type"),
-                request.form.get("status"),
+                request.form.get("status") or "Active",
+                request.form.get("portal_status") or "Active",
+                request.form.get("plan") or "Tax Client",
+                request.form.get("next_billing_date"),
                 request.form.get("notes"),
             ),
         )
@@ -600,7 +615,8 @@ def crm():
             COUNT(*) as total,
             COALESCE(SUM(CASE WHEN status='New' THEN 1 ELSE 0 END), 0) as new,
             COALESCE(SUM(CASE WHEN status='Contacted' THEN 1 ELSE 0 END), 0) as contacted,
-            COALESCE(SUM(CASE WHEN status='Converted' THEN 1 ELSE 0 END), 0) as converted
+            COALESCE(SUM(CASE WHEN status='Converted' THEN 1 ELSE 0 END), 0) as converted,
+            COALESCE(SUM(CASE WHEN follow_up_date < date('now') AND status!='Converted' THEN 1 ELSE 0 END), 0) as overdue
         FROM crm_leads
     """, one=True)
 
@@ -610,32 +626,28 @@ def crm():
 
     filters = []
     params = []
-
     if search:
         filters.append("(name LIKE ? OR phone LIKE ? OR email LIKE ? OR notes LIKE ?)")
         like = f"%{search}%"
         params.extend([like, like, like, like])
-
     if status_filter:
         filters.append("status = ?")
         params.append(status_filter)
-
     if source_filter:
         filters.append("source LIKE ?")
         params.append(f"%{source_filter}%")
 
     where_clause = "WHERE " + " AND ".join(filters) if filters else ""
-
-    rows = query_db(
-        f"""SELECT * FROM crm_leads
-        {where_clause}
-        ORDER BY created_at DESC, id DESC""",
-        tuple(params),
-    )
+    rows = query_db(f"SELECT * FROM crm_leads {where_clause} ORDER BY created_at DESC, id DESC", tuple(params))
+    enhanced = []
+    for row in rows:
+        item = dict(row)
+        item["urgency"] = lead_urgency(item.get("follow_up_date"))
+        enhanced.append(item)
 
     return render_template(
         "crm.html",
-        leads=rows,
+        leads=enhanced,
         stats=stats,
         search=search,
         status_filter=status_filter,
@@ -681,8 +693,8 @@ def convert_lead(lead_id):
         client_id = existing_client["id"]
     else:
         client_id = execute_db(
-            """INSERT INTO clients(name, business_name, email, phone, client_type, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO clients(name, business_name, email, phone, client_type, status, portal_status, plan, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 lead["name"],
                 "",
@@ -690,15 +702,49 @@ def convert_lead(lead_id):
                 lead["phone"],
                 "CRM Lead",
                 "Active",
+                "Active",
+                "Tax Client",
                 f"Converted from CRM. Source: {lead['source'] or ''}. Notes: {lead['notes'] or ''}",
             ),
         )
 
-    execute_db(
-        "UPDATE crm_leads SET status='Converted', updated_at=CURRENT_TIMESTAMP WHERE id=?",
-        (lead_id,),
-    )
-    flash("Lead converted to client.", "success")
+    current_year = str(date.today().year)
+    existing_return = query_db("SELECT id FROM tax_returns WHERE client_id=? AND tax_year=?", (client_id, current_year), one=True)
+    if not existing_return:
+        execute_db(
+            """INSERT INTO tax_returns(client_id, tax_year, service_type, status, due_date, fee, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                client_id,
+                current_year,
+                "Tax Preparation",
+                "Client Intake",
+                f"{current_year}-04-15",
+                0,
+                "Auto-created when CRM lead converted.",
+            ),
+        )
+
+    existing_invoice = query_db("SELECT id FROM invoices WHERE client_id=? AND description LIKE ?", (client_id, "%CRM onboarding%"), one=True)
+    if not existing_invoice:
+        invoice_number = f"PPT-{client_id}-{datetime.now().strftime('%Y%m%d')}"
+        execute_db(
+            """INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description, payment_link)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                client_id,
+                invoice_number,
+                today_iso(),
+                "",
+                0,
+                "Draft",
+                "CRM onboarding invoice - update amount before sending.",
+                "",
+            ),
+        )
+
+    execute_db("UPDATE crm_leads SET status='Converted', updated_at=CURRENT_TIMESTAMP WHERE id=?", (lead_id,))
+    flash("Lead converted. Client, tax return, and draft invoice were created.", "success")
     return redirect(url_for("crm"))
 
 
@@ -813,6 +859,11 @@ def settings():
 @app.errorhandler(403)
 def forbidden(_):
     return render_template("error.html", message="You do not have access to that page."), 403
+
+
+@app.errorhandler(404)
+def not_found(_):
+    return render_template("error.html", message="That page was not found."), 404
 
 
 @app.template_filter("currency")

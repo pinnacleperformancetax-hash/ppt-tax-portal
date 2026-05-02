@@ -716,8 +716,49 @@ def payments():
 @login_required
 @admin_required
 def mark_invoice_paid(invoice_id):
+    invoice = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
+    if not invoice:
+        flash("Invoice not found.", "danger")
+        return redirect(url_for("payments"))
+
     execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?", (invoice_id,))
-    flash("Invoice marked paid.", "success")
+
+    existing_payment = query_db(
+        "SELECT id FROM payments WHERE invoice_id=? AND status='Paid' LIMIT 1",
+        (invoice_id,),
+        one=True,
+    )
+    if not existing_payment:
+        execute_db(
+            """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
+               VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
+            (invoice_id, invoice["amount"], invoice["payment_link"] or "", "Marked paid manually"),
+        )
+
+    income_category = query_db(
+        "SELECT id FROM categories WHERE name='Tax Preparation Income' AND kind='income' LIMIT 1",
+        one=True,
+    )
+    existing_transaction = query_db(
+        "SELECT id FROM transactions WHERE notes=? LIMIT 1",
+        (f"Auto-created from paid invoice #{invoice_id}",),
+        one=True,
+    )
+    if not existing_transaction:
+        execute_db(
+            """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
+               VALUES (?, ?, 'income', ?, ?, ?, ?)""",
+            (
+                datetime.now().strftime("%Y-%m-%d"),
+                f"Invoice payment #{invoice['invoice_number'] or invoice_id}",
+                income_category["id"] if income_category else None,
+                invoice["client_id"],
+                invoice["amount"],
+                f"Auto-created from paid invoice #{invoice_id}",
+            ),
+        )
+
+    flash("Invoice marked paid and income recorded.", "success")
     return redirect(url_for("payments"))
 
 
@@ -814,6 +855,42 @@ def settings():
     users = query_db("""SELECT u.*, cl.name AS client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.created_at DESC""")
     clients_rows = query_db("SELECT * FROM clients ORDER BY name")
     return render_template("settings.html", users=users, clients=clients_rows)
+
+
+
+@app.route("/reports")
+@login_required
+@admin_required
+def reports():
+    income = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", one=True)["total"]
+    expenses = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", one=True)["total"]
+    paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
+    unpaid = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    transaction_rows = query_db(
+        """SELECT t.*, c.name AS category_name, cl.name AS client_name
+           FROM transactions t
+           LEFT JOIN categories c ON c.id=t.category_id
+           LEFT JOIN clients cl ON cl.id=t.client_id
+           ORDER BY t.date DESC, t.id DESC
+           LIMIT 50"""
+    )
+    invoice_rows = query_db(
+        """SELECT i.*, cl.name AS client_name
+           FROM invoices i
+           LEFT JOIN clients cl ON cl.id=i.client_id
+           ORDER BY i.issue_date DESC, i.id DESC
+           LIMIT 50"""
+    )
+    return render_template(
+        "reports.html",
+        income=income,
+        expenses=expenses,
+        profit=income - expenses,
+        paid=paid,
+        unpaid=unpaid,
+        transactions=transaction_rows,
+        invoices=invoice_rows,
+    )
 
 
 @app.route("/reports/export/transactions.csv")

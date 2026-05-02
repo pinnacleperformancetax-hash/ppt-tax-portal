@@ -140,6 +140,63 @@ def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, defin
         pass
 
 
+
+def clean_and_seed_categories(db: sqlite3.Connection) -> None:
+    categories = [
+        ("Tax Preparation Income", "income"),
+        ("Bookkeeping Income", "income"),
+        ("Consulting Income", "income"),
+        ("Office Supplies", "expense"),
+        ("Software & Subscriptions", "expense"),
+        ("Advertising & Marketing", "expense"),
+        ("Travel", "expense"),
+        ("Meals", "expense"),
+    ]
+
+    # Move transactions pointing to duplicate category rows back to the first matching category.
+    duplicate_groups = db.execute(
+        """SELECT name, kind, MIN(id) AS keep_id
+           FROM categories
+           GROUP BY name, kind
+           HAVING COUNT(*) > 1"""
+    ).fetchall()
+
+    for group in duplicate_groups:
+        duplicate_ids = [
+            row[0] for row in db.execute(
+                "SELECT id FROM categories WHERE name=? AND kind=? AND id<>?",
+                (group["name"], group["kind"], group["keep_id"]),
+            ).fetchall()
+        ]
+        for duplicate_id in duplicate_ids:
+            db.execute(
+                "UPDATE transactions SET category_id=? WHERE category_id=?",
+                (group["keep_id"], duplicate_id),
+            )
+
+    # Delete duplicate category rows but keep the first one.
+    db.execute(
+        """DELETE FROM categories
+           WHERE id NOT IN (
+               SELECT MIN(id)
+               FROM categories
+               GROUP BY name, kind
+           )"""
+    )
+
+    # Add missing default categories without creating duplicates.
+    for name, kind in categories:
+        existing = db.execute(
+            "SELECT id FROM categories WHERE name=? AND kind=? LIMIT 1",
+            (name, kind),
+        ).fetchone()
+        if not existing:
+            db.execute(
+                "INSERT INTO categories(name, kind) VALUES (?, ?)",
+                (name, kind),
+            )
+
+
 def init_db() -> None:
     ensure_dirs()
     db = sqlite3.connect(DB_PATH)
@@ -278,18 +335,7 @@ def init_db() -> None:
     add_column_if_missing(db, "clients", "address", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
 
-    categories = [
-        ("Tax Preparation Income", "income"),
-        ("Bookkeeping Income", "income"),
-        ("Consulting Income", "income"),
-        ("Office Supplies", "expense"),
-        ("Software & Subscriptions", "expense"),
-        ("Advertising & Marketing", "expense"),
-        ("Travel", "expense"),
-        ("Meals", "expense"),
-    ]
-    for name, kind in categories:
-        db.execute("INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)", (name, kind))
+    clean_and_seed_categories(db)
 
     admin = db.execute("SELECT id FROM users WHERE lower(email)=?", ("admin@pinnacleperformancetax.com",)).fetchone()
     admin_hash = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "ChangeMe123!"), method="pbkdf2:sha256")
@@ -441,6 +487,18 @@ def dashboard():
     )
 
 
+
+@app.route("/maintenance/clean-categories")
+@login_required
+@admin_required
+def maintenance_clean_categories():
+    db = get_db()
+    clean_and_seed_categories(db)
+    db.commit()
+    flash("Bookkeeping categories cleaned.", "success")
+    return redirect(url_for("transactions"))
+
+
 @app.route("/clients", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -476,7 +534,7 @@ def transactions():
                        WHERE (?='admin' OR t.client_id=?)
                        ORDER BY t.date DESC, t.id DESC""",
                     (current_user.role, current_user.client_id or -1))
-    categories = query_db("SELECT * FROM categories ORDER BY kind, name")
+    categories = query_db("SELECT MIN(id) AS id, name, kind FROM categories GROUP BY name, kind ORDER BY kind, name")
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
     return render_template("transactions.html", transactions=rows, categories=categories, clients=clients_rows)
 

@@ -9,8 +9,14 @@ from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
 
-from flask import Flask, g, render_template, request, redirect, url_for, flash, send_file, abort
-from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
+from flask import (
+    Flask, g, render_template, request, redirect, url_for,
+    flash, send_file, abort
+)
+from flask_login import (
+    LoginManager, UserMixin, current_user, login_required,
+    login_user, logout_user
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -58,6 +64,7 @@ def close_db(_error=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
+
 
 @app.context_processor
 def inject_brand():
@@ -129,33 +136,126 @@ def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, defin
 
 def init_db() -> None:
     ensure_dirs()
-
     db = sqlite3.connect(DB_PATH)
 
-    schema_path = BASE_DIR / "schema.sql"
-    if not schema_path.exists():
-        schema_path = Path("schema.sql")
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS clients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        business_name TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        client_type TEXT,
+        status TEXT DEFAULT 'Active',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
 
-    with open(schema_path, "r", encoding="utf-8") as f:
-        db.executescript(f.read())
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'client',
+        client_id INTEGER,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        kind TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT,
+        description TEXT,
+        type TEXT,
+        category_id INTEGER,
+        client_id INTEGER,
+        amount REAL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(category_id) REFERENCES categories(id),
+        FOREIGN KEY(client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS tax_returns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        tax_year TEXT,
+        service_type TEXT,
+        status TEXT,
+        due_date TEXT,
+        fee REAL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        document_name TEXT,
+        original_filename TEXT,
+        file_path TEXT,
+        tax_year TEXT,
+        status TEXT DEFAULT 'Received',
+        notes TEXT,
+        uploaded_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(client_id) REFERENCES clients(id),
+        FOREIGN KEY(uploaded_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS invoices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        invoice_number TEXT,
+        issue_date TEXT,
+        due_date TEXT,
+        amount REAL DEFAULT 0,
+        status TEXT,
+        description TEXT,
+        payment_link TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS appointments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        title TEXT,
+        start_at TEXT,
+        end_at TEXT,
+        location TEXT,
+        meeting_link TEXT,
+        notes TEXT,
+        status TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(client_id) REFERENCES clients(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS crm_leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        status TEXT DEFAULT 'New',
+        source TEXT,
+        follow_up_date TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
 
     add_column_if_missing(db, "clients", "address", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
-
-    db.execute(
-        """CREATE TABLE IF NOT EXISTS crm_leads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT,
-            email TEXT,
-            status TEXT DEFAULT 'New',
-            source TEXT,
-            follow_up_date TEXT,
-            notes TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )"""
-    )
 
     categories = [
         ("Tax Preparation Income", "income"),
@@ -169,10 +269,7 @@ def init_db() -> None:
     ]
 
     for name, kind in categories:
-        db.execute(
-            "INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)",
-            (name, kind),
-        )
+        db.execute("INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)", (name, kind))
 
     admin = db.execute(
         "SELECT id FROM users WHERE lower(email)=?",
@@ -211,7 +308,6 @@ def init_db() -> None:
 
     client = db.execute("SELECT id FROM clients WHERE lower(email)=?", ("client@example.com",)).fetchone()
     client_id = client[0] if client else 1
-
     sample_user = db.execute("SELECT id FROM users WHERE lower(email)=?", ("client@example.com",)).fetchone()
     if sample_user:
         db.execute(
@@ -228,6 +324,13 @@ def init_db() -> None:
     db.close()
 
 
+@app.before_request
+def bootstrap_database():
+    # This keeps the free Render instance from crashing if the SQLite DB is missing after redeploy.
+    if request.endpoint not in {"static"}:
+        init_db()
+
+
 @app.route("/init")
 def init():
     init_db()
@@ -237,20 +340,6 @@ def init():
 @app.route("/reset-admin-2026")
 def reset_admin_2026():
     init_db()
-    db = get_db()
-    password_hash = generate_password_hash("ChangeMe123!", method="pbkdf2:sha256")
-    admin = db.execute("SELECT id FROM users WHERE lower(email)=?", ("admin@pinnacleperformancetax.com",)).fetchone()
-    if admin:
-        db.execute(
-            "UPDATE users SET name=?, password_hash=?, role=?, is_active=1 WHERE lower(email)=?",
-            ("PPT Admin", password_hash, "admin", "admin@pinnacleperformancetax.com"),
-        )
-    else:
-        db.execute(
-            "INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)",
-            ("PPT Admin", "admin@pinnacleperformancetax.com", password_hash, "admin", 1),
-        )
-    db.commit()
     return "ADMIN RESET COMPLETE - Login with admin@pinnacleperformancetax.com / ChangeMe123!"
 
 
@@ -278,40 +367,39 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/dashboard")
 @app.route("/")
 @login_required
 def dashboard():
     client_filter = None if current_user.role == "admin" else current_user.client_id
-    where = "" if client_filter is None else " WHERE client_id = ? "
+    where = "" if client_filter is None else "WHERE client_id = ?"
     args = () if client_filter is None else (client_filter,)
 
     income = query_db(f"SELECT COALESCE(SUM(amount),0) total FROM transactions {where} AND type='income'" if where else "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", args if where else (), one=True)["total"]
     expenses = query_db(f"SELECT COALESCE(SUM(amount),0) total FROM transactions {where} AND type='expense'" if where else "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", args if where else (), one=True)["total"]
     open_invoices = query_db(f"SELECT COUNT(*) c FROM invoices {where} AND status!='Paid'" if where else "SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", args if where else (), one=True)["c"]
-    pending_docs = query_db(f"SELECT COUNT(*) c FROM documents {where} AND status!='Received'" if where else "SELECT COUNT(*) c FROM documents WHERE status!='Received'", args if where else (), one=True)["c"]
-    tax_returns = query_db(f"SELECT COUNT(*) c FROM tax_returns {where}", args if where else (), one=True)["c"]
-    appointments = query_db(f"SELECT COUNT(*) c FROM appointments {where}", args if where else (), one=True)["c"]
+    pending_docs = query_db(f"SELECT COUNT(*) c FROM documents {where} AND status='Received'" if where else "SELECT COUNT(*) c FROM documents WHERE status='Received'", args if where else (), one=True)["c"]
+    tax_returns_count = query_db(f"SELECT COUNT(*) c FROM tax_returns {where}" if where else "SELECT COUNT(*) c FROM tax_returns", args if where else (), one=True)["c"]
+    appointments_count = query_db(f"SELECT COUNT(*) c FROM appointments {where}" if where else "SELECT COUNT(*) c FROM appointments", args if where else (), one=True)["c"]
 
     recent_transactions = query_db(
-        f"""
-        SELECT t.*, c.name AS category_name, cl.name AS client_name
+        f"""SELECT t.*, c.name AS category_name, cl.name AS client_name
         FROM transactions t
         LEFT JOIN categories c ON c.id=t.category_id
         LEFT JOIN clients cl ON cl.id=t.client_id
         {where}
-        ORDER BY date DESC, id DESC LIMIT 8
-        """,
+        ORDER BY date DESC, id DESC LIMIT 8""",
         args if where else (),
     )
+
     upcoming_appointments = query_db(
-        f"""
-        SELECT a.*, cl.name AS client_name
+        f"""SELECT a.*, cl.name AS client_name
         FROM appointments a LEFT JOIN clients cl ON cl.id=a.client_id
         {where}
-        ORDER BY start_at ASC LIMIT 6
-        """,
+        ORDER BY start_at ASC LIMIT 6""",
         args if where else (),
     )
+
     return render_template(
         "dashboard.html",
         income=income,
@@ -319,8 +407,8 @@ def dashboard():
         balance=income - expenses,
         open_invoices=open_invoices,
         pending_docs=pending_docs,
-        tax_returns=tax_returns,
-        appointments=appointments,
+        tax_returns=tax_returns_count,
+        appointments=appointments_count,
         recent_transactions=recent_transactions,
         upcoming_appointments=upcoming_appointments,
     )
@@ -333,7 +421,7 @@ def clients():
     if request.method == "POST":
         execute_db(
             """INSERT INTO clients(name, business_name, email, phone, address, client_type, status, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("name"),
                 request.form.get("business_name"),
@@ -349,19 +437,15 @@ def clients():
         return redirect(url_for("clients"))
     rows = query_db("SELECT * FROM clients ORDER BY created_at DESC, id DESC")
     return render_template("clients.html", clients=rows)
-    
-
-    rows = query_db("SELECT * FROM clients ORDER BY created_at DESC, id DESC")
-    return render_template("clients.html", clients=rows)
 
 
 @app.route("/transactions", methods=["GET", "POST"])
 @login_required
-def transactions():   
+def transactions():
     if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("date"),
                 request.form.get("description"),
@@ -374,13 +458,14 @@ def transactions():
         )
         flash("Transaction added.", "success")
         return redirect(url_for("transactions"))
+
     rows = query_db(
         """SELECT t.*, c.name AS category_name, cl.name AS client_name
-           FROM transactions t
-           LEFT JOIN categories c ON c.id=t.category_id
-           LEFT JOIN clients cl ON cl.id=t.client_id
-           WHERE (?='admin' OR t.client_id=?)
-           ORDER BY t.date DESC, t.id DESC""",
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        LEFT JOIN clients cl ON cl.id=t.client_id
+        WHERE (?='admin' OR t.client_id=?)
+        ORDER BY t.date DESC, t.id DESC""",
         (current_user.role, current_user.client_id or -1),
     )
     categories = query_db("SELECT * FROM categories ORDER BY kind, name")
@@ -388,13 +473,14 @@ def transactions():
     return render_template("transactions.html", transactions=rows, categories=categories, clients=clients_rows)
 
 
+@app.route("/tax_returns", methods=["GET", "POST"])
 @app.route("/tax-returns", methods=["GET", "POST"])
 @login_required
 def tax_returns():
     if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO tax_returns(client_id, tax_year, service_type, status, due_date, fee, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("client_id"),
                 request.form.get("tax_year"),
@@ -407,11 +493,12 @@ def tax_returns():
         )
         flash("Tax return created.", "success")
         return redirect(url_for("tax_returns"))
+
     rows = query_db(
         """SELECT tr.*, cl.name AS client_name, cl.business_name
-           FROM tax_returns tr JOIN clients cl ON cl.id=tr.client_id
-           WHERE (?='admin' OR tr.client_id=?)
-           ORDER BY tr.tax_year DESC, tr.id DESC""",
+        FROM tax_returns tr JOIN clients cl ON cl.id=tr.client_id
+        WHERE (?='admin' OR tr.client_id=?)
+        ORDER BY tr.tax_year DESC, tr.id DESC""",
         (current_user.role, current_user.client_id or -1),
     )
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
@@ -424,7 +511,6 @@ def documents():
     if request.method == "POST":
         client_id = request.form.get("client_id") if current_user.role == "admin" else current_user.client_id
         uploaded = request.files.get("file")
-
         if not client_id:
             flash("Please select a client before saving a document.", "warning")
             return redirect(url_for("documents"))
@@ -444,7 +530,7 @@ def documents():
 
         execute_db(
             """INSERT INTO documents(client_id, document_name, original_filename, file_path, tax_year, status, notes, uploaded_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 client_id,
                 request.form.get("document_name") or "Uploaded Document",
@@ -461,9 +547,9 @@ def documents():
 
     rows = query_db(
         """SELECT d.*, cl.name AS client_name
-           FROM documents d JOIN clients cl ON cl.id=d.client_id
-           WHERE (?='admin' OR d.client_id=?)
-           ORDER BY d.created_at DESC, d.id DESC""",
+        FROM documents d JOIN clients cl ON cl.id=d.client_id
+        WHERE (?='admin' OR d.client_id=?)
+        ORDER BY d.created_at DESC, d.id DESC""",
         (current_user.role, current_user.client_id or -1),
     )
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
@@ -474,8 +560,6 @@ def documents():
 @login_required
 @admin_required
 def crm():
-
-    # CREATE LEAD
     if request.method == "POST":
         execute_db(
             """INSERT INTO crm_leads
@@ -494,7 +578,6 @@ def crm():
         flash("CRM lead saved.", "success")
         return redirect(url_for("crm"))
 
-    # DASHBOARD COUNTS
     stats = query_db("""
         SELECT
             COUNT(*) as total,
@@ -505,63 +588,67 @@ def crm():
     """, one=True)
 
     rows = query_db("SELECT * FROM crm_leads ORDER BY created_at DESC, id DESC")
-
     return render_template("crm.html", leads=rows, stats=stats)
 
 
-# UPDATE LEAD
 @app.route("/crm/<int:lead_id>/update", methods=["POST"])
 @login_required
 @admin_required
 def update_crm_lead(lead_id):
     execute_db(
         """UPDATE crm_leads
-           SET status=?, follow_up_date=?, notes=?, updated_at=CURRENT_TIMESTAMP
-           WHERE id=?""",
+        SET status=?, follow_up_date=?, notes=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?""",
         (
-            request.form.get("status"),
+            request.form.get("status") or "New",
             request.form.get("follow_up_date"),
             request.form.get("notes"),
             lead_id,
         ),
     )
-
     flash("CRM lead updated.", "success")
     return redirect(url_for("crm"))
 
 
-# 🔥 CONVERT LEAD TO CLIENT
 @app.route("/crm/<int:lead_id>/convert", methods=["POST"])
 @login_required
 @admin_required
 def convert_lead(lead_id):
-
     lead = query_db("SELECT * FROM crm_leads WHERE id=?", (lead_id,), one=True)
-
     if not lead:
         flash("Lead not found.", "danger")
         return redirect(url_for("crm"))
 
-    # INSERT INTO CLIENTS
-    execute_db(
-        """INSERT INTO clients (name, email, phone, status)
-           VALUES (?, ?, ?, ?)""",
-        (
-            lead["name"],
-            lead["email"],
-            lead["phone"],
-            "Active",
-        ),
-    )
+    existing_client = query_db(
+        "SELECT id FROM clients WHERE lower(email)=?",
+        ((lead["email"] or "").lower(),),
+        one=True,
+    ) if lead["email"] else None
 
-    # MARK LEAD AS CONVERTED
+    if existing_client:
+        client_id = existing_client["id"]
+    else:
+        client_id = execute_db(
+            """INSERT INTO clients(name, business_name, email, phone, client_type, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                lead["name"],
+                "",
+                lead["email"],
+                lead["phone"],
+                "CRM Lead",
+                "Active",
+                f"Converted from CRM. Source: {lead['source'] or ''}. Notes: {lead['notes'] or ''}",
+            ),
+        )
+
     execute_db(
-        "UPDATE crm_leads SET status='Converted' WHERE id=?",
+        "UPDATE crm_leads SET status='Converted', updated_at=CURRENT_TIMESTAMP WHERE id=?",
         (lead_id,),
     )
-
     flash("Lead converted to client.", "success")
     return redirect(url_for("crm"))
+
 
 @app.route("/invoices", methods=["GET", "POST"])
 @login_required
@@ -569,7 +656,7 @@ def invoices():
     if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description, payment_link)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("client_id"),
                 request.form.get("invoice_number"),
@@ -583,11 +670,12 @@ def invoices():
         )
         flash("Invoice created.", "success")
         return redirect(url_for("invoices"))
+
     rows = query_db(
         """SELECT i.*, cl.name AS client_name FROM invoices i
-           JOIN clients cl ON cl.id=i.client_id
-           WHERE (?='admin' OR i.client_id=?)
-           ORDER BY i.issue_date DESC, i.id DESC""",
+        JOIN clients cl ON cl.id=i.client_id
+        WHERE (?='admin' OR i.client_id=?)
+        ORDER BY i.issue_date DESC, i.id DESC""",
         (current_user.role, current_user.client_id or -1),
     )
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
@@ -600,7 +688,7 @@ def appointments():
     if request.method == "POST" and current_user.role == "admin":
         execute_db(
             """INSERT INTO appointments(client_id, title, start_at, end_at, location, meeting_link, notes, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("client_id") or None,
                 request.form.get("title"),
@@ -614,11 +702,12 @@ def appointments():
         )
         flash("Appointment added.", "success")
         return redirect(url_for("appointments"))
+
     rows = query_db(
         """SELECT a.*, cl.name AS client_name FROM appointments a
-           LEFT JOIN clients cl ON cl.id=a.client_id
-           WHERE (?='admin' OR a.client_id=?)
-           ORDER BY a.start_at ASC, a.id DESC""",
+        LEFT JOIN clients cl ON cl.id=a.client_id
+        WHERE (?='admin' OR a.client_id=?)
+        ORDER BY a.start_at ASC, a.id DESC""",
         (current_user.role, current_user.client_id or -1),
     )
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
@@ -631,9 +720,9 @@ def appointments():
 def export_transactions():
     rows = query_db(
         """SELECT t.date, t.description, t.type, c.name AS category, cl.name AS client, t.amount, t.notes
-           FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
-           LEFT JOIN clients cl ON cl.id=t.client_id
-           ORDER BY t.date DESC, t.id DESC"""
+        FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
+        LEFT JOIN clients cl ON cl.id=t.client_id
+        ORDER BY t.date DESC, t.id DESC"""
     )
     output = io.StringIO()
     writer = csv.writer(output)
@@ -652,7 +741,7 @@ def settings():
         client_id = request.form.get("client_id") or None
         password = request.form.get("password") or "Temp123!"
         execute_db(
-            "INSERT INTO users(name, email, password_hash, role, client_id, is_active) VALUES (?, ?, ?, ?, ?, ?)",
+            """INSERT INTO users(name, email, password_hash, role, client_id, is_active) VALUES (?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("name"),
                 request.form.get("email").lower(),

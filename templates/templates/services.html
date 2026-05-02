@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Services</h1>
+<p class="sub">Preset packages used for faster quoting, lead conversion, and invoice creation.</p>
+
+<div class="card">
+  <h2>Add Service Package</h2>
+  <form method="POST" class="grid grid-2">
+    <input name="name" placeholder="Service name" required>
+    <input name="category" placeholder="Category">
+    <input name="default_price" placeholder="Default price">
+    <textarea name="description" placeholder="Description"></textarea>
+    <div><button type="submit">Save Package</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Service Packages</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Category</th><th>Default Price</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for s in services %}
+        <tr><td>{{ s.name }}</td><td>{{ s.category }}</td><td class="money">{{ s.default_price|currency }}</td><td>{{ s.description }}</td></tr>
+      {% else %}
+        <tr><td colspan="4">No services yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

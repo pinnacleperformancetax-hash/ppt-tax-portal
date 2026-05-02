@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Payments</h1>
+<p class="sub">Track money due, paid invoices, draft invoices, and payment links.</p>
+
+<div class="metric-grid">
+  <div class="metric"><span>Paid Revenue</span><strong>{{ paid_total|currency }}</strong></div>
+  <div class="metric"><span>Unpaid Balance</span><strong>{{ unpaid_total|currency }}</strong></div>
+  <div class="metric"><span>Draft Invoices</span><strong>{{ draft_total }}</strong></div>
+  <div class="metric"><span>Payment Mode</span><strong>Links</strong></div>
+</div>
+
+<div class="card">
+  <h2>Invoice Payment Center</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Invoice</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Payment Link</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in invoices %}
+        <tr>
+          <td>{{ i.client_name }}<br><small>{{ i.client_email }}</small></td>
+          <td>{{ i.invoice_number }}</td>
+          <td>{{ i.status }}</td>
+          <td>{{ i.description }}</td>
+          <td class="money">{{ i.amount|currency }}</td>
+          <td>
+            {% if i.payment_link %}
+              <a class="btn" href="{{ i.payment_link }}" target="_blank">Open Pay Link</a>
+            {% else %}
+              <span class="empty">Add payment link on invoice page</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" action="/invoice/{{ i.id }}/mark-paid" style="display:inline;">
+              <button type="submit">Mark Paid</button>
+            </form>
+            <form method="POST" action="/invoice/{{ i.id }}/mark-sent" style="display:inline;">
+              <button class="btn-dark" type="submit">Mark Sent</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No invoices yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

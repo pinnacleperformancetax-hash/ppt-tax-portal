@@ -32,6 +32,12 @@
     <input name="phone" placeholder="Phone number">
     <input name="email" placeholder="Email address">
     <input name="source" placeholder="Source: Referral, Facebook, Google, Walk-in">
+    <select name="service_interest">
+      <option value="">Service interest</option>
+      {% for p in service_packages %}
+        <option value="{{ p.name }}">{{ p.name }} - {{ p.default_price|currency }}</option>
+      {% endfor %}
+    </select>
     <input type="date" name="follow_up_date">
     <textarea name="notes" placeholder="Notes"></textarea>
     <div><button type="submit">Save Lead</button></div>
@@ -62,6 +68,7 @@
       <div><small>Phone</small>{{ lead.phone or "—" }}</div>
       <div><small>Email</small>{{ lead.email or "—" }}</div>
       <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+      <div><small>Service</small>{{ lead.service_interest or "—" }}</div>
       <div><small>Notes</small>{{ lead.notes or "—" }}</div>
     </div>
 

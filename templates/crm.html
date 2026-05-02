@@ -49,12 +49,12 @@
     <div class="lead-actions">
       <form method="POST" action="/crm/{{ lead.id }}/update">
         <select name="status">
-          <option {% if lead.status=='New' %}selected{% endif %}>New</option>
-          <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
-          <option {% if lead.status=='Consultation Booked' %}selected{% endif %}>Consultation Booked</option>
-          <option {% if lead.status=='Filed' %}selected{% endif %}>Filed</option>
-          <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
-          <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
+          <option {% if lead.status=="New" %}selected{% endif %}>New</option>
+          <option {% if lead.status=="Contacted" %}selected{% endif %}>Contacted</option>
+          <option {% if lead.status=="Consultation Booked" %}selected{% endif %}>Consultation Booked</option>
+          <option {% if lead.status=="Filed" %}selected{% endif %}>Filed</option>
+          <option {% if lead.status=="Converted" %}selected{% endif %}>Converted</option>
+          <option {% if lead.status=="Lost" %}selected{% endif %}>Lost</option>
         </select>
 
         <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
@@ -63,7 +63,7 @@
       </form>
     </div>
 
-    {% if lead.status != 'Converted' %}
+    {% if lead.status != "Converted" %}
     <form method="POST" action="/crm/{{ lead.id }}/convert" style="margin-top:12px;">
       <button type="submit">Convert to Client</button>
     </form>

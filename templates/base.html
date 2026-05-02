@@ -304,59 +304,56 @@
 </head>
 
 <body>
-  {% if current_user.is_authenticated %}
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="brand-title">
-        Pinnacle<br>
-        Performance Tax<br>
-        and Accounting
-      </div>
+ {% if current_user.is_authenticated %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand-title">
+      Pinnacle<br>
+      Performance Tax<br>
+      and Accounting
+    </div>
 
-      <div class="brand-contact">
-        {{ brand.website }}<br>
-        {{ brand.email }}<br>
-        {{ brand.phone }}
-      </div>
+    <div class="brand-contact">
+      {{ brand.website }}<br>
+      {{ brand.email }}<br>
+      {{ brand.phone }}
+    </div>
 
-      <nav class="nav">
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
 
-        {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('clients') }}">Clients</a>
-        {% endif %}
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('clients') }}">Clients</a>
+      {% endif %}
 
-        <a href="{{ url_for('transactions') }}">Bookkeeping</a>
-        <a href="{{ url_for('tax_returns') }}">Tax Returns</a>
-        <a href="{{ url_for('documents') }}">Documents</a>
-        <a href="{{ url_for('invoices') }}">Invoices</a>
-        <a href="{{ url_for('appointments') }}">Appointments</a>
+      <a href="{{ url_for('transactions') }}">Bookkeeping</a>
+      <a href="{{ url_for('tax_returns') }}">Tax Returns</a>
+      <a href="{{ url_for('documents') }}">Documents</a>
+      <a href="{{ url_for('invoices') }}">Invoices</a>
+      <a href="{{ url_for('appointments') }}">Appointments</a>
 
-        {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('crm') }}">CRM</a>
-        <a href="{{ url_for('settings') }}">Users</a>
-        {% endif %}
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('crm') }}">CRM</a>
+      <a href="{{ url_for('settings') }}">Users</a>
+      {% endif %}
 
-        <a href="{{ url_for('logout') }}">Sign Out</a>
-      </nav>
-    </aside>
+      <a href="{{ url_for('logout') }}">Sign Out</a>
+    </nav>
+  </aside>
 
-    <main>
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-          <div class="flash">{{ message }}</div>
-        {% endfor %}
-      {% endwith %}
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
 
-      {% block content %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
 
-      <footer>
-        © {{ year }} Pinnacle Performance Tax and Accounting · Internal starter build.
-      </footer>
-    </main>
-  </div>
-  {% else %}
+{% else %}
+  <main style="max-width:500px;margin:80px auto;">
     {% block auth_content %}{% endblock %}
-  {% endif %}
-</body>
-</html>
+  </main>
+{% endif %}

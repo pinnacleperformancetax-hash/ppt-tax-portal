@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Payments</h1>
+
+<div class="card">
+    <h2>Make a Payment</h2>
+    <p>Select an invoice and complete payment using Clover.</p>
+
+    <form method="POST">
+        <label>Invoice ID</label>
+        <input type="text" name="invoice_id" placeholder="Enter invoice ID">
+
+        <label>Amount</label>
+        <input type="text" name="amount" placeholder="$0.00">
+
+        <button type="submit" class="btn">Pay with Clover</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Payment History</h2>
+    <p>No payments recorded yet.</p>
+</div>
+{% endblock %}

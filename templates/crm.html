@@ -1,89 +1,79 @@
-
 {% extends "base.html" %}
 {% block content %}
 
 <h1>CRM Leads</h1>
-<p class="sub">Track tax, bookkeeping, and accounting prospects.</p>
+<p class="sub">Track prospects, follow-ups, and client conversions.</p>
 
-<!-- OVERVIEW -->
-<div class="card">
-  <h3>Overview</h3>
-  <p><strong>Total Leads:</strong> {{ stats.total if stats else 0 }}</p>
-  <p><strong>New:</strong> {{ stats.new if stats else 0 }}</p>
-  <p><strong>Contacted:</strong> {{ stats.contacted if stats else 0 }}</p>
-  <p><strong>Converted:</strong> {{ stats.converted if stats else 0 }}</p>
+<div class="crm-overview">
+  <div class="metric"><span>Total Leads</span><strong>{{ stats.total if stats else 0 }}</strong></div>
+  <div class="metric"><span>New</span><strong>{{ stats.new if stats and stats.new else 0 }}</strong></div>
+  <div class="metric"><span>Contacted</span><strong>{{ stats.contacted if stats and stats.contacted else 0 }}</strong></div>
+  <div class="metric"><span>Converted</span><strong>{{ stats.converted if stats and stats.converted else 0 }}</strong></div>
 </div>
 
-<!-- ADD LEAD -->
 <div class="card">
-  <h3>Add New Lead</h3>
-  <form method="POST" style="display:grid; gap:10px;">
-    <input name="name" placeholder="Name" required>
-    <input name="phone" placeholder="Phone">
-    <input name="email" placeholder="Email">
-    <input name="source" placeholder="Source (Facebook, Referral, etc)">
+  <h2>Add New Lead</h2>
+  <form method="POST" class="grid grid-2">
+    <input name="name" placeholder="Lead name" required>
+    <input name="phone" placeholder="Phone number">
+    <input name="email" placeholder="Email address">
+    <input name="source" placeholder="Source: Referral, Facebook, Google, Walk-in">
     <input type="date" name="follow_up_date">
     <textarea name="notes" placeholder="Notes"></textarea>
-    <button type="submit">Save Lead</button>
+    <div><button type="submit">Save Lead</button></div>
   </form>
 </div>
 
-<!-- PIPELINE -->
 <div class="card">
-  <h3>Lead Pipeline</h3>
+  <h2>Lead Pipeline</h2>
 
   {% for lead in leads %}
-  <div style="border:1px solid #ddd; padding:15px; border-radius:10px; margin-bottom:15px;">
-
-    <!-- TOP INFO -->
-    <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
+  <div class="lead-card">
+    <div class="lead-top">
       <div>
-        <strong>{{ lead.name }}</strong><br>
-        {{ lead.phone }} | {{ lead.email }}<br>
-        <small>Source: {{ lead.source }}</small>
+        <div class="lead-name">{{ lead.name }}</div>
+        <div class="lead-source">{{ lead.source or "No source listed" }}</div>
       </div>
 
-      <div>
-        <strong>Status:</strong>
-        <span style="color:{% if lead.status == 'Converted' %}green{% else %}#555{% endif %}">
-          {{ lead.status }}
-        </span><br>
-        <small>Follow-Up: {{ lead.follow_up_date }}</small>
-      </div>
+      {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
+      <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
     </div>
 
-    <!-- ACTIONS -->
-    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+    <div class="lead-details">
+      <div><small>Phone</small>{{ lead.phone or "—" }}</div>
+      <div><small>Email</small>{{ lead.email or "—" }}</div>
+      <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+      <div><small>Notes</small>{{ lead.notes or "—" }}</div>
+    </div>
 
-      <!-- UPDATE -->
-      <form method="POST" action="/crm/{{ lead.id }}/update" style="display:flex; gap:5px; flex-wrap:wrap;">
+    <div class="lead-actions">
+      <form method="POST" action="/crm/{{ lead.id }}/update">
         <select name="status">
-          <option {% if lead.status=="New" %}selected{% endif %}>New</option>
-          <option {% if lead.status=="Contacted" %}selected{% endif %}>Contacted</option>
-          <option {% if lead.status=="Converted" %}selected{% endif %}>Converted</option>
+          <option {% if lead.status=='New' %}selected{% endif %}>New</option>
+          <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
+          <option {% if lead.status=='Consultation Booked' %}selected{% endif %}>Consultation Booked</option>
+          <option {% if lead.status=='Filed' %}selected{% endif %}>Filed</option>
+          <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
+          <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
         </select>
 
-        <input type="date" name="follow_up_date" value="{{ lead.follow_up_date }}">
-        <input name="notes" placeholder="Notes" value="{{ lead.notes }}">
+        <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
+        <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
         <button type="submit">Update</button>
       </form>
-
-      <!-- CONVERT -->
-      {% if lead.status != "Converted" %}
-      <form method="POST" action="/crm/{{ lead.id }}/convert">
-        <button type="submit" style="background:green; color:white;">
-          Convert to Client
-        </button>
-      </form>
-      {% else %}
-      <span style="color:green; font-weight:bold;">✔ Client</span>
-      {% endif %}
-
     </div>
 
+    {% if lead.status != 'Converted' %}
+    <form method="POST" action="/crm/{{ lead.id }}/convert" style="margin-top:12px;">
+      <button type="submit">Convert to Client</button>
+    </form>
+    {% else %}
+      <div class="client-badge">✓ Client Converted</div>
+    {% endif %}
   </div>
+  {% else %}
+    <p>No leads yet.</p>
   {% endfor %}
-
 </div>
 
 {% endblock %}

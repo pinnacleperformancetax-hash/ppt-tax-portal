@@ -1,28 +1,4 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Appointments</h1>
-<p class="sub">Track consultations, reviews, onboarding calls, and meetings.</p>
-{% if current_user.role == 'admin' %}
-<div class="card">
-  <h2>Add Appointment</h2>
-  <form method="POST" class="grid grid-3">
-    <select name="client_id"><option value="">No client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
-    <input name="title" placeholder="Title">
-    <input name="start_at" placeholder="Start date/time">
-    <input name="end_at" placeholder="End date/time">
-    <input name="location" placeholder="Location">
-    <input name="meeting_link" placeholder="Meeting link">
-    <select name="status"><option>Scheduled</option><option>Completed</option><option>Cancelled</option></select>
-    <textarea name="notes" placeholder="Notes"></textarea>
-    <div><button type="submit">Save Appointment</button></div>
-  </form>
-</div>
-{% endif %}
-<div class="card">
-  <h2>Appointment List</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Client</th><th>Title</th><th>Start</th><th>End</th><th>Location</th><th>Status</th></tr></thead>
-    <tbody>{% for a in appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.end_at }}</td><td>{{ a.location }}</td><td>{{ a.status }}</td></tr>{% else %}<tr><td colspan="6">No appointments yet.</td></tr>{% endfor %}</tbody>
-  </table></div>
-</div>
+{% extends "base.html" %}{% block content %}
+<h1>Appointments</h1>{% if current_user.role == 'admin' %}<div class="card"><h2>Add Appointment</h2><form method="POST" class="grid grid-2"><select name="client_id"><option value="">No client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select><input name="title" placeholder="Title"><input type="datetime-local" name="start_at"><input type="datetime-local" name="end_at"><input name="location" placeholder="Location"><input name="meeting_link" placeholder="Meeting link"><input name="status" value="Scheduled"><textarea name="notes" placeholder="Notes"></textarea><button>Add Appointment</button></form></div>{% endif %}
+<div class="card"><h2>Appointments</h2><table><tr><th>Client</th><th>Title</th><th>Start</th><th>End</th><th>Status</th></tr>{% for a in appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.end_at }}</td><td>{{ a.status }}</td></tr>{% endfor %}</table></div>
 {% endblock %}

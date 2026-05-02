@@ -1,16 +1,13 @@
 {% extends "base.html" %}
-{% block login_content %}
-<div class="login-wrap">
-  <form class="login-card" method="POST">
-    <h1>PPT Portal Login</h1>
-    <p class="sub">Secure access for tax, bookkeeping, CRM, and client workflow.</p>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category,message in messages %}
-        <div class="flash">{{ message }}</div>
-      {% endfor %}
-    {% endwith %}
-    <input name="email" placeholder="Email address" value="admin@pinnacleperformancetax.com" required style="margin-bottom:12px;">
-    <input name="password" type="password" placeholder="Password" required style="margin-bottom:16px;">
+{% block content %}
+<div style="max-width:420px;margin:90px auto;background:white;padding:34px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.08);">
+  <h1>PPT Portal Login</h1>
+  <p class="sub">Sign in to continue</p>
+  <form method="POST">
+    <input name="email" placeholder="Email" value="admin@pinnacleperformancetax.com" required>
+    <br><br>
+    <input name="password" type="password" placeholder="Password" required>
+    <br><br>
     <button type="submit" style="width:100%;">Login</button>
   </form>
 </div>

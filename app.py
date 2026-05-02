@@ -274,12 +274,27 @@ def init_db() -> None:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS service_packages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        category TEXT,
+        default_price REAL DEFAULT 0,
+        description TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     """)
 
     add_column_if_missing(db, "clients", "address", "TEXT")
     add_column_if_missing(db, "clients", "portal_status", "TEXT DEFAULT 'Active'")
     add_column_if_missing(db, "clients", "plan", "TEXT DEFAULT 'Internal'")
     add_column_if_missing(db, "clients", "next_billing_date", "TEXT")
+    add_column_if_missing(db, "clients", "service_package", "TEXT")
+    add_column_if_missing(db, "clients", "payment_status", "TEXT DEFAULT 'Not Started'")
+    add_column_if_missing(db, "invoices", "payment_provider", "TEXT DEFAULT 'Manual'")
+    add_column_if_missing(db, "invoices", "paid_at", "TEXT")
+    add_column_if_missing(db, "crm_leads", "service_interest", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
 
     categories = [
@@ -294,6 +309,19 @@ def init_db() -> None:
     ]
     for name, kind in categories:
         db.execute("INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)", (name, kind))
+
+    service_packages = [
+        ("Basic Tax Return", "Tax", 250, "Standard individual tax preparation starting package."),
+        ("Business Tax Return", "Tax", 500, "Business return preparation starting package."),
+        ("Monthly Bookkeeping", "Bookkeeping", 300, "Recurring bookkeeping package."),
+        ("Tax Strategy Session", "Consulting", 150, "One-on-one tax strategy consultation."),
+        ("VIP Tax + Bookkeeping", "Premium", 750, "Premium bundled client package."),
+    ]
+    for name, category, default_price, description in service_packages:
+        db.execute(
+            "INSERT OR IGNORE INTO service_packages(name, category, default_price, description, is_active) VALUES (?, ?, ?, ?, 1)",
+            (name, category, default_price, description),
+        )
 
     admin = db.execute("SELECT id FROM users WHERE lower(email)=?", ("admin@pinnacleperformancetax.com",)).fetchone()
     if admin:
@@ -595,8 +623,8 @@ def crm():
     if request.method == "POST":
         execute_db(
             """INSERT INTO crm_leads
-            (name, phone, email, status, source, follow_up_date, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (name, phone, email, status, source, follow_up_date, notes, service_interest)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 request.form.get("name"),
                 request.form.get("phone"),
@@ -605,6 +633,7 @@ def crm():
                 request.form.get("source"),
                 request.form.get("follow_up_date"),
                 request.form.get("notes"),
+                request.form.get("service_interest"),
             ),
         )
         flash("CRM lead saved.", "success")
@@ -645,6 +674,7 @@ def crm():
         item["urgency"] = lead_urgency(item.get("follow_up_date"))
         enhanced.append(item)
 
+    service_packages = query_db("SELECT * FROM service_packages WHERE is_active=1 ORDER BY category, default_price")
     return render_template(
         "crm.html",
         leads=enhanced,
@@ -652,6 +682,7 @@ def crm():
         search=search,
         status_filter=status_filter,
         source_filter=source_filter,
+        service_packages=service_packages,
     )
 
 
@@ -725,21 +756,27 @@ def convert_lead(lead_id):
             ),
         )
 
+    package_name = lead["service_interest"] if "service_interest" in lead.keys() else None
+    package = query_db("SELECT * FROM service_packages WHERE name=?", (package_name,), one=True) if package_name else None
+    invoice_amount = package["default_price"] if package else 250
+    invoice_description = package["name"] if package else "CRM onboarding invoice - update amount before sending."
+
     existing_invoice = query_db("SELECT id FROM invoices WHERE client_id=? AND description LIKE ?", (client_id, "%CRM onboarding%"), one=True)
     if not existing_invoice:
         invoice_number = f"PPT-{client_id}-{datetime.now().strftime('%Y%m%d')}"
         execute_db(
-            """INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description, payment_link)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description, payment_link, payment_provider)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 client_id,
                 invoice_number,
                 today_iso(),
                 "",
-                0,
+                invoice_amount,
                 "Draft",
-                "CRM onboarding invoice - update amount before sending.",
+                invoice_description,
                 "",
+                "Manual",
             ),
         )
 
@@ -810,6 +847,116 @@ def appointments():
     )
     clients_rows = query_db("SELECT * FROM clients ORDER BY name") if current_user.role == "admin" else []
     return render_template("appointments.html", appointments=rows, clients=clients_rows)
+
+
+
+@app.route("/invoice/<int:invoice_id>/mark-paid", methods=["POST"])
+@login_required
+@admin_required
+def mark_invoice_paid(invoice_id):
+    execute_db(
+        "UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP WHERE id=?",
+        (invoice_id,),
+    )
+    flash("Invoice marked paid.", "success")
+    return redirect(url_for("invoices"))
+
+
+@app.route("/invoice/<int:invoice_id>/mark-sent", methods=["POST"])
+@login_required
+@admin_required
+def mark_invoice_sent(invoice_id):
+    execute_db(
+        "UPDATE invoices SET status='Sent' WHERE id=?",
+        (invoice_id,),
+    )
+    flash("Invoice marked sent.", "success")
+    return redirect(url_for("invoices"))
+
+
+@app.route("/payments")
+@login_required
+@admin_required
+def payments():
+    rows = query_db(
+        """SELECT i.*, cl.name AS client_name, cl.email AS client_email
+        FROM invoices i
+        JOIN clients cl ON cl.id=i.client_id
+        ORDER BY
+          CASE
+            WHEN i.status='Overdue' THEN 1
+            WHEN i.status='Sent' THEN 2
+            WHEN i.status='Draft' THEN 3
+            WHEN i.status='Paid' THEN 4
+            ELSE 5
+          END,
+          i.issue_date DESC,
+          i.id DESC"""
+    )
+    paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
+    unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    draft_total = query_db("SELECT COUNT(*) c FROM invoices WHERE status='Draft'", one=True)["c"]
+    return render_template("payments.html", invoices=rows, paid_total=paid_total, unpaid_total=unpaid_total, draft_total=draft_total)
+
+
+@app.route("/services", methods=["GET", "POST"])
+@login_required
+@admin_required
+def services():
+    if request.method == "POST":
+        execute_db(
+            """INSERT INTO service_packages(name, category, default_price, description, is_active)
+            VALUES (?, ?, ?, ?, ?)""",
+            (
+                request.form.get("name"),
+                request.form.get("category"),
+                money(request.form.get("default_price")),
+                request.form.get("description"),
+                1,
+            ),
+        )
+        flash("Service package saved.", "success")
+        return redirect(url_for("services"))
+
+    rows = query_db("SELECT * FROM service_packages ORDER BY category, default_price")
+    return render_template("services.html", services=rows)
+
+
+@app.route("/followups")
+@login_required
+@admin_required
+def followups():
+    rows = query_db(
+        """SELECT * FROM crm_leads
+        WHERE status!='Converted'
+        ORDER BY
+          CASE
+            WHEN follow_up_date IS NULL OR follow_up_date='' THEN 4
+            WHEN follow_up_date < date('now') THEN 1
+            WHEN follow_up_date = date('now') THEN 2
+            ELSE 3
+          END,
+          follow_up_date ASC,
+          created_at DESC"""
+    )
+    enhanced = []
+    for row in rows:
+        item = dict(row)
+        item["urgency"] = lead_urgency(item.get("follow_up_date"))
+        enhanced.append(item)
+
+    overdue = sum(1 for r in enhanced if r["urgency"] == "overdue")
+    today_count = sum(1 for r in enhanced if r["urgency"] == "today")
+    upcoming = sum(1 for r in enhanced if r["urgency"] == "upcoming")
+
+    return render_template(
+        "followups.html",
+        leads=enhanced,
+        overdue=overdue,
+        today_count=today_count,
+        upcoming=upcoming,
+    )
+
 
 
 @app.route("/reports/export/transactions.csv")

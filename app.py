@@ -7,7 +7,8 @@ import sqlite3
 from functools import wraps
 from pathlib import Path
 from uuid import uuid4
-from datetime import datetime, date
+from datetime import datetime
+from urllib.parse import urlparse, date
 
 from flask import (
     Flask, g, render_template, request, redirect, url_for,
@@ -125,6 +126,16 @@ def money(value) -> float:
     except Exception:
         return 0.0
 
+
+
+def safe_payment_link(link: str) -> str:
+    link = (link or "").strip()
+    if not link:
+        return ""
+    parsed = urlparse(link)
+    if parsed.scheme not in {"http", "https"}:
+        return ""
+    return link
 
 def add_column_if_missing(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     try:
@@ -857,145 +868,81 @@ def appointments():
 
 
 
+
+
+@app.route("/payments", methods=["GET", "POST"])
+@login_required
+@admin_required
+def payments():
+    if request.method == "POST":
+        invoice_id = request.form.get("invoice_id")
+        payment_link = safe_payment_link(request.form.get("payment_link") or "")
+        payment_notes = request.form.get("payment_notes") or ""
+        action = request.form.get("action") or "save"
+
+        if not invoice_id:
+            flash("Please select an invoice.", "danger")
+            return redirect(url_for("payments"))
+
+        invoice = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
+        if not invoice:
+            flash("Invoice not found.", "danger")
+            return redirect(url_for("payments"))
+
+        if action == "mark_paid":
+            execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?", (invoice_id,))
+            flash("Invoice marked paid.", "success")
+            return redirect(url_for("payments"))
+
+        if action == "mark_sent":
+            execute_db("UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?", (invoice_id,))
+            flash("Invoice marked sent.", "success")
+            return redirect(url_for("payments"))
+
+        if not payment_link:
+            flash("Paste a valid Clover payment link beginning with https://", "danger")
+            return redirect(url_for("payments"))
+
+        new_status = "Sent" if action == "save_and_send" else (invoice["status"] or "Draft")
+        execute_db(
+            """UPDATE invoices
+               SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status=?
+               WHERE id=?""",
+            (payment_link, payment_link, payment_notes, new_status, invoice_id),
+        )
+        flash("Clover payment link saved.", "success")
+        return redirect(url_for("payments"))
+
+    invoices = query_db(
+        """SELECT i.*, cl.name AS client_name, cl.email AS client_email
+           FROM invoices i
+           LEFT JOIN clients cl ON cl.id=i.client_id
+           ORDER BY i.created_at DESC, i.id DESC"""
+    )
+    paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
+    unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    ready_count = query_db("SELECT COUNT(*) c FROM invoices WHERE payment_link IS NOT NULL AND payment_link!='' AND status!='Paid'", one=True)["c"]
+    missing_link_count = query_db("SELECT COUNT(*) c FROM invoices WHERE (payment_link IS NULL OR payment_link='') AND status!='Paid'", one=True)["c"]
+
+    return render_template("payments.html", invoices=invoices, paid_total=paid_total, unpaid_total=unpaid_total, ready_count=ready_count, missing_link_count=missing_link_count)
+
+
 @app.route("/invoice/<int:invoice_id>/mark-paid", methods=["POST"])
 @login_required
 @admin_required
 def mark_invoice_paid(invoice_id):
-    execute_db(
-        "UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP WHERE id=?",
-        (invoice_id,),
-    )
+    execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?", (invoice_id,))
     flash("Invoice marked paid.", "success")
-    return redirect(url_for("invoices"))
+    return redirect(url_for("payments"))
 
 
 @app.route("/invoice/<int:invoice_id>/mark-sent", methods=["POST"])
 @login_required
 @admin_required
 def mark_invoice_sent(invoice_id):
-    execute_db(
-        "UPDATE invoices SET status='Sent' WHERE id=?",
-        (invoice_id,),
-    )
+    execute_db("UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?", (invoice_id,))
     flash("Invoice marked sent.", "success")
-    return redirect(url_for("invoices"))
-
-
-
-@app.route("/invoice/<int:invoice_id>/update-payment", methods=["POST"])
-@login_required
-@admin_required
-def update_invoice_payment(invoice_id):
-    payment_link = (request.form.get("payment_link") or request.form.get("clover_link") or "").strip()
-    payment_notes = request.form.get("payment_notes") or ""
-    provider = request.form.get("payment_provider") or "Clover"
-
-    execute_db(
-        """UPDATE invoices
-        SET payment_link=?, clover_link=?, payment_provider=?, payment_notes=?
-        WHERE id=?""",
-        (payment_link, payment_link, provider, payment_notes, invoice_id),
-    )
-    flash("Clover payment link saved.", "success")
     return redirect(url_for("payments"))
-
-
-@app.route("/invoice/<int:invoice_id>/send-clover", methods=["POST"])
-@login_required
-@admin_required
-def send_clover_invoice(invoice_id):
-    execute_db(
-        "UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?",
-        (invoice_id,),
-    )
-    flash("Invoice marked sent with Clover payment link.", "success")
-    return redirect(url_for("payments"))
-
-
-@app.route("/payments")
-@login_required
-@admin_required
-def payments():
-    rows = query_db(
-        """SELECT i.*, cl.name AS client_name, cl.email AS client_email
-        FROM invoices i
-        JOIN clients cl ON cl.id=i.client_id
-        ORDER BY
-          CASE
-            WHEN i.status='Overdue' THEN 1
-            WHEN i.status='Sent' THEN 2
-            WHEN i.status='Draft' THEN 3
-            WHEN i.status='Paid' THEN 4
-            ELSE 5
-          END,
-          i.issue_date DESC,
-          i.id DESC"""
-    )
-    paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
-    unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
-    draft_total = query_db("SELECT COUNT(*) c FROM invoices WHERE status='Draft'", one=True)["c"]
-    return render_template("payments.html", invoices=rows, paid_total=paid_total, unpaid_total=unpaid_total, draft_total=draft_total)
-
-
-@app.route("/services", methods=["GET", "POST"])
-@login_required
-@admin_required
-def services():
-    if request.method == "POST":
-        execute_db(
-            """INSERT INTO service_packages(name, category, default_price, description, is_active)
-            VALUES (?, ?, ?, ?, ?)""",
-            (
-                request.form.get("name"),
-                request.form.get("category"),
-                money(request.form.get("default_price")),
-                request.form.get("description"),
-                1,
-            ),
-        )
-        flash("Service package saved.", "success")
-        return redirect(url_for("services"))
-
-    rows = query_db("SELECT * FROM service_packages ORDER BY category, default_price")
-    return render_template("services.html", services=rows)
-
-
-@app.route("/followups")
-@login_required
-@admin_required
-def followups():
-    rows = query_db(
-        """SELECT * FROM crm_leads
-        WHERE status!='Converted'
-        ORDER BY
-          CASE
-            WHEN follow_up_date IS NULL OR follow_up_date='' THEN 4
-            WHEN follow_up_date < date('now') THEN 1
-            WHEN follow_up_date = date('now') THEN 2
-            ELSE 3
-          END,
-          follow_up_date ASC,
-          created_at DESC"""
-    )
-    enhanced = []
-    for row in rows:
-        item = dict(row)
-        item["urgency"] = lead_urgency(item.get("follow_up_date"))
-        enhanced.append(item)
-
-    overdue = sum(1 for r in enhanced if r["urgency"] == "overdue")
-    today_count = sum(1 for r in enhanced if r["urgency"] == "today")
-    upcoming = sum(1 for r in enhanced if r["urgency"] == "upcoming")
-
-    return render_template(
-        "followups.html",
-        leads=enhanced,
-        overdue=overdue,
-        today_count=today_count,
-        upcoming=upcoming,
-    )
-
-
 
 @app.route("/reports/export/transactions.csv")
 @login_required

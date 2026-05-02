@@ -5,120 +5,57 @@
 <title>PPT Portal</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f6f7fb;
-  margin: 0;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 220px;
-  background: #0f172a;
-  color: white;
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  padding: 20px;
-}
-
-/* Main Content */
-.main {
-  margin-left: 240px;
-  padding: 30px;
-}
-
-/* Cards */
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
-}
-
-/* Buttons */
-button {
-  background: #11823b;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-/* CRM Metrics */
-.crm-overview {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.metric {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-/* Forms */
-.grid {
-  display: grid;
-  gap: 10px;
-}
-
-.grid-2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-input, textarea, select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  width: 100%;
-}
-
-/* Lead Cards */
-.lead-card {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  margin-top: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-/* Status Colors */
-.status-pill {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
-.status-new { background: #e5e7eb; }
-.status-contacted { background: #bfdbfe; }
-.status-converted { background: #bbf7d0; }
-.status-lost { background: #fecaca; }
-
+body { margin:0; font-family:Arial,sans-serif; background:#f6f7fb; }
+.sidebar { width:240px; background:#0f172a; color:white; position:fixed; top:0; bottom:0; padding:25px; }
+.sidebar a { display:block; color:white; text-decoration:none; margin:14px 0; font-weight:bold; }
+.main { margin-left:260px; padding:30px; }
+.auth { min-height:100vh; display:flex; justify-content:center; align-items:center; }
+.card { background:white; padding:25px; border-radius:14px; box-shadow:0 5px 20px rgba(0,0,0,.08); margin-bottom:20px; }
+button { background:#11823b; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; }
+input, textarea, select { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; }
+.grid { display:grid; gap:12px; }
+.grid-2 { grid-template-columns:1fr 1fr; }
+.crm-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin:20px 0; }
+.metric { background:white; padding:18px; border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
+.metric strong { display:block; font-size:28px; color:#11823b; }
+.lead-card { background:white; padding:18px; border-radius:14px; margin-top:15px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
+.status-pill { padding:6px 12px; border-radius:999px; font-size:12px; font-weight:bold; }
+.status-new { background:#e5e7eb; }
+.status-contacted { background:#bfdbfe; }
+.status-converted { background:#bbf7d0; }
+.status-lost { background:#fecaca; }
 </style>
 </head>
 
 <body>
 
+{% if not current_user.is_authenticated %}
+  <div class="auth">
+    {% block content %}{% endblock %}
+  </div>
+{% else %}
+
 <div class="sidebar">
   <h2>PPT</h2>
   <p>Pinnacle Performance Tax</p>
+
+  <a href="/dashboard">Dashboard</a>
+  <a href="/clients">Clients</a>
+  <a href="/transactions">Bookkeeping</a>
+  <a href="/tax_returns">Tax Returns</a>
+  <a href="/documents">Documents</a>
+  <a href="/invoices">Invoices</a>
+  <a href="/appointments">Appointments</a>
+  <a href="/crm">CRM</a>
+  <a href="/settings">Users</a>
+  <a href="/logout">Sign Out</a>
 </div>
 
 <div class="main">
-  {% block content %}
-  {% endblock %}
+  {% block content %}{% endblock %}
 </div>
+
+{% endif %}
 
 </body>
 </html>

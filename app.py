@@ -399,6 +399,18 @@ def dashboard():
         args if where else (),
     )
 
+    active_clients = query_db("SELECT COUNT(*) c FROM clients WHERE status='Active'", one=True)["c"]
+    crm_total = query_db("SELECT COUNT(*) c FROM crm_leads", one=True)["c"]
+    crm_new = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='New'", one=True)["c"]
+    crm_converted = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='Converted'", one=True)["c"]
+    unpaid_invoice_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+
+    recent_leads = query_db(
+        """SELECT * FROM crm_leads
+        ORDER BY created_at DESC, id DESC
+        LIMIT 6"""
+    )
+
     return render_template(
         "dashboard.html",
         income=income,
@@ -408,8 +420,14 @@ def dashboard():
         pending_docs=pending_docs,
         tax_returns=tax_returns_count,
         appointments=appointments_count,
+        active_clients=active_clients,
+        crm_total=crm_total,
+        crm_new=crm_new,
+        crm_converted=crm_converted,
+        unpaid_invoice_total=unpaid_invoice_total,
         recent_transactions=recent_transactions,
         upcoming_appointments=upcoming_appointments,
+        recent_leads=recent_leads,
     )
 
 
@@ -580,14 +598,49 @@ def crm():
     stats = query_db("""
         SELECT
             COUNT(*) as total,
-            SUM(CASE WHEN status='New' THEN 1 ELSE 0 END) as new,
-            SUM(CASE WHEN status='Contacted' THEN 1 ELSE 0 END) as contacted,
-            SUM(CASE WHEN status='Converted' THEN 1 ELSE 0 END) as converted
+            COALESCE(SUM(CASE WHEN status='New' THEN 1 ELSE 0 END), 0) as new,
+            COALESCE(SUM(CASE WHEN status='Contacted' THEN 1 ELSE 0 END), 0) as contacted,
+            COALESCE(SUM(CASE WHEN status='Converted' THEN 1 ELSE 0 END), 0) as converted
         FROM crm_leads
     """, one=True)
 
-    rows = query_db("SELECT * FROM crm_leads ORDER BY created_at DESC, id DESC")
-    return render_template("crm.html", leads=rows, stats=stats)
+    search = request.args.get("search", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    source_filter = request.args.get("source", "").strip()
+
+    filters = []
+    params = []
+
+    if search:
+        filters.append("(name LIKE ? OR phone LIKE ? OR email LIKE ? OR notes LIKE ?)")
+        like = f"%{search}%"
+        params.extend([like, like, like, like])
+
+    if status_filter:
+        filters.append("status = ?")
+        params.append(status_filter)
+
+    if source_filter:
+        filters.append("source LIKE ?")
+        params.append(f"%{source_filter}%")
+
+    where_clause = "WHERE " + " AND ".join(filters) if filters else ""
+
+    rows = query_db(
+        f"""SELECT * FROM crm_leads
+        {where_clause}
+        ORDER BY created_at DESC, id DESC""",
+        tuple(params),
+    )
+
+    return render_template(
+        "crm.html",
+        leads=rows,
+        stats=stats,
+        search=search,
+        status_filter=status_filter,
+        source_filter=source_filter,
+    )
 
 
 @app.route("/crm/<int:lead_id>/update", methods=["POST"])

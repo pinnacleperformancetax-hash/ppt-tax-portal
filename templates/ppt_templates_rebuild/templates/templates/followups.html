@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Follow-Ups</h1>
+<p class="sub">Daily action list for overdue, due today, and upcoming leads.</p>
+
+<div class="metric-grid">
+  <div class="metric"><span>Overdue</span><strong>{{ overdue }}</strong></div>
+  <div class="metric"><span>Due Today</span><strong>{{ today_count }}</strong></div>
+  <div class="metric"><span>Upcoming</span><strong>{{ upcoming }}</strong></div>
+  <div class="metric"><span>Total Open</span><strong>{{ leads|length }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Lead Follow-Up Queue</h2>
+  {% for lead in leads %}
+    {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
+    <div class="lead-card">
+      <div class="lead-top">
+        <div>
+          <div class="lead-name">{{ lead.name }}</div>
+          <div class="lead-source">{{ lead.source or "No source listed" }}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
+          {% if lead.urgency != "none" %}
+          <span class="urgency-pill urgency-{{ lead.urgency }}">
+            {% if lead.urgency == "overdue" %}Overdue{% elif lead.urgency == "today" %}Due Today{% else %}Upcoming{% endif %}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lead-details">
+        <div><small>Phone</small>{{ lead.phone or "—" }}</div>
+        <div><small>Email</small>{{ lead.email or "—" }}</div>
+        <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+        <div><small>Notes</small>{{ lead.notes or "—" }}</div>
+      </div>
+
+      <div class="lead-actions">
+        <form method="POST" action="/crm/{{ lead.id }}/update">
+          <select name="status">
+            {% for s in ["New","Contacted","Consultation Booked","Filed","Converted","Lost"] %}
+              <option {% if lead.status == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
+          <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
+          <button type="submit">Update</button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p class="empty">No open follow-ups.</p>
+  {% endfor %}
+</div>
+{% endblock %}

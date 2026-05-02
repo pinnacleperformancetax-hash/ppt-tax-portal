@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Invoices</h1>
+<p class="sub">Create invoices, track payment status, and add Clover payment links.</p>
+{% if current_user.role == 'admin' %}
+<div class="card">
+  <h2>Create Invoice</h2>
+  <form method="POST" class="grid grid-3">
+    <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <input name="invoice_number" placeholder="Invoice number">
+    <input type="date" name="issue_date">
+    <input type="date" name="due_date">
+    <input name="amount" placeholder="Amount">
+    <select name="status"><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select>
+    <input name="payment_link" placeholder="Clover payment link">
+    <textarea name="description" placeholder="Description"></textarea>
+    <div><button type="submit">Save Invoice</button></div>
+  </form>
+</div>
+{% endif %}
+<div class="card">
+  <h2>Invoice List</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Invoice</th><th>Issue</th><th>Due</th><th>Status</th><th>Description</th><th>Amount</th><th>Pay</th></tr></thead>
+    <tbody>{% for i in invoices %}<tr><td>{{ i.client_name }}</td><td>{{ i.invoice_number }}</td><td>{{ i.issue_date }}</td><td>{{ i.due_date }}</td><td>{{ i.status }}</td><td>{{ i.description }}</td><td class="money">{{ i.amount|currency }}</td><td>{% if i.payment_link %}<a class="btn" href="{{ i.payment_link }}" target="_blank">Pay</a>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="8">No invoices yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

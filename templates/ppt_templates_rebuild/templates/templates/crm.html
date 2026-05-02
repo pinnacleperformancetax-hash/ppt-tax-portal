@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>CRM Leads</h1>
+<p class="sub">Track prospects, follow-ups, sources, urgency, and client conversions.</p>
+
+<div class="metric-grid">
+  <div class="metric"><span>Total Leads</span><strong>{{ stats.total if stats else 0 }}</strong></div>
+  <div class="metric"><span>New</span><strong>{{ stats.new if stats else 0 }}</strong></div>
+  <div class="metric"><span>Contacted</span><strong>{{ stats.contacted if stats else 0 }}</strong></div>
+  <div class="metric"><span>Overdue</span><strong>{{ stats.overdue if stats else 0 }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Search & Filter</h2>
+  <form method="GET" class="grid grid-3">
+    <input name="search" value="{{ search or '' }}" placeholder="Search name, phone, email, or notes">
+    <select name="status">
+      <option value="">All Statuses</option>
+      {% for s in ["New","Contacted","Consultation Booked","Filed","Converted","Lost"] %}
+      <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <input name="source" value="{{ source_filter or '' }}" placeholder="Filter source: Facebook, Referral, Google">
+    <div><button type="submit">Apply Filter</button> <a class="btn btn-dark" href="/crm">Clear</a></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Add New Lead</h2>
+  <form method="POST" class="grid grid-2">
+    <input name="name" placeholder="Lead name" required>
+    <input name="phone" placeholder="Phone number">
+    <input name="email" placeholder="Email address">
+    <input name="source" placeholder="Source: Referral, Facebook, Google, Walk-in">
+    <select name="service_interest">
+      <option value="">Service interest</option>
+      {% for p in service_packages %}
+        <option value="{{ p.name }}">{{ p.name }} - {{ p.default_price|currency }}</option>
+      {% endfor %}
+    </select>
+    <input type="date" name="follow_up_date">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div><button type="submit">Save Lead</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Lead Pipeline</h2>
+  {% for lead in leads %}
+  {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
+  <div class="lead-card">
+    <div class="lead-top">
+      <div>
+        <div class="lead-name">{{ lead.name }}</div>
+        <div class="lead-source">{{ lead.source or "No source listed" }}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
+        {% if lead.urgency != "none" %}
+        <span class="urgency-pill urgency-{{ lead.urgency }}">
+          {% if lead.urgency == "overdue" %}Overdue{% elif lead.urgency == "today" %}Due Today{% else %}Upcoming{% endif %}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="lead-details">
+      <div><small>Phone</small>{{ lead.phone or "—" }}</div>
+      <div><small>Email</small>{{ lead.email or "—" }}</div>
+      <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+      <div><small>Service</small>{{ lead.service_interest or "—" }}</div>
+      <div><small>Notes</small>{{ lead.notes or "—" }}</div>
+    </div>
+
+    <div class="lead-actions">
+      <form method="POST" action="/crm/{{ lead.id }}/update">
+        <select name="status">
+          {% for s in ["New","Contacted","Consultation Booked","Filed","Converted","Lost"] %}
+          <option {% if lead.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+        <input type="date" name="follow_up_date" value="{{ lead.follow_up_date or '' }}">
+        <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
+        <button type="submit">Update</button>
+      </form>
+    </div>
+
+    {% if lead.status != "Converted" %}
+    <form method="POST" action="/crm/{{ lead.id }}/convert" style="margin-top:12px;">
+      <button type="submit">Convert to Client + Tax Return + Draft Invoice</button>
+    </form>
+    {% else %}
+      <div class="client-badge">✓ Client Converted</div>
+    {% endif %}
+  </div>
+  {% else %}
+    <p class="empty">No leads match this filter.</p>
+  {% endfor %}
+</div>
+{% endblock %}

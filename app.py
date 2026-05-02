@@ -34,6 +34,7 @@ BRAND = {
     "phone": "478-338-1632",
     "primary_color": "#11823b",
     "dark_color": "#0f172a",
+    "payment_provider": "Clover",
 }
 
 app = Flask(__name__)
@@ -292,8 +293,10 @@ def init_db() -> None:
     add_column_if_missing(db, "clients", "next_billing_date", "TEXT")
     add_column_if_missing(db, "clients", "service_package", "TEXT")
     add_column_if_missing(db, "clients", "payment_status", "TEXT DEFAULT 'Not Started'")
-    add_column_if_missing(db, "invoices", "payment_provider", "TEXT DEFAULT 'Manual'")
+    add_column_if_missing(db, "invoices", "payment_provider", "TEXT DEFAULT 'Clover'")
     add_column_if_missing(db, "invoices", "paid_at", "TEXT")
+    add_column_if_missing(db, "invoices", "clover_link", "TEXT")
+    add_column_if_missing(db, "invoices", "payment_notes", "TEXT")
     add_column_if_missing(db, "crm_leads", "service_interest", "TEXT")
     add_column_if_missing(db, "users", "is_active", "INTEGER DEFAULT 1")
 
@@ -435,6 +438,8 @@ def dashboard():
     crm_new = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='New'", one=True)["c"]
     crm_converted = query_db("SELECT COUNT(*) c FROM crm_leads WHERE status='Converted'", one=True)["c"]
     overdue_followups = query_db("SELECT COUNT(*) c FROM crm_leads WHERE follow_up_date < ? AND status!='Converted'", (today_iso(),), one=True)["c"]
+    clover_ready = query_db("SELECT COUNT(*) c FROM invoices WHERE payment_link IS NOT NULL AND payment_link!='' AND status!='Paid'", one=True)["c"]
+    needs_payment_link = query_db("SELECT COUNT(*) c FROM invoices WHERE (payment_link IS NULL OR payment_link='') AND status!='Paid'", one=True)["c"]
 
     recent_leads = query_db("SELECT * FROM crm_leads ORDER BY created_at DESC, id DESC LIMIT 6")
     recent_transactions = query_db(
@@ -465,6 +470,8 @@ def dashboard():
         crm_converted=crm_converted,
         unpaid_invoice_total=unpaid_invoice_total,
         overdue_followups=overdue_followups,
+        clover_ready=clover_ready,
+        needs_payment_link=needs_payment_link,
         recent_transactions=recent_transactions,
         upcoming_appointments=upcoming_appointments,
         recent_leads=recent_leads,
@@ -800,7 +807,7 @@ def invoices():
                 money(request.form.get("amount")),
                 request.form.get("status"),
                 request.form.get("description"),
-                request.form.get("payment_link"),
+                request.form.get("payment_link") or request.form.get("clover_link"),
             ),
         )
         flash("Invoice created.", "success")
@@ -872,6 +879,37 @@ def mark_invoice_sent(invoice_id):
     )
     flash("Invoice marked sent.", "success")
     return redirect(url_for("invoices"))
+
+
+
+@app.route("/invoice/<int:invoice_id>/update-payment", methods=["POST"])
+@login_required
+@admin_required
+def update_invoice_payment(invoice_id):
+    payment_link = (request.form.get("payment_link") or request.form.get("clover_link") or "").strip()
+    payment_notes = request.form.get("payment_notes") or ""
+    provider = request.form.get("payment_provider") or "Clover"
+
+    execute_db(
+        """UPDATE invoices
+        SET payment_link=?, clover_link=?, payment_provider=?, payment_notes=?
+        WHERE id=?""",
+        (payment_link, payment_link, provider, payment_notes, invoice_id),
+    )
+    flash("Clover payment link saved.", "success")
+    return redirect(url_for("payments"))
+
+
+@app.route("/invoice/<int:invoice_id>/send-clover", methods=["POST"])
+@login_required
+@admin_required
+def send_clover_invoice(invoice_id):
+    execute_db(
+        "UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?",
+        (invoice_id,),
+    )
+    flash("Invoice marked sent with Clover payment link.", "success")
+    return redirect(url_for("payments"))
 
 
 @app.route("/payments")

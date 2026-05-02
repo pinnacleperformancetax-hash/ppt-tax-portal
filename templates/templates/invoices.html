@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Invoices</h1>
-<p class="sub">Create invoices, track payment status, and add payment links.</p>
+<p class="sub">Create invoices, track payment status, and add Clover payment links.</p>
 {% if current_user.role == 'admin' %}
 <div class="card">
   <h2>Create Invoice</h2>
@@ -12,7 +12,7 @@
     <input type="date" name="due_date">
     <input name="amount" placeholder="Amount">
     <select name="status"><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select>
-    <input name="payment_link" placeholder="Payment link">
+    <input name="payment_link" placeholder="Clover payment link">
     <textarea name="description" placeholder="Description"></textarea>
     <div><button type="submit">Save Invoice</button></div>
   </form>

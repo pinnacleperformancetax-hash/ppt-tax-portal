@@ -24,6 +24,13 @@
   <div class="metric"><span>Overdue Follow-Ups</span><strong>{{ overdue_followups }}</strong></div>
 </div>
 
+<div class="metric-grid">
+  <div class="metric"><span>Clover Ready</span><strong>{{ clover_ready }}</strong></div>
+  <div class="metric"><span>Needs Pay Link</span><strong>{{ needs_payment_link }}</strong></div>
+  <div class="metric"><span>Payment Provider</span><strong>Clover</strong></div>
+  <div class="metric"><span>Pay Center</span><strong><a href="/payments">Open</a></strong></div>
+</div>
+
 <div class="card">
   <h2>Recent CRM Leads</h2>
   {% for lead in recent_leads %}

@@ -1,1 +1,106 @@
-{% extends "base.html" %}{% block content %}<p class="sub">Welcome back.</p><h1>Welcome, {{ current_user.name }}</h1><p class="sub">{% if current_user.role == 'admin' %}Admin Console{% else %}Client Portal{% endif %}</p><div class="hero"><h2>{{ brand.app_name }}</h2><p>Branded bookkeeping and tax workflow portal for Pinnacle Performance Tax.</p></div><div class="stats"><div class="stat"><small>Income</small><strong>{{ income|currency }}</strong></div><div class="stat"><small>Expenses</small><strong>{{ expenses|currency }}</strong></div><div class="stat"><small>Net</small><strong>{{ balance|currency }}</strong></div><div class="stat"><small>Open Invoices</small><strong>{{ open_invoices }}</strong></div><div class="stat"><small>Pending Documents</small><strong>{{ pending_docs }}</strong></div><div class="stat"><small>Tax Returns</small><strong>{{ tax_returns }}</strong></div></div><div class="card"><h2>Recent Transactions</h2><table><tr><th>Date</th><th>Description</th><th>Client</th><th>Amount</th></tr>{% for t in recent_transactions %}<tr><td>{{ t.date }}</td><td>{{ t.description }}<br><small>{{ t.category_name }}</small></td><td>{{ t.client_name }}</td><td>{{ t.amount|currency }}</td></tr>{% else %}<tr><td colspan="4">No transactions yet.</td></tr>{% endfor %}</table></div><div class="card"><h2>Appointments</h2><table><tr><th>When</th><th>Title</th><th>Client</th></tr>{% for a in upcoming_appointments %}<tr><td>{{ a.start_at }}</td><td>{{ a.title }}</td><td>{{ a.client_name }}</td></tr>{% else %}<tr><td colspan="3">No appointments.</td></tr>{% endfor %}</table></div>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Dashboard</h1>
+<p class="sub">PPT business overview, revenue activity, clients, and CRM movement.</p>
+
+<div class="crm-overview">
+  <div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div>
+  <div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div>
+  <div class="metric"><span>Balance</span><strong>{{ balance|currency }}</strong></div>
+  <div class="metric"><span>Unpaid Invoices</span><strong>{{ unpaid_invoice_total|currency }}</strong></div>
+</div>
+
+<div class="crm-overview">
+  <div class="metric"><span>Active Clients</span><strong>{{ active_clients }}</strong></div>
+  <div class="metric"><span>CRM Leads</span><strong>{{ crm_total }}</strong></div>
+  <div class="metric"><span>New Leads</span><strong>{{ crm_new }}</strong></div>
+  <div class="metric"><span>Converted</span><strong>{{ crm_converted }}</strong></div>
+</div>
+
+<div class="crm-overview">
+  <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices }}</strong></div>
+  <div class="metric"><span>Pending Docs</span><strong>{{ pending_docs }}</strong></div>
+  <div class="metric"><span>Tax Returns</span><strong>{{ tax_returns }}</strong></div>
+  <div class="metric"><span>Appointments</span><strong>{{ appointments }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Recent CRM Leads</h2>
+  {% for lead in recent_leads %}
+    <div class="lead-card">
+      <div class="lead-top">
+        <div>
+          <div class="lead-name">{{ lead.name }}</div>
+          <div class="lead-source">{{ lead.source or "No source listed" }}</div>
+        </div>
+        {% set status_class = (lead.status or 'New')|lower|replace(' ', '-') %}
+        <span class="status-pill status-{{ status_class }}">{{ lead.status or "New" }}</span>
+      </div>
+      <div class="lead-details">
+        <div><small>Phone</small>{{ lead.phone or "—" }}</div>
+        <div><small>Email</small>{{ lead.email or "—" }}</div>
+        <div><small>Follow-Up</small>{{ lead.follow_up_date or "No date set" }}</div>
+        <div><small>Notes</small>{{ lead.notes or "—" }}</div>
+      </div>
+    </div>
+  {% else %}
+    <p>No CRM leads yet.</p>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>Recent Transactions</h2>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:10px;">Date</th>
+        <th style="text-align:left; padding:10px;">Description</th>
+        <th style="text-align:left; padding:10px;">Client</th>
+        <th style="text-align:left; padding:10px;">Category</th>
+        <th style="text-align:right; padding:10px;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in recent_transactions %}
+      <tr>
+        <td style="padding:10px;">{{ row.date }}</td>
+        <td style="padding:10px;">{{ row.description }}</td>
+        <td style="padding:10px;">{{ row.client_name or "—" }}</td>
+        <td style="padding:10px;">{{ row.category_name or "—" }}</td>
+        <td style="padding:10px; text-align:right;">{{ row.amount|currency }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="padding:10px;">No transactions yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Upcoming Appointments</h2>
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:10px;">Client</th>
+        <th style="text-align:left; padding:10px;">Title</th>
+        <th style="text-align:left; padding:10px;">Start</th>
+        <th style="text-align:left; padding:10px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in upcoming_appointments %}
+      <tr>
+        <td style="padding:10px;">{{ row.client_name or "—" }}</td>
+        <td style="padding:10px;">{{ row.title }}</td>
+        <td style="padding:10px;">{{ row.start_at }}</td>
+        <td style="padding:10px;">{{ row.status }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="padding:10px;">No appointments yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

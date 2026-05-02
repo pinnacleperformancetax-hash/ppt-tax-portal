@@ -1,61 +1,36 @@
 {% extends "base.html" %}
+
 {% block content %}
 
-<h1>Payments</h1>
+<h2>Payments</h2>
 
-<div class="card">
-  <h2>Make a Payment</h2>
+<form method="POST">
 
-  <form method="POST">
+    <label><strong>Clover Payment Link</strong></label><br>
+    <input type="text" name="clover_link" placeholder="Paste Clover link here (https://...)" style="width:100%; padding:10px; margin-bottom:15px;" required>
 
-    <label>Select Invoice</label>
-    <select name="invoice_id" required>
-      <option value="">-- Select Invoice --</option>
-      {% for invoice in invoices %}
-        <option value="{{ invoice.id }}">
-          #{{ invoice.id }} - ${{ invoice.amount }} ({{ invoice.client_name }})
-        </option>
-      {% endfor %}
+    <h3>Make a Payment</h3>
+
+    <label>Select Invoice</label><br>
+    <select name="invoice_id" style="width:100%; padding:10px; margin-bottom:10px;">
+        <option value="">-- Select Invoice --</option>
+        {% for invoice in invoices %}
+            <option value="{{ invoice.id }}">{{ invoice.id }} - ${{ invoice.amount }}</option>
+        {% endfor %}
     </select>
 
-    <label>Amount</label>
-    <input type="text" name="amount" readonly id="amount-field">
+    <label>Amount</label><br>
+    <input type="number" step="0.01" name="amount" placeholder="Enter amount" style="width:100%; padding:10px; margin-bottom:15px;" required>
 
-    <button type="submit">Pay with Clover</button>
+    <button type="submit" style="background:#11823b; color:white; padding:10px 20px; border:none;">
+        Pay with Clover
+    </button>
 
-  </form>
-</div>
+</form>
 
-<div class="card">
-  <h2>Payment History</h2>
+<hr>
 
-  {% if payments %}
-    <table>
-      <tr>
-        <th>Invoice</th>
-        <th>Amount</th>
-        <th>Date</th>
-      </tr>
-
-      {% for p in payments %}
-      <tr>
-        <td>#{{ p.invoice_id }}</td>
-        <td>${{ p.amount }}</td>
-        <td>{{ p.date }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-  {% else %}
-    <p>No payments recorded yet.</p>
-  {% endif %}
-</div>
-
-<script>
-document.querySelector("select[name='invoice_id']").addEventListener("change", function() {
-    const selected = this.options[this.selectedIndex].text;
-    const amount = selected.match(/\$(\d+)/);
-    document.getElementById("amount-field").value = amount ? amount[1] : "";
-});
-</script>
+<h3>Payment History</h3>
+<p>No payments recorded yet.</p>
 
 {% endblock %}

@@ -1,23 +1,4 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Users</h1>
-<p class="sub">Create admin or client logins.</p>
-<div class="card">
-  <h2>Create User</h2>
-  <form method="POST" class="grid grid-3">
-    <input name="name" placeholder="Name" required>
-    <input name="email" placeholder="Email" required>
-    <input name="password" placeholder="Password">
-    <select name="role"><option value="client">Client</option><option value="admin">Admin</option></select>
-    <select name="client_id"><option value="">No client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
-    <div><button type="submit">Create User</button></div>
-  </form>
-</div>
-<div class="card">
-  <h2>User List</h2>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Client</th><th>Active</th></tr></thead>
-    <tbody>{% for u in users %}<tr><td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.role }}</td><td>{{ u.client_name }}</td><td>{{ u.is_active }}</td></tr>{% else %}<tr><td colspan="5">No users yet.</td></tr>{% endfor %}</tbody>
-  </table></div>
-</div>
 {% endblock %}

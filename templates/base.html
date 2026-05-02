@@ -3,26 +3,111 @@
 <head>
 <meta charset="UTF-8">
 <title>PPT Portal</title>
+
 <style>
-body { font-family: Arial, sans-serif; background:#f6f7fb; margin:0; }
-.sidebar { width:220px; background:#0f172a; color:white; position:fixed; top:0; bottom:0; padding:20px; }
-.main { margin-left:240px; padding:30px; }
-.card { background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:20px; }
-button { background:#11823b; color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; }
-button:hover { opacity:0.9; }
-.crm-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:20px; }
-.metric { background:white; padding:15px; border-radius:10px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-.grid { display:grid; gap:10px; }
-.grid-2 { grid-template-columns:1fr 1fr; }
-input, textarea, select { padding:10px; border-radius:8px; border:1px solid #ddd; width:100%; }
-.lead-card { background:white; padding:15px; border-radius:10px; margin-top:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-.status-pill { padding:5px 10px; border-radius:20px; font-size:12px; }
-.status-new { background:#e5e7eb; }
-.status-contacted { background:#bfdbfe; }
-.status-converted { background:#bbf7d0; }
-.status-lost { background:#fecaca; }
+body {
+  font-family: Arial, sans-serif;
+  background: #f6f7fb;
+  margin: 0;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #0f172a;
+  color: white;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  padding: 20px;
+}
+
+/* Main Content */
+.main {
+  margin-left: 240px;
+  padding: 30px;
+}
+
+/* Cards */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+/* Buttons */
+button {
+  background: #11823b;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* CRM Metrics */
+.crm-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.metric {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Forms */
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+input, textarea, select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  width: 100%;
+}
+
+/* Lead Cards */
+.lead-card {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Status Colors */
+.status-pill {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.status-new { background: #e5e7eb; }
+.status-contacted { background: #bfdbfe; }
+.status-converted { background: #bbf7d0; }
+.status-lost { background: #fecaca; }
+
 </style>
 </head>
+
 <body>
 
 <div class="sidebar">
@@ -31,7 +116,8 @@ input, textarea, select { padding:10px; border-radius:8px; border:1px solid #ddd
 </div>
 
 <div class="main">
-{% block content %}{% endblock %}
+  {% block content %}
+  {% endblock %}
 </div>
 
 </body>

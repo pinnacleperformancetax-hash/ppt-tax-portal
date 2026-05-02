@@ -2,53 +2,318 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PPT Portal</title>
+
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#f6f7fb; color:#111827; }
-.sidebar { width:240px; background:#0f172a; color:white; position:fixed; top:0; bottom:0; left:0; padding:25px; }
-.sidebar a { display:block; color:white; text-decoration:none; margin:10px 0; font-weight:bold; }
-.main { margin-left:260px; padding:30px; }
-.auth { min-height:100vh; display:flex; justify-content:center; align-items:center; padding:30px; }
-.card { background:white; padding:25px; border-radius:14px; box-shadow:0 5px 20px rgba(0,0,0,.08); margin-bottom:20px; }
-button { background:#11823b; color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; }
-input, textarea, select { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box; }
-.grid { display:grid; gap:12px; }
-.grid-2 { grid-template-columns:1fr 1fr; }
-.crm-overview { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin:20px 0; }
-.metric { background:white; padding:18px; border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
-.metric strong { display:block; font-size:28px; color:#11823b; }
-.lead-card { background:white; padding:18px; border-radius:14px; margin-top:15px; box-shadow:0 4px 14px rgba(0,0,0,.05); }
-.status-pill { padding:6px 12px; border-radius:999px; font-size:12px; font-weight:bold; }
-.status-new { background:#e5e7eb; }
-.status-contacted { background:#bfdbfe; }
-.status-converted { background:#bbf7d0; }
-.status-lost { background:#fecaca; }
+:root {
+  --ppt-green: #11823b;
+  --dark: #0f172a;
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.auth {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+}
+
+.sidebar {
+  width: 250px;
+  background: var(--dark);
+  color: white;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  padding: 28px 22px;
+}
+
+.sidebar h2 {
+  margin: 0 0 16px;
+  font-size: 25px;
+  line-height: 1.05;
+}
+
+.sidebar .contact {
+  color: #d1d5db;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 28px;
+}
+
+.sidebar a {
+  display: block;
+  color: white;
+  text-decoration: none;
+  margin: 7px 0;
+  font-weight: 700;
+  padding: 11px 10px;
+  border-radius: 10px;
+}
+
+.sidebar a:hover {
+  background: rgba(255,255,255,.09);
+}
+
+.main {
+  margin-left: 270px;
+  padding: 34px;
+  max-width: 1250px;
+}
+
+h1 {
+  font-size: 34px;
+  margin: 0 0 8px;
+}
+
+h2, h3 { margin-top: 0; }
+
+.sub {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.card {
+  background: var(--card);
+  padding: 24px;
+  border-radius: 18px;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  margin-bottom: 22px;
+}
+
+button,
+.btn {
+  background: var(--ppt-green);
+  color: white;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover,
+.btn:hover { opacity: .92; }
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d9dee8;
+  background: white;
+  font-size: 14px;
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.crm-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0;
+}
+
+.metric {
+  background: white;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.metric span {
+  display: block;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 30px;
+  color: var(--ppt-green);
+}
+
+.lead-card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  margin-top: 16px;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.lead-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.lead-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.lead-source {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.lead-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.lead-details small {
+  display: block;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: .05em;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.lead-actions form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-new { background: #e5e7eb; color: #374151; }
+.status-contacted { background: #dbeafe; color: #1d4ed8; }
+.status-consultation-booked { background: #ede9fe; color: #6d28d9; }
+.status-filed { background: #fef3c7; color: #92400e; }
+.status-converted { background: #dcfce7; color: #166534; }
+.status-lost { background: #fee2e2; color: #991b1b; }
+
+.client-badge {
+  display: inline-block;
+  margin-top: 12px;
+  color: #166534;
+  font-weight: 800;
+}
+
+.flash {
+  background: white;
+  border-left: 5px solid var(--ppt-green);
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: relative;
+    width: 100%;
+    bottom: auto;
+  }
+
+  .main {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .crm-overview,
+  .grid-2,
+  .lead-details,
+  .lead-actions form {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 
 <body>
 
 {% if request.path != '/login' %}
-<div class="sidebar">
-  <h2>PPT</h2>
-  <p>Pinnacle Performance Tax</p>
+  <aside class="sidebar">
+    <h2>Pinnacle<br>Performance Tax<br>and Accounting</h2>
 
-  <a href="/dashboard">Dashboard</a>
-  <a href="/clients">Clients</a>
-  <a href="/transactions">Bookkeeping</a>
-  <a href="/tax_returns">Tax Returns</a>
-  <a href="/documents">Documents</a>
-  <a href="/invoices">Invoices</a>
-  <a href="/appointments">Appointments</a>
-  <a href="/crm">CRM</a>
-  <a href="/settings">Users</a>
-  <a href="/logout">Sign Out</a>
-</div>
+    <div class="contact">
+      www.pinnacleperformancetax.com<br>
+      pinnacleperformancetax@gmail.com<br>
+      478-338-1632
+    </div>
+
+    <a href="/dashboard">Dashboard</a>
+    <a href="/clients">Clients</a>
+    <a href="/transactions">Bookkeeping</a>
+    <a href="/tax_returns">Tax Returns</a>
+    <a href="/documents">Documents</a>
+    <a href="/invoices">Invoices</a>
+    <a href="/appointments">Appointments</a>
+    <a href="/crm">CRM</a>
+    <a href="/settings">Users</a>
+    <a href="/logout">Sign Out</a>
+  </aside>
 {% endif %}
 
-<div class="{% if request.path == '/login' %}auth{% else %}main{% endif %}">
+<main class="{% if request.path == '/login' %}auth{% else %}main{% endif %}">
+  {% if request.path != '/login' %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  {% endif %}
+
+  {% block auth_content %}{% endblock %}
   {% block content %}{% endblock %}
-</div>
+</main>
 
 </body>
 </html>

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Welcome, {{ current_user.name }}</h1>
+<p class="sub">Your secure tax and accounting portal.</p>
+
+<div class="metric-grid">
+  <div class="metric"><span>Portal Status</span><strong>{{ client.portal_status if client else "Active" }}</strong></div>
+  <div class="metric"><span>Plan</span><strong>{{ client.plan if client else "Client" }}</strong></div>
+  <div class="metric"><span>Unpaid Balance</span><strong>{{ unpaid_total|currency }}</strong></div>
+  <div class="metric"><span>Tax Returns</span><strong>{{ tax_returns|length }}</strong></div>
+</div>
+
+<div class="card">
+  <h2>Your Tax Status</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Year</th><th>Service</th><th>Status</th><th>Due Date</th><th>Notes</th></tr></thead>
+    <tbody>
+    {% for row in tax_returns %}
+      <tr><td>{{ row.tax_year }}</td><td>{{ row.service_type }}</td><td>{{ row.status }}</td><td>{{ row.due_date }}</td><td>{{ row.notes }}</td></tr>
+    {% else %}
+      <tr><td colspan="5">No tax return records yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Upload Documents</h2>
+  <form method="POST" action="/documents" enctype="multipart/form-data" class="grid grid-2">
+    <input name="document_name" placeholder="Document name">
+    <input name="tax_year" placeholder="Tax year">
+    <input type="file" name="file">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div><button type="submit">Upload Document</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your Invoices</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th>Description</th><th>Amount</th><th>Pay</th></tr></thead>
+    <tbody>
+    {% for row in invoices %}
+      <tr>
+        <td>{{ row.invoice_number }}</td><td>{{ row.issue_date }}</td><td>{{ row.status }}</td>
+        <td>{{ row.description }}</td><td class="money">{{ row.amount|currency }}</td>
+        <td>{% if row.payment_link %}<a class="btn" href="{{ row.payment_link }}" target="_blank">Pay</a>{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6">No invoices yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

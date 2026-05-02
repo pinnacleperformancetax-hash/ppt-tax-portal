@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Bookkeeping</h1>
+<p class="sub">Track income, expenses, categories, and client-linked transactions.</p>
+{% if current_user.role == 'admin' %}
+<div class="card">
+  <h2>Add Transaction</h2>
+  <form method="POST" class="grid grid-3">
+    <input type="date" name="date">
+    <input name="description" placeholder="Description">
+    <select name="type"><option value="income">Income</option><option value="expense">Expense</option></select>
+    <select name="category_id">{% for c in categories %}<option value="{{ c.id }}">{{ c.name }} ({{ c.kind }})</option>{% endfor %}</select>
+    <select name="client_id"><option value="">No client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <input name="amount" placeholder="Amount">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div><button type="submit">Save Transaction</button></div>
+  </form>
+</div>
+{% endif %}
+<div class="card">
+  <h2>Transactions</h2>
+  <a class="btn btn-dark" href="/reports/export/transactions.csv">Export CSV</a><br><br>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th>Client</th><th>Amount</th></tr></thead>
+    <tbody>{% for t in transactions %}<tr><td>{{ t.date }}</td><td>{{ t.description }}</td><td>{{ t.type }}</td><td>{{ t.category_name }}</td><td>{{ t.client_name }}</td><td class="money">{{ t.amount|currency }}</td></tr>{% else %}<tr><td colspan="6">No transactions.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

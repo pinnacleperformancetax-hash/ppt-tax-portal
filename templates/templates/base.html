@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ brand.app_name }}</title>
+<style>
+:root{
+  --ppt-green:#11823b;
+  --ppt-dark:#071525;
+  --ppt-navy:#0f172a;
+  --bg:#f4f7f5;
+  --card:#ffffff;
+  --muted:#667085;
+  --line:#e7eee9;
+  --danger:#b42318;
+  --warning:#b54708;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:#111827}
+a{text-decoration:none;color:inherit}
+.layout{display:flex;min-height:100vh}
+.sidebar{
+  width:265px;background:linear-gradient(180deg,#081426,#0f172a);color:white;padding:28px 22px;
+  position:fixed;top:0;bottom:0;left:0;overflow:auto
+}
+.brand-title{font-size:24px;line-height:1.05;font-weight:900;letter-spacing:-.04em;margin:0 0 18px}
+.brand-small{font-size:12px;line-height:1.5;color:#d7dee8;margin-bottom:28px}
+.nav a{display:block;padding:12px 14px;border-radius:12px;margin:4px 0;font-weight:800;color:#f8fafc}
+.nav a:hover,.nav a.active{background:rgba(255,255,255,.12)}
+.main{margin-left:265px;width:calc(100% - 265px);padding:34px 42px 60px}
+h1{font-size:38px;letter-spacing:-.04em;margin:0 0 6px}
+h2{font-size:24px;margin:0 0 18px;letter-spacing:-.03em}
+h3{margin:0 0 12px}
+.sub{color:var(--muted);margin:0 0 28px}
+.card{
+  background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:24px;padding:24px;margin:20px 0;
+  box-shadow:0 18px 50px rgba(15,23,42,.05);backdrop-filter:blur(10px)
+}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0}
+.metric{
+  background:linear-gradient(180deg,#fff,#f9fbfa);border:1px solid var(--line);border-radius:22px;padding:22px;
+  box-shadow:0 12px 34px rgba(15,23,42,.04)
+}
+.metric span{display:block;color:#667085;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-bottom:8px}
+.metric strong{display:block;color:var(--ppt-green);font-size:30px;letter-spacing:-.04em}
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+input,textarea,select{
+  width:100%;padding:13px 14px;border:1px solid #d8e1dc;border-radius:14px;background:white;font:inherit;
+  min-height:46px
+}
+textarea{min-height:92px;resize:vertical}
+button,.btn{
+  display:inline-block;border:none;background:var(--ppt-green);color:white;border-radius:13px;padding:12px 18px;
+  font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(17,130,59,.18)
+}
+button:hover,.btn:hover{filter:brightness(.94)}
+.btn-dark{background:#0f172a}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px}
+table{width:100%;border-collapse:collapse;background:white}
+th,td{padding:13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;color:#667085;letter-spacing:.07em}
+td.money{text-align:right;font-weight:900}
+.flash{padding:14px 16px;background:#ecfdf3;border-left:5px solid var(--ppt-green);border-radius:14px;margin-bottom:16px}
+.lead-card{background:white;border:1px solid var(--line);border-radius:22px;padding:20px;margin:14px 0;box-shadow:0 12px 32px rgba(15,23,42,.04)}
+.lead-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:16px}
+.lead-name{font-size:19px;font-weight:900;letter-spacing:-.02em}
+.lead-source{color:#667085;font-size:13px;margin-top:4px}
+.lead-details{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:12px 0}
+.lead-details small{display:block;color:#667085;font-size:11px;text-transform:uppercase;font-weight:900;letter-spacing:.07em;margin-bottom:4px}
+.lead-actions form{display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:center}
+.status-pill,.urgency-pill,.client-badge{
+  display:inline-flex;align-items:center;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900
+}
+.status-new{background:#e6f4ea;color:#11823b}
+.status-contacted{background:#e0f2fe;color:#0369a1}
+.status-consultation-booked{background:#ede9fe;color:#6d28d9}
+.status-filed{background:#dcfce7;color:#166534}
+.status-converted{background:#bbf7d0;color:#166534}
+.status-lost{background:#fee2e2;color:#991b1b}
+.urgency-overdue{background:#fee2e2;color:#991b1b}
+.urgency-today{background:#fef3c7;color:#92400e}
+.urgency-upcoming{background:#dbeafe;color:#1d4ed8}
+.client-badge{background:#ecfdf3;color:#11823b;margin-top:12px}
+.empty{color:#667085}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at top,#e8f7ee,transparent 42%),#f7faf8}
+.login-card{width:min(440px,100%);background:white;border:1px solid var(--line);border-radius:28px;padding:34px;box-shadow:0 25px 80px rgba(15,23,42,.10)}
+.login-card h1{text-align:center}
+.login-card .sub{text-align:center}
+@media(max-width:900px){
+  .sidebar{position:relative;width:100%;min-height:auto}
+  .layout{display:block}
+  .main{margin-left:0;width:100%;padding:24px}
+  .metric-grid,.grid-2,.grid-3,.lead-details{grid-template-columns:1fr}
+  .lead-actions form{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+{% if request.endpoint == 'login' %}
+  {% block login_content %}{% endblock %}
+{% else %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand-title">Pinnacle<br>Performance Tax<br>and Accounting</div>
+    <div class="brand-small">
+      {{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}
+    </div>
+    <nav class="nav">
+      <a href="/dashboard">Dashboard</a>
+      {% if current_user.is_authenticated and current_user.role == 'admin' %}
+      <a href="/clients">Clients</a>
+      <a href="/transactions">Bookkeeping</a>
+      <a href="/tax_returns">Tax Returns</a>
+      <a href="/documents">Documents</a>
+      <a href="/invoices">Invoices</a>
+      <a href="/appointments">Appointments</a>
+      <a href="/crm">CRM</a>
+      <a href="/settings">Users</a>
+      {% else %}
+      <a href="/tax_returns">My Tax Status</a>
+      <a href="/documents">My Documents</a>
+      <a href="/invoices">My Invoices</a>
+      <a href="/appointments">My Appointments</a>
+      {% endif %}
+      <a href="/logout">Sign Out</a>
+    </nav>
+  </aside>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+    <p class="sub" style="margin-top:30px;">© {{ year }} {{ brand.business_name }} · Premium internal portal build.</p>
+  </main>
+</div>
+{% endif %}
+</body>
+</html>

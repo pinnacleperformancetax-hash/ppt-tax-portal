@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Returns</h1>
+<p class="sub">Track client return status, due dates, fees, and notes.</p>
+{% if current_user.role == 'admin' %}
+<div class="card">
+  <h2>Create Tax Return</h2>
+  <form method="POST" class="grid grid-3">
+    <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <input name="tax_year" placeholder="Tax year">
+    <input name="service_type" placeholder="Service type">
+    <select name="status"><option>Client Intake</option><option>Documents Needed</option><option>In Review</option><option>Filed</option><option>Completed</option></select>
+    <input type="date" name="due_date">
+    <input name="fee" placeholder="Fee">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div><button type="submit">Save Tax Return</button></div>
+  </form>
+</div>
+{% endif %}
+<div class="card">
+  <h2>Returns</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Business</th><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Fee</th><th>Notes</th></tr></thead>
+    <tbody>{% for r in returns %}<tr><td>{{ r.client_name }}</td><td>{{ r.business_name }}</td><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td class="money">{{ r.fee|currency }}</td><td>{{ r.notes }}</td></tr>{% else %}<tr><td colspan="8">No tax returns yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

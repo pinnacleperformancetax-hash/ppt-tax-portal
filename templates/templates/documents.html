@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Documents</h1>
+<p class="sub">Upload and track client documents securely.</p>
+<div class="card">
+  <h2>Upload Document</h2>
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    {% if current_user.role == 'admin' %}
+    <select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    {% endif %}
+    <input name="document_name" placeholder="Document name">
+    <input name="tax_year" placeholder="Tax year">
+    <select name="status"><option>Received</option><option>Needs Review</option><option>Approved</option></select>
+    <input type="file" name="file">
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <div><button type="submit">Save Document</button></div>
+  </form>
+</div>
+<div class="card">
+  <h2>Document List</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Name</th><th>File</th><th>Year</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>{% for d in documents %}<tr><td>{{ d.client_name }}</td><td>{{ d.document_name }}</td><td>{% if d.file_path %}<a class="btn" href="/{{ d.file_path }}" target="_blank">Open</a>{% else %}—{% endif %}</td><td>{{ d.tax_year }}</td><td>{{ d.status }}</td><td>{{ d.notes }}</td></tr>{% else %}<tr><td colspan="6">No documents yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

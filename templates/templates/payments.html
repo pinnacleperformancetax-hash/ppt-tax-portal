@@ -1,71 +1,69 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Clover Payments</h1>
-<p class="sub">Add Clover checkout links to invoices, send payment links, and track paid/unpaid money.</p>
+<p class="sub">Paste Clover checkout links, send invoices, and track paid/unpaid revenue.</p>
 
 <div class="metric-grid">
   <div class="metric"><span>Paid Revenue</span><strong>{{ paid_total|currency }}</strong></div>
   <div class="metric"><span>Unpaid Balance</span><strong>{{ unpaid_total|currency }}</strong></div>
-  <div class="metric"><span>Draft Invoices</span><strong>{{ draft_total }}</strong></div>
-  <div class="metric"><span>Provider</span><strong>Clover</strong></div>
+  <div class="metric"><span>Clover Links Ready</span><strong>{{ ready_count }}</strong></div>
+  <div class="metric"><span>Need Payment Link</span><strong>{{ missing_link_count }}</strong></div>
 </div>
 
 <div class="card">
-  <h2>How to Use Clover</h2>
-  <p class="sub" style="margin-bottom:0;">
-    Create a Clover payment link in Clover, paste it into the invoice below, then click “Mark Sent”.
-    When the client pays, click “Mark Paid” so the dashboard and revenue tracking update.
-  </p>
+  <h2>Add / Update Clover Link</h2>
+  <form method="POST" class="grid grid-2">
+    <div>
+      <label>Select Invoice</label>
+      <select name="invoice_id" required>
+        <option value="">Choose invoice</option>
+        {% for inv in invoices %}
+          <option value="{{ inv.id }}">
+            #{{ inv.invoice_number or inv.id }} — {{ inv.client_name or 'No client' }} — {{ inv.amount|currency }} — {{ inv.status or 'Draft' }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Clover Payment Link</label>
+      <input name="payment_link" placeholder="https://checkout.clover.com/...">
+    </div>
+
+    <div style="grid-column:1 / -1;">
+      <label>Payment Notes</label>
+      <input name="payment_notes" placeholder="Example: Sent by text, due before appointment">
+    </div>
+
+    <div>
+      <button type="submit" name="action" value="save">Save Clover Link</button>
+      <button type="submit" name="action" value="save_and_send" class="btn-dark">Save + Mark Sent</button>
+    </div>
+  </form>
 </div>
 
 <div class="card">
   <h2>Invoice Payment Center</h2>
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Client</th>
-          <th>Invoice</th>
-          <th>Status</th>
-          <th>Description</th>
-          <th>Amount</th>
-          <th>Clover Link</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Client</th><th>Invoice</th><th>Status</th><th>Description</th><th>Amount</th><th>Clover Link</th><th>Actions</th></tr></thead>
       <tbody>
-      {% for i in invoices %}
+      {% for inv in invoices %}
+        {% set status_class = (inv.status or 'Draft')|lower|replace(' ', '-') %}
         <tr>
-          <td>{{ i.client_name }}<br><small>{{ i.client_email }}</small></td>
-          <td>{{ i.invoice_number }}</td>
+          <td>{{ inv.client_name or "No client" }}<br><small>{{ inv.client_email or "" }}</small></td>
+          <td>{{ inv.invoice_number or inv.id }}</td>
+          <td><span class="status-pill status-{{ status_class }}">{{ inv.status or "Draft" }}</span></td>
+          <td>{{ inv.description or "—" }}</td>
+          <td class="money">{{ inv.amount|currency }}</td>
+          <td>{% if inv.payment_link %}<a class="btn" href="{{ inv.payment_link }}" target="_blank">Open Pay Link</a><br><small>{{ inv.payment_provider or "Clover" }}</small>{% else %}<span class="empty">No Clover link yet</span>{% endif %}</td>
           <td>
-            {% set status_class = (i.status or 'Draft')|lower|replace(' ', '-') %}
-            <span class="status-pill status-{{ status_class }}">{{ i.status or "Draft" }}</span>
-          </td>
-          <td>{{ i.description }}</td>
-          <td class="money">{{ i.amount|currency }}</td>
-          <td style="min-width:320px;">
-            <form method="POST" action="/invoice/{{ i.id }}/update-payment" class="grid" style="gap:8px;">
-              <input name="payment_link" value="{{ i.payment_link or i.clover_link or '' }}" placeholder="Paste Clover payment link here">
-              <input name="payment_notes" value="{{ i.payment_notes or '' }}" placeholder="Payment notes, optional">
-              <input type="hidden" name="payment_provider" value="Clover">
-              <button type="submit">Save Clover Link</button>
-            </form>
-            {% if i.payment_link %}
-              <br><a class="btn" href="{{ i.payment_link }}" target="_blank">Open Pay Link</a>
-            {% endif %}
-          </td>
-          <td>
-            <form method="POST" action="/invoice/{{ i.id }}/send-clover" style="margin-bottom:8px;">
-              <button type="submit">Mark Sent</button>
-            </form>
-            <form method="POST" action="/invoice/{{ i.id }}/mark-paid">
-              <button class="btn-dark" type="submit">Mark Paid</button>
-            </form>
+            <form method="POST" action="/invoice/{{ inv.id }}/mark-sent" style="display:inline;"><button type="submit">Mark Sent</button></form>
+            <form method="POST" action="/invoice/{{ inv.id }}/mark-paid" style="display:inline;"><button type="submit" class="btn-dark">Mark Paid</button></form>
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="7">No invoices yet.</td></tr>
+        <tr><td colspan="7">No invoices found.</td></tr>
       {% endfor %}
       </tbody>
     </table>

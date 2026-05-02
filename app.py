@@ -255,6 +255,17 @@ def init_db() -> None:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_id INTEGER,
+        amount REAL DEFAULT 0,
+        provider TEXT DEFAULT 'Clover',
+        payment_link TEXT,
+        status TEXT DEFAULT 'Created',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     """)
 
     for col, definition in [
@@ -551,6 +562,7 @@ def invoices():
     return render_template("invoices.html", invoices=rows, clients=clients_rows)
 
 
+
 @app.route("/payments", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -571,12 +583,23 @@ def payments():
             return redirect(url_for("payments"))
 
         if action == "mark_paid":
-            execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?", (invoice_id,))
+            execute_db(
+                "UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP, payment_provider='Clover' WHERE id=?",
+                (invoice_id,),
+            )
+            execute_db(
+                """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
+                   VALUES (?, ?, 'Clover', ?, 'Paid', ?)""",
+                (invoice_id, invoice["amount"], invoice["payment_link"] or "", "Marked paid manually"),
+            )
             flash("Invoice marked paid.", "success")
             return redirect(url_for("payments"))
 
         if action == "mark_sent":
-            execute_db("UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?", (invoice_id,))
+            execute_db(
+                "UPDATE invoices SET status='Sent', payment_provider='Clover' WHERE id=?",
+                (invoice_id,),
+            )
             flash("Invoice marked sent.", "success")
             return redirect(url_for("payments"))
 
@@ -585,21 +608,50 @@ def payments():
             return redirect(url_for("payments"))
 
         new_status = "Sent" if action == "save_and_send" else (invoice["status"] or "Draft")
-        execute_db("""UPDATE invoices
-                      SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status=?
-                      WHERE id=?""",
-                   (payment_link, payment_link, payment_notes, new_status, invoice_id))
+        execute_db(
+            """UPDATE invoices
+               SET payment_link=?, clover_link=?, payment_provider='Clover', payment_notes=?, status=?
+               WHERE id=?""",
+            (payment_link, payment_link, payment_notes, new_status, invoice_id),
+        )
+        execute_db(
+            """INSERT INTO payments(invoice_id, amount, provider, payment_link, status, notes)
+               VALUES (?, ?, 'Clover', ?, ?, ?)""",
+            (invoice_id, invoice["amount"], payment_link, "Link Saved", payment_notes),
+        )
         flash("Clover payment link saved.", "success")
         return redirect(url_for("payments"))
 
-    invoices_rows = query_db("""SELECT i.*, cl.name AS client_name, cl.email AS client_email
-                                FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id
-                                ORDER BY i.created_at DESC, i.id DESC""")
+    invoices_rows = query_db(
+        """SELECT i.id, i.invoice_number, i.amount, i.status, i.description, i.payment_link,
+                  i.payment_provider, i.payment_notes, i.created_at,
+                  cl.name AS client_name, cl.email AS client_email
+           FROM invoices i
+           LEFT JOIN clients cl ON cl.id=i.client_id
+           ORDER BY i.created_at DESC, i.id DESC"""
+    )
+    payment_rows = query_db(
+        """SELECT p.*, i.invoice_number, cl.name AS client_name
+           FROM payments p
+           LEFT JOIN invoices i ON i.id=p.invoice_id
+           LEFT JOIN clients cl ON cl.id=i.client_id
+           ORDER BY p.created_at DESC, p.id DESC
+           LIMIT 25"""
+    )
     paid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status='Paid'", one=True)["total"]
     unpaid_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
     ready_count = query_db("SELECT COUNT(*) c FROM invoices WHERE payment_link IS NOT NULL AND payment_link!='' AND status!='Paid'", one=True)["c"]
     missing_link_count = query_db("SELECT COUNT(*) c FROM invoices WHERE (payment_link IS NULL OR payment_link='') AND status!='Paid'", one=True)["c"]
-    return render_template("payments.html", invoices=invoices_rows, paid_total=paid_total, unpaid_total=unpaid_total, ready_count=ready_count, missing_link_count=missing_link_count)
+
+    return render_template(
+        "payments.html",
+        invoices=invoices_rows,
+        payments=payment_rows,
+        paid_total=paid_total,
+        unpaid_total=unpaid_total,
+        ready_count=ready_count,
+        missing_link_count=missing_link_count,
+    )
 
 
 @app.route("/invoice/<int:invoice_id>/mark-paid", methods=["POST"])

@@ -1,9 +1,11 @@
+
 {% extends "base.html" %}
 {% block content %}
 
 <h1>CRM Leads</h1>
 <p class="sub">Track tax, bookkeeping, and accounting prospects.</p>
 
+<!-- OVERVIEW -->
 <div class="card">
   <h3>Overview</h3>
   <p><strong>Total Leads:</strong> {{ stats.total if stats else 0 }}</p>
@@ -12,92 +14,76 @@
   <p><strong>Converted:</strong> {{ stats.converted if stats else 0 }}</p>
 </div>
 
+<!-- ADD LEAD -->
 <div class="card">
-  <h2>Add New Lead</h2>
-  <form method="POST">
-    <input name="name" placeholder="Name">
+  <h3>Add New Lead</h3>
+  <form method="POST" style="display:grid; gap:10px;">
+    <input name="name" placeholder="Name" required>
     <input name="phone" placeholder="Phone">
     <input name="email" placeholder="Email">
-    <input name="source" placeholder="Source: Facebook, Referral, Google, Walk-in">
+    <input name="source" placeholder="Source (Facebook, Referral, etc)">
     <input type="date" name="follow_up_date">
     <textarea name="notes" placeholder="Notes"></textarea>
     <button type="submit">Save Lead</button>
   </form>
 </div>
 
+<!-- PIPELINE -->
 <div class="card">
-  <h2>Lead Pipeline</h2>
+  <h3>Lead Pipeline</h3>
 
-  <table style="width:100%; border-collapse:collapse; margin-top:15px;">
-    <thead>
-      <tr style="background:#f4f6f8;">
-        <th style="padding:10px; text-align:left;">Name</th>
-        <th style="padding:10px; text-align:left;">Contact</th>
-        <th style="padding:10px; text-align:left;">Status</th>
-        <th style="padding:10px; text-align:left;">Follow-Up</th>
-        <th style="padding:10px; text-align:left;">Actions</th>
-      </tr>
-    </thead>
+  {% for lead in leads %}
+  <div style="border:1px solid #ddd; padding:15px; border-radius:10px; margin-bottom:15px;">
 
-    <tbody>
-      {% for lead in leads %}
-      <tr style="border-bottom:1px solid #ddd;">
-        <td style="padding:10px;">
-          <strong>{{ lead.name }}</strong><br>
-          <small>{{ lead.source }}</small>
-        </td>
+    <!-- TOP INFO -->
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
+      <div>
+        <strong>{{ lead.name }}</strong><br>
+        {{ lead.phone }} | {{ lead.email }}<br>
+        <small>Source: {{ lead.source }}</small>
+      </div>
 
-        <td style="padding:10px;">
-          {{ lead.phone }}<br>
-          {{ lead.email }}
-        </td>
+      <div>
+        <strong>Status:</strong>
+        <span style="color:{% if lead.status == 'Converted' %}green{% else %}#555{% endif %}">
+          {{ lead.status }}
+        </span><br>
+        <small>Follow-Up: {{ lead.follow_up_date }}</small>
+      </div>
+    </div>
 
-        <td style="padding:10px;">
-          {% if lead.status == 'Converted' %}
-            <span style="color:green; font-weight:bold;">Converted</span>
-          {% else %}
-            {{ lead.status }}
-          {% endif %}
-        </td>
+    <!-- ACTIONS -->
+    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
 
-        <td style="padding:10px;">
-          {{ lead.follow_up_date or 'No date set' }}
-        </td>
+      <!-- UPDATE -->
+      <form method="POST" action="/crm/{{ lead.id }}/update" style="display:flex; gap:5px; flex-wrap:wrap;">
+        <select name="status">
+          <option {% if lead.status=="New" %}selected{% endif %}>New</option>
+          <option {% if lead.status=="Contacted" %}selected{% endif %}>Contacted</option>
+          <option {% if lead.status=="Converted" %}selected{% endif %}>Converted</option>
+        </select>
 
-        <td style="padding:10px;">
-          <form method="POST" action="/crm/{{ lead.id }}/update" style="margin-bottom:6px;">
-            <select name="status">
-              <option {% if lead.status=='New' %}selected{% endif %}>New</option>
-              <option {% if lead.status=='Contacted' %}selected{% endif %}>Contacted</option>
-              <option {% if lead.status=='Consultation Booked' %}selected{% endif %}>Consultation Booked</option>
-              <option {% if lead.status=='Filed' %}selected{% endif %}>Filed</option>
-              <option {% if lead.status=='Converted' %}selected{% endif %}>Converted</option>
-              <option {% if lead.status=='Lost' %}selected{% endif %}>Lost</option>
-            </select>
+        <input type="date" name="follow_up_date" value="{{ lead.follow_up_date }}">
+        <input name="notes" placeholder="Notes" value="{{ lead.notes }}">
+        <button type="submit">Update</button>
+      </form>
 
-            <input type="date" name="follow_up_date" value="{{ lead.follow_up_date }}">
-            <input name="notes" value="{{ lead.notes or '' }}" placeholder="Update notes">
-            <button type="submit">Update</button>
-          </form>
-
-          {% if lead.status != 'Converted' %}
-          <form method="POST" action="/crm/{{ lead.id }}/convert">
-            <button type="submit" style="background:#28a745; color:white;">
-              Convert to Client
-            </button>
-          </form>
-          {% else %}
-            <span style="color:green; font-weight:bold;">✓ Client</span>
-          {% endif %}
-        </td>
-      </tr>
+      <!-- CONVERT -->
+      {% if lead.status != "Converted" %}
+      <form method="POST" action="/crm/{{ lead.id }}/convert">
+        <button type="submit" style="background:green; color:white;">
+          Convert to Client
+        </button>
+      </form>
       {% else %}
-      <tr>
-        <td colspan="5" style="padding:15px;">No leads yet.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      <span style="color:green; font-weight:bold;">✔ Client</span>
+      {% endif %}
+
+    </div>
+
+  </div>
+  {% endfor %}
+
 </div>
 
 {% endblock %}

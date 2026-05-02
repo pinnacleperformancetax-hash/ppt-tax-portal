@@ -1,69 +1,88 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Clover Payments</h1>
-<p class="sub">Select invoice, paste Clover link, mark sent/paid, and auto-record income.</p>
+<h1>Payments</h1>
 
 <div class="metric-grid">
   <div class="metric"><span>Paid Revenue</span><strong>{{ paid_total|currency }}</strong></div>
   <div class="metric"><span>Unpaid Balance</span><strong>{{ unpaid_total|currency }}</strong></div>
-  <div class="metric"><span>Clover Links Ready</span><strong>{{ ready_count }}</strong></div>
-  <div class="metric"><span>Need Payment Link</span><strong>{{ missing_link_count }}</strong></div>
 </div>
 
 <div class="card">
-  <h2>Add Clover Link to Invoice</h2>
+  <h2>Pay with Clover</h2>
+  <p class="sub">Select the portal invoice, paste the Clover checkout link, then click Pay with Clover. After the customer pays, return here and click Mark Paid.</p>
+
   <form method="POST" class="grid grid-2">
+    <div style="grid-column:1 / -1;">
+      <label>Clover Payment Link</label>
+      <input type="url" name="clover_link" id="cloverLink" placeholder="Paste Clover checkout link here (https://...)" required>
+    </div>
+
     <div>
       <label>Select Invoice</label>
       <select name="invoice_id" id="invoiceSelect" required>
-        <option value="" data-amount="">Choose invoice</option>
-        {% for inv in invoices %}
-          <option value="{{ inv.id }}" data-amount="{{ inv.amount }}">
-            #{{ inv.invoice_number or inv.id }} — {{ inv.client_name or 'No client' }} — {{ inv.amount|currency }} — {{ inv.status or 'Draft' }}
+        <option value="" data-amount="">-- Select Invoice --</option>
+        {% for invoice in invoices %}
+          <option value="{{ invoice.id }}" data-amount="{{ invoice.amount }}">
+            {{ invoice.invoice_number or invoice.id }} - {{ invoice.amount|currency }}{% if invoice.client_name %} - {{ invoice.client_name }}{% endif %}
           </option>
         {% endfor %}
       </select>
     </div>
+
     <div>
       <label>Amount</label>
-      <input id="amountPreview" value="" placeholder="Auto-fills after invoice selection" readonly>
+      <input type="number" step="0.01" name="amount" id="amountInput" placeholder="Enter amount" required>
     </div>
-    <div style="grid-column:1 / -1;">
-      <label>Clover Payment Link</label>
-      <input name="payment_link" placeholder="https://checkout.clover.com/...">
-    </div>
-    <div style="grid-column:1 / -1;">
-      <label>Payment Notes</label>
-      <input name="payment_notes" placeholder="Optional note">
-    </div>
+
     <div>
-      <button name="action" value="save" type="submit">Save Link</button>
-      <button name="action" value="save_and_send" type="submit" class="btn-dark">Save + Mark Sent</button>
+      <button type="submit" name="action" value="pay">Pay with Clover</button>
     </div>
   </form>
 </div>
 
 <div class="card">
-  <h2>Invoices</h2>
+  <h2>Invoice Payment Status</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Clover</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for inv in invoices %}
+      <thead>
         <tr>
-          <td>{{ inv.client_name or 'No client' }}</td>
-          <td>{{ inv.invoice_number or inv.id }}</td>
-          <td class="money">{{ inv.amount|currency }}</td>
-          <td>{{ inv.status or 'Draft' }}</td>
-          <td>{% if inv.payment_link %}<a class="btn" href="{{ inv.payment_link }}" target="_blank">Open Link</a>{% else %}<span class="empty">No link</span>{% endif %}</td>
-          <td>
-            <form method="POST" style="display:inline;"><input type="hidden" name="invoice_id" value="{{ inv.id }}"><button name="action" value="mark_sent">Mark Sent</button></form>
-            <form method="POST" style="display:inline;"><input type="hidden" name="invoice_id" value="{{ inv.id }}"><button name="action" value="mark_paid" class="btn-dark">Mark Paid</button></form>
-          </td>
+          <th>Invoice</th>
+          <th>Client</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Clover Link</th>
+          <th>Action</th>
         </tr>
-      {% else %}
-        <tr><td colspan="6">No invoices found.</td></tr>
-      {% endfor %}
+      </thead>
+      <tbody>
+        {% for invoice in invoices %}
+          <tr>
+            <td>{{ invoice.invoice_number or invoice.id }}</td>
+            <td>{{ invoice.client_name or '—' }}</td>
+            <td class="money">{{ invoice.amount|currency }}</td>
+            <td>{{ invoice.status or 'Draft' }}</td>
+            <td>
+              {% set saved_link = invoice.payment_link or invoice.clover_link %}
+              {% if saved_link %}
+                <a class="btn" href="{{ saved_link }}" target="_blank">Open Clover</a>
+              {% else %}
+                <span class="empty">No link saved</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if invoice.status != 'Paid' %}
+                <form method="POST" style="display:inline;">
+                  <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                  <button type="submit" name="action" value="mark_paid" class="btn-dark">Mark Paid</button>
+                </form>
+              {% else %}
+                <span class="success">Paid</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6">No invoices found. Create an invoice first.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -73,13 +92,22 @@
   <h2>Payment History</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Provider</th></tr></thead>
+      <thead>
+        <tr><th>Date</th><th>Invoice</th><th>Client</th><th>Amount</th><th>Status</th><th>Provider</th></tr>
+      </thead>
       <tbody>
-      {% for p in payments %}
-        <tr><td>{{ p.created_at }}</td><td>{{ p.client_name or '—' }}</td><td>{{ p.invoice_number or p.invoice_id }}</td><td class="money">{{ p.amount|currency }}</td><td>{{ p.status }}</td><td>{{ p.provider }}</td></tr>
-      {% else %}
-        <tr><td colspan="6">No payments recorded yet.</td></tr>
-      {% endfor %}
+        {% for p in payments %}
+          <tr>
+            <td>{{ p.created_at }}</td>
+            <td>{{ p.invoice_number or p.invoice_id }}</td>
+            <td>{{ p.client_name or '—' }}</td>
+            <td class="money">{{ p.amount|currency }}</td>
+            <td>{{ p.status }}</td>
+            <td>{{ p.provider }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6">No payments recorded yet.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -87,11 +115,11 @@
 
 <script>
 const invoiceSelect = document.getElementById("invoiceSelect");
-const amountPreview = document.getElementById("amountPreview");
-if (invoiceSelect && amountPreview) {
+const amountInput = document.getElementById("amountInput");
+if (invoiceSelect && amountInput) {
   invoiceSelect.addEventListener("change", function() {
     const amount = this.options[this.selectedIndex].dataset.amount || "";
-    amountPreview.value = amount ? "$" + Number(amount).toFixed(2) : "";
+    if (amount) amountInput.value = Number(amount).toFixed(2);
   });
 }
 </script>

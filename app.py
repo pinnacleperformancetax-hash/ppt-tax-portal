@@ -461,8 +461,8 @@ def documents():
                        ORDER BY d.id DESC LIMIT 300""")
     return render_template("documents.html", documents=rows, clients=query_db("SELECT id, name FROM clients ORDER BY name"))
 
-
 @app.route("/tax-returns", methods=["GET", "POST"])
+@app.route("/tax_returns", methods=["GET", "POST"])
 @login_required
 def tax_returns():
     if request.method == "POST" and current_user.role == "admin":

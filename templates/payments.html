@@ -2,48 +2,152 @@
 
 {% block content %}
 
-<h2 style="margin-bottom:20px;">Payments</h2>
+<div style="max-width:1180px; margin:0 auto;">
 
-<div style="background:white; padding:20px; border-radius:8px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:22px;">
+    <div>
+      <h1 style="margin:0; font-size:34px; letter-spacing:-1px;">Payments</h1>
+      <p style="margin:6px 0 0; color:#64748b;">Record payments, mark invoices paid, and track payment history.</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="/invoices" style="background:#0f172a; color:white; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700;">View Invoices</a>
+      <a href="/reports" style="background:#11823b; color:white; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:700;">Reports</a>
+    </div>
+  </div>
 
-    <h3>Record Payment</h3>
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px;">
+    <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 8px 22px rgba(15,23,42,.06); border:1px solid #e5e7eb;">
+      <div style="font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase;">Payment Mode</div>
+      <div style="font-size:28px; font-weight:900; color:#11823b; margin-top:8px;">Manual</div>
+      <div style="font-size:13px; color:#64748b; margin-top:4px;">Clover removed for Phase 1</div>
+    </div>
 
-    <form method="POST">
+    <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 8px 22px rgba(15,23,42,.06); border:1px solid #e5e7eb;">
+      <div style="font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase;">Workflow</div>
+      <div style="font-size:28px; font-weight:900; color:#11823b; margin-top:8px;">Stable</div>
+      <div style="font-size:13px; color:#64748b; margin-top:4px;">No fixed checkout amount</div>
+    </div>
 
-        <label>Select Invoice</label><br>
-        <select name="invoice_id" style="width:100%; padding:10px; margin-bottom:10px;">
-            <option value="">-- Select Invoice --</option>
+    <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 8px 22px rgba(15,23,42,.06); border:1px solid #e5e7eb;">
+      <div style="font-size:12px; font-weight:800; color:#64748b; text-transform:uppercase;">Next Step</div>
+      <div style="font-size:28px; font-weight:900; color:#11823b; margin-top:8px;">Stripe</div>
+      <div style="font-size:13px; color:#64748b; margin-top:4px;">Later, if you want real online pay</div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1.25fr .75fr; gap:20px; align-items:start;">
+
+    <div style="background:white; border-radius:22px; padding:26px; box-shadow:0 10px 28px rgba(15,23,42,.07); border:1px solid #e5e7eb;">
+      <h2 style="margin:0 0 6px; font-size:24px;">Record Payment</h2>
+      <p style="margin:0 0 20px; color:#64748b;">Select the invoice, confirm the amount, and record the payment.</p>
+
+      <form method="POST" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        <div style="grid-column:1 / -1;">
+          <label style="display:block; font-weight:800; margin-bottom:6px;">Select Invoice</label>
+          <select name="invoice_id" id="invoiceSelect" required style="width:100%; padding:13px; border:1px solid #d1d5db; border-radius:12px;">
+            <option value="" data-amount="">-- Select Invoice --</option>
             {% for invoice in invoices %}
-                <option value="{{ invoice.id }}">
-                    {{ invoice.id }} - ${{ invoice.amount }}
-                </option>
+              <option value="{{ invoice.id }}" data-amount="{{ invoice.amount }}">
+                {{ invoice.invoice_number or invoice.id }} • {{ invoice.client_name or 'No client' }} • ${{ invoice.amount }} • {{ invoice.status }}
+              </option>
             {% endfor %}
-        </select>
+          </select>
+        </div>
 
-        <label>Amount</label><br>
-        <input type="number" step="0.01" name="amount"
-               style="width:100%; padding:10px; margin-bottom:10px;">
+        <div>
+          <label style="display:block; font-weight:800; margin-bottom:6px;">Amount</label>
+          <input type="number" step="0.01" name="amount" id="amountInput" placeholder="0.00" style="width:100%; padding:13px; border:1px solid #d1d5db; border-radius:12px;">
+        </div>
 
-        <label>Payment Method</label><br>
-        <select name="method" style="width:100%; padding:10px; margin-bottom:10px;">
-            <option value="Card">Card</option>
+        <div>
+          <label style="display:block; font-weight:800; margin-bottom:6px;">Payment Method</label>
+          <select name="method" style="width:100%; padding:13px; border:1px solid #d1d5db; border-radius:12px;">
+            <option value="Manual">Manual</option>
+            <option value="Card Outside Portal">Card Outside Portal</option>
             <option value="Cash">Cash</option>
+            <option value="Check">Check</option>
             <option value="Zelle">Zelle</option>
-            <option value="Other">Other</option>
-        </select>
+            <option value="Cash App">Cash App</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
 
-        <button type="submit"
-                style="background:#11823b; color:white; padding:10px 20px; border:none;">
-            Record Payment
-        </button>
+        <div>
+          <label style="display:block; font-weight:800; margin-bottom:6px;">Reference / Confirmation</label>
+          <input name="reference" placeholder="Optional" style="width:100%; padding:13px; border:1px solid #d1d5db; border-radius:12px;">
+        </div>
 
-    </form>
+        <div>
+          <label style="display:block; font-weight:800; margin-bottom:6px;">Notes</label>
+          <input name="notes" placeholder="Optional note" style="width:100%; padding:13px; border:1px solid #d1d5db; border-radius:12px;">
+        </div>
+
+        <div style="grid-column:1 / -1;">
+          <button type="submit" style="background:#11823b; color:white; padding:13px 22px; border:none; border-radius:12px; font-weight:900; box-shadow:0 8px 18px rgba(17,130,59,.18);">
+            Record Payment + Mark Paid
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <div style="background:#eef7f1; border:1px solid #cce7d4; border-radius:22px; padding:24px;">
+      <h2 style="margin:0 0 12px; font-size:22px; color:#0f172a;">How it works</h2>
+      <div style="display:grid; gap:12px;">
+        <div style="background:white; border-radius:14px; padding:14px;"><strong>1. Record payment</strong><br><span style="color:#64748b;">Payment saves in the portal.</span></div>
+        <div style="background:white; border-radius:14px; padding:14px;"><strong>2. Invoice updates</strong><br><span style="color:#64748b;">Invoice becomes Paid.</span></div>
+        <div style="background:white; border-radius:14px; padding:14px;"><strong>3. Bookkeeping updates</strong><br><span style="color:#64748b;">Income is added automatically.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="background:white; border-radius:22px; padding:24px; margin-top:22px; box-shadow:0 10px 28px rgba(15,23,42,.07); border:1px solid #e5e7eb;">
+    <h2 style="margin:0 0 14px;">Payment History</h2>
+
+    <div style="overflow:auto; border:1px solid #e5e7eb; border-radius:16px;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Date</th>
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Invoice</th>
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Client</th>
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Method</th>
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Reference</th>
+            <th style="text-align:left; padding:12px; font-size:12px; color:#64748b;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td style="padding:12px; border-top:1px solid #e5e7eb;">{{ payment.created_at }}</td>
+            <td style="padding:12px; border-top:1px solid #e5e7eb;">{{ payment.invoice_number or payment.invoice_id }}</td>
+            <td style="padding:12px; border-top:1px solid #e5e7eb;">{{ payment.client_name or '—' }}</td>
+            <td style="padding:12px; border-top:1px solid #e5e7eb;">{{ payment.method }}</td>
+            <td style="padding:12px; border-top:1px solid #e5e7eb;">{{ payment.reference or '—' }}</td>
+            <td style="padding:12px; border-top:1px solid #e5e7eb; font-weight:900;">${{ payment.amount }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="padding:16px; color:#64748b;">No payments recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
 </div>
 
-<hr>
-
-<h3>Payment History</h3>
-<p>No payments recorded yet.</p>
+<script>
+const invoiceSelect = document.getElementById("invoiceSelect");
+const amountInput = document.getElementById("amountInput");
+if (invoiceSelect && amountInput) {
+  invoiceSelect.addEventListener("change", function () {
+    const selected = invoiceSelect.options[invoiceSelect.selectedIndex];
+    const amount = selected.getAttribute("data-amount");
+    if (amount) amountInput.value = Number(amount).toFixed(2);
+  });
+}
+</script>
 
 {% endblock %}

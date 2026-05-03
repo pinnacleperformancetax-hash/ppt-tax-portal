@@ -114,6 +114,13 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_UPLOADS
 
 
+def add_column_if_missing(table: str, column: str, definition: str) -> None:
+    cols = [r["name"] for r in get_db().execute(f"PRAGMA table_info({table})").fetchall()]
+    if column not in cols:
+        get_db().execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        get_db().commit()
+
+
 def init_db() -> None:
     db = get_db()
     db.executescript("""
@@ -233,10 +240,17 @@ def init_db() -> None:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE INDEX IF NOT EXISTS idx_transactions_client ON transactions(client_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+    CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
     CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
     """)
+
+    add_column_if_missing("tax_returns", "invoice_id", "INTEGER")
+    add_column_if_missing("tax_returns", "completed_at", "TEXT")
+    add_column_if_missing("payments", "method", "TEXT DEFAULT 'Manual Entry'")
+    add_column_if_missing("payments", "reference", "TEXT")
+    add_column_if_missing("payments", "client_id", "INTEGER")
 
     categories = [
         ("Tax Preparation Income", "income"),
@@ -247,6 +261,8 @@ def init_db() -> None:
         ("Advertising & Marketing", "expense"),
         ("Travel", "expense"),
         ("Meals", "expense"),
+        ("Contract Labor", "expense"),
+        ("Bank Fees", "expense"),
     ]
     for name, kind in categories:
         db.execute("INSERT OR IGNORE INTO categories(name, kind) VALUES (?, ?)", (name, kind))
@@ -254,8 +270,8 @@ def init_db() -> None:
     admin_email = "admin@pinnacleperformancetax.com"
     admin_password = os.environ.get("ADMIN_PASSWORD", "ChangeMe123")
     admin_hash = generate_password_hash(admin_password)
-    existing_admin = db.execute("SELECT id FROM users WHERE lower(email)=?", (admin_email,)).fetchone()
-    if existing_admin:
+    admin = db.execute("SELECT id FROM users WHERE lower(email)=?", (admin_email,)).fetchone()
+    if admin:
         db.execute("UPDATE users SET name=?, password_hash=?, role='admin', is_active=1 WHERE lower(email)=?",
                    ("PPT Admin", admin_hash, admin_email))
     else:
@@ -267,12 +283,6 @@ def init_db() -> None:
                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
                    ("Sample Client", "Sample Business LLC", "client@example.com", "478-555-0110", "Business", "Active", "Demo client"))
 
-    client = db.execute("SELECT id FROM clients WHERE email='client@example.com'").fetchone()
-    if client and db.execute("SELECT COUNT(*) c FROM invoices").fetchone()["c"] == 0:
-        today = datetime.now().strftime("%Y-%m-%d")
-        db.execute("""INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   (client["id"], "INV-0001", today, today, 375.00, "Draft", "Tax preparation service"))
     db.commit()
 
 
@@ -363,7 +373,6 @@ def transactions():
                     money(request.form.get("amount")), request.form.get("notes")))
         flash("Transaction added.", "success")
         return redirect(url_for("transactions"))
-
     rows = query_db("""SELECT t.*, c.name category_name, cl.name client_name
                        FROM transactions t
                        LEFT JOIN categories c ON c.id=t.category_id
@@ -386,7 +395,6 @@ def invoices():
                     request.form.get("status"), request.form.get("description")))
         flash("Invoice saved.", "success")
         return redirect(url_for("invoices"))
-
     rows = query_db("""SELECT i.*, cl.name client_name FROM invoices i
                        LEFT JOIN clients cl ON cl.id=i.client_id
                        ORDER BY i.id DESC LIMIT 300""")
@@ -397,6 +405,7 @@ def invoices():
 @login_required
 @admin_required
 def payments():
+    init_db()
     if request.method == "POST":
         invoice_id = request.form.get("invoice_id")
         invoice = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
@@ -414,18 +423,27 @@ def payments():
                    (invoice_id, invoice["client_id"], amount, method, reference, notes))
         execute_db("UPDATE invoices SET status='Paid', paid_at=CURRENT_TIMESTAMP WHERE id=?", (invoice_id,))
 
+        linked_return = query_db("SELECT id FROM tax_returns WHERE invoice_id=? LIMIT 1", (invoice_id,), one=True)
+        if linked_return:
+            execute_db("UPDATE tax_returns SET status='Completed', completed_at=CURRENT_TIMESTAMP WHERE id=?", (linked_return["id"],))
+
         cat = query_db("SELECT id FROM categories WHERE name='Tax Preparation Income' AND kind='income'", one=True)
-        execute_db("""INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
-                      VALUES (?, ?, 'income', ?, ?, ?, ?)""",
-                   (datetime.now().strftime("%Y-%m-%d"),
-                    f"Payment received for invoice {invoice['invoice_number'] or invoice_id}",
-                    cat["id"] if cat else None, invoice["client_id"], amount,
-                    f"Payment record for invoice #{invoice_id}"))
-        flash("Payment recorded. Invoice marked paid. Bookkeeping income added.", "success")
+        if not query_db("SELECT id FROM transactions WHERE notes=? LIMIT 1", (f"Payment record for invoice #{invoice_id}",), one=True):
+            execute_db("""INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
+                          VALUES (?, ?, 'income', ?, ?, ?, ?)""",
+                       (datetime.now().strftime("%Y-%m-%d"),
+                        f"Payment received for invoice {invoice['invoice_number'] or invoice_id}",
+                        cat["id"] if cat else None,
+                        invoice["client_id"], amount,
+                        f"Payment record for invoice #{invoice_id}"))
+
+        flash("Payment recorded. Invoice marked paid. Linked tax return completed. Income added.", "success")
         return redirect(url_for("payments"))
 
-    invoices = query_db("""SELECT i.*, cl.name client_name FROM invoices i
+    invoices = query_db("""SELECT i.*, cl.name client_name, tr.id tax_return_id, tr.status tax_return_status
+                           FROM invoices i
                            LEFT JOIN clients cl ON cl.id=i.client_id
+                           LEFT JOIN tax_returns tr ON tr.invoice_id=i.id
                            ORDER BY i.status='Paid', i.id DESC LIMIT 300""")
     payments_rows = query_db("""SELECT p.*, i.invoice_number, cl.name client_name
                                 FROM payments p
@@ -461,20 +479,40 @@ def documents():
                        ORDER BY d.id DESC LIMIT 300""")
     return render_template("documents.html", documents=rows, clients=query_db("SELECT id, name FROM clients ORDER BY name"))
 
+
 @app.route("/tax-returns", methods=["GET", "POST"])
 @app.route("/tax_returns", methods=["GET", "POST"])
 @login_required
 def tax_returns():
+    init_db()
     if request.method == "POST" and current_user.role == "admin":
-        execute_db("""INSERT INTO tax_returns(client_id, tax_year, service_type, status, due_date, fee, notes)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   (request.form.get("client_id"), request.form.get("tax_year"), request.form.get("service_type"),
-                    request.form.get("status"), request.form.get("due_date"), money(request.form.get("fee")),
-                    request.form.get("notes")))
-        flash("Tax return saved.", "success")
+        client_id = request.form.get("client_id")
+        tax_year = request.form.get("tax_year")
+        service_type = request.form.get("service_type")
+        status = request.form.get("status") or "In Progress"
+        due_date = request.form.get("due_date")
+        fee = money(request.form.get("fee"))
+        notes = request.form.get("notes")
+
+        invoice_number = f"TR-{tax_year}-{datetime.now().strftime('%H%M%S')}"
+        description = f"Tax return service: {service_type or 'Tax Return'} for {tax_year}"
+
+        invoice_id = execute_db("""INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description)
+                                   VALUES (?, ?, ?, ?, ?, 'Sent', ?)""",
+                                (client_id, invoice_number, datetime.now().strftime("%Y-%m-%d"),
+                                 due_date, fee, description))
+
+        execute_db("""INSERT INTO tax_returns(client_id, tax_year, service_type, status, due_date, fee, notes, invoice_id)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (client_id, tax_year, service_type, status, due_date, fee, notes, invoice_id))
+
+        flash("Tax return saved and invoice auto-created.", "success")
         return redirect(url_for("tax_returns"))
-    rows = query_db("""SELECT tr.*, cl.name client_name FROM tax_returns tr
+
+    rows = query_db("""SELECT tr.*, cl.name client_name, i.invoice_number, i.status invoice_status
+                       FROM tax_returns tr
                        LEFT JOIN clients cl ON cl.id=tr.client_id
+                       LEFT JOIN invoices i ON i.id=tr.invoice_id
                        ORDER BY tr.id DESC LIMIT 300""")
     return render_template("tax_returns.html", returns=rows, clients=query_db("SELECT id, name FROM clients ORDER BY name"))
 

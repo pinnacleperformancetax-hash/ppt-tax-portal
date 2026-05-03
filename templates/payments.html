@@ -27,13 +27,10 @@
 @media(max-width:950px){.ppt-metrics,.ppt-split,.ppt-grid{grid-template-columns:1fr}.ppt-page-head{display:block}}
 </style>
 
-{% set paid_count_value = paid_invoice_count if paid_invoice_count is defined else (paid_count if paid_count is defined else 0) %}
-{% set unpaid_count_value = unpaid_invoice_count if unpaid_invoice_count is defined else (unpaid_count if unpaid_count is defined else 0) %}
-
 <div class="ppt-page-head">
   <div>
     <h1>Payments</h1>
-    <p class="ppt-sub">Record client payments, update invoice status, and keep bookkeeping totals current.</p>
+    <p class="ppt-sub">Record client payments, update invoice status, complete linked tax returns, and post income.</p>
   </div>
   <div class="ppt-actions">
     <a class="ppt-link dark" href="/invoices">View Invoices</a>
@@ -42,28 +39,16 @@
 </div>
 
 <div class="ppt-metrics">
-  <div class="ppt-metric">
-    <span>Total Payments Collected</span>
-    <strong>{{ paid_total|currency if paid_total is defined else "$0.00" }}</strong>
-  </div>
-  <div class="ppt-metric">
-    <span>Outstanding Balance</span>
-    <strong>{{ unpaid_total|currency if unpaid_total is defined else "$0.00" }}</strong>
-  </div>
-  <div class="ppt-metric">
-    <span>Invoices Paid</span>
-    <strong>{{ paid_count_value }}</strong>
-  </div>
-  <div class="ppt-metric">
-    <span>Invoices Unpaid</span>
-    <strong>{{ unpaid_count_value }}</strong>
-  </div>
+  <div class="ppt-metric"><span>Total Payments Collected</span><strong>{{ paid_total|currency }}</strong></div>
+  <div class="ppt-metric"><span>Outstanding Balance</span><strong>{{ unpaid_total|currency }}</strong></div>
+  <div class="ppt-metric"><span>Invoices Paid</span><strong>{{ paid_invoice_count }}</strong></div>
+  <div class="ppt-metric"><span>Invoices Unpaid</span><strong>{{ unpaid_invoice_count }}</strong></div>
 </div>
 
 <div class="ppt-split">
   <div class="ppt-card">
     <h2>Record Payment</h2>
-    <p class="ppt-sub">Choose the invoice, confirm the amount received, and save the payment.</p>
+    <p class="ppt-sub">Choose the invoice. The amount fills in automatically.</p>
 
     <form method="POST" class="ppt-grid" style="margin-top:16px">
       <div class="ppt-field" style="grid-column:1/-1">
@@ -72,7 +57,8 @@
           <option value="" data-amount="">-- Select Invoice --</option>
           {% for invoice in invoices %}
             <option value="{{ invoice.id }}" data-amount="{{ invoice.amount }}">
-              {{ invoice.invoice_number or invoice.id }} • {{ invoice.client_name or invoice.client or "No client" }} • {{ invoice.amount|currency }} • {{ invoice.status }}
+              {{ invoice.invoice_number or invoice.id }} • {{ invoice.client_name or "No client" }} • {{ invoice.amount|currency }} • {{ invoice.status }}
+              {% if invoice.tax_return_id %} • Tax Return{% endif %}
             </option>
           {% endfor %}
         </select>
@@ -114,27 +100,12 @@
   </div>
 
   <div class="ppt-card">
-    <h2>Payment Summary</h2>
-    <p class="ppt-sub">What updates when a payment is recorded.</p>
-
-    <div class="ppt-note">
-      Recording a payment updates the invoice, payment history, bookkeeping income, and reports.
-    </div>
-
-    <div class="ppt-mini">
-      <strong>Invoice Status</strong><br>
-      <span class="ppt-sub">The selected invoice changes to Paid.</span>
-    </div>
-
-    <div class="ppt-mini">
-      <strong>Bookkeeping Income</strong><br>
-      <span class="ppt-sub">The payment is added as income automatically.</span>
-    </div>
-
-    <div class="ppt-mini">
-      <strong>Reports</strong><br>
-      <span class="ppt-sub">Collected and outstanding totals stay updated.</span>
-    </div>
+    <h2>Payment Automation</h2>
+    <p class="ppt-sub">What updates after payment is recorded.</p>
+    <div class="ppt-note">Payment saves to history, invoice becomes Paid, linked tax return becomes Completed, and income posts to bookkeeping.</div>
+    <div class="ppt-mini"><strong>Invoice</strong><br><span class="ppt-sub">Marked Paid automatically.</span></div>
+    <div class="ppt-mini"><strong>Tax Return</strong><br><span class="ppt-sub">Linked return changes to Completed.</span></div>
+    <div class="ppt-mini"><strong>Bookkeeping</strong><br><span class="ppt-sub">Income transaction is created once.</span></div>
   </div>
 </div>
 
@@ -142,30 +113,19 @@
   <h2>Payment History</h2>
   <div class="ppt-table-wrap">
     <table class="ppt-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Invoice</th>
-          <th>Client</th>
-          <th>Method</th>
-          <th>Reference</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Date</th><th>Invoice</th><th>Client</th><th>Method</th><th>Reference</th><th>Amount</th></tr></thead>
       <tbody>
         {% for payment in payments %}
           <tr>
             <td>{{ payment.created_at or "—" }}</td>
-            <td>{{ payment.invoice_number or payment.invoice_id or payment.invoice }}</td>
-            <td>{{ payment.client_name or payment.client or "—" }}</td>
+            <td>{{ payment.invoice_number or payment.invoice_id }}</td>
+            <td>{{ payment.client_name or "—" }}</td>
             <td><span class="ppt-pill">{{ payment.method or "Manual Entry" }}</span></td>
             <td>{{ payment.reference or "—" }}</td>
             <td>{{ payment.amount|currency }}</td>
           </tr>
         {% else %}
-          <tr>
-            <td colspan="6">No payments recorded yet.</td>
-          </tr>
+          <tr><td colspan="6">No payments recorded yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

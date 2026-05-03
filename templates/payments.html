@@ -1,116 +1,186 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Payments</title>
+{% extends "base.html" %}
+
+{% block content %}
 <style>
-body { font-family: Arial; background:#f4f7f6; margin:0; }
-
-.sidebar {
-  width:250px;
-  height:100vh;
-  position:fixed;
-  background:#11823b;
-  color:white;
-  padding:20px;
-}
-
-.main {
-  margin-left:260px;
-  padding:30px;
-}
-
-.card {
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  margin-bottom:20px;
-}
-
-.grid {
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:15px;
-}
-
-.metric strong {
-  font-size:24px;
-  color:#11823b;
-}
-
-button {
-  background:#11823b;
-  color:white;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-}
+.ppt-page-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:14px}
+.ppt-page-head h1{font-size:34px;margin:0 0 6px;font-weight:900;letter-spacing:-.04em}
+.ppt-sub{color:#64748b;margin:0}
+.ppt-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ppt-btn,.ppt-link{border:0;background:#11823b;color:white;border-radius:13px;padding:12px 18px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-block}
+.ppt-link.dark{background:#0f172a}
+.ppt-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:18px 0}
+.ppt-metric{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:20px;box-shadow:0 10px 28px rgba(15,23,42,.055)}
+.ppt-metric span{display:block;color:#64748b;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.07em}
+.ppt-metric strong{display:block;font-size:28px;color:#11823b;margin-top:7px}
+.ppt-split{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+.ppt-card{background:#fff;border:1px solid #e5e7eb;border-radius:22px;padding:24px;margin:18px 0;box-shadow:0 10px 28px rgba(15,23,42,.055)}
+.ppt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ppt-field label{display:block;font-weight:900;font-size:13px;margin:0 0 6px}
+.ppt-field input,.ppt-field select{width:100%;border:1px solid #d1d5db;border-radius:13px;padding:12px 13px;background:white;font-size:14px}
+.ppt-note{background:#eef7f1;border:1px solid #d4eadb;border-radius:16px;padding:14px;color:#14532d;font-weight:700;margin-top:14px}
+.ppt-mini{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-top:12px}
+.ppt-table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:18px;background:white}
+.ppt-table{width:100%;border-collapse:collapse}
+.ppt-table th,.ppt-table td{text-align:left;border-bottom:1px solid #e5e7eb;padding:13px;vertical-align:top}
+.ppt-table th{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.ppt-pill{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;background:#f3f4f6;color:#374151}
+@media(max-width:950px){.ppt-metrics,.ppt-split,.ppt-grid{grid-template-columns:1fr}.ppt-page-head{display:block}}
 </style>
-</head>
 
-<body>
+{% set paid_count_value = paid_invoice_count if paid_invoice_count is defined else (paid_count if paid_count is defined else 0) %}
+{% set unpaid_count_value = unpaid_invoice_count if unpaid_invoice_count is defined else (unpaid_count if unpaid_count is defined else 0) %}
 
-<div class="sidebar">
-<h2>PPT</h2>
-<p>pinnacleperformancetax@gmail.com</p>
-<p>478-338-1632</p>
+<div class="ppt-page-head">
+  <div>
+    <h1>Payments</h1>
+    <p class="ppt-sub">Record client payments, update invoice status, and keep bookkeeping totals current.</p>
+  </div>
+  <div class="ppt-actions">
+    <a class="ppt-link dark" href="/invoices">View Invoices</a>
+    <a class="ppt-link" href="/reports">Reports</a>
+  </div>
 </div>
 
-<div class="main">
-
-<h1>Payments</h1>
-
-<div class="grid">
-
-<div class="card metric">
-<span>Total Collected</span>
-<strong>${{ paid_total }}</strong>
+<div class="ppt-metrics">
+  <div class="ppt-metric">
+    <span>Total Payments Collected</span>
+    <strong>{{ paid_total|currency if paid_total is defined else "$0.00" }}</strong>
+  </div>
+  <div class="ppt-metric">
+    <span>Outstanding Balance</span>
+    <strong>{{ unpaid_total|currency if unpaid_total is defined else "$0.00" }}</strong>
+  </div>
+  <div class="ppt-metric">
+    <span>Invoices Paid</span>
+    <strong>{{ paid_count_value }}</strong>
+  </div>
+  <div class="ppt-metric">
+    <span>Invoices Unpaid</span>
+    <strong>{{ unpaid_count_value }}</strong>
+  </div>
 </div>
 
-<div class="card metric">
-<span>Outstanding</span>
-<strong>${{ unpaid_total }}</strong>
+<div class="ppt-split">
+  <div class="ppt-card">
+    <h2>Record Payment</h2>
+    <p class="ppt-sub">Choose the invoice, confirm the amount received, and save the payment.</p>
+
+    <form method="POST" class="ppt-grid" style="margin-top:16px">
+      <div class="ppt-field" style="grid-column:1/-1">
+        <label>Select Invoice</label>
+        <select name="invoice_id" id="invoiceSelect" required>
+          <option value="" data-amount="">-- Select Invoice --</option>
+          {% for invoice in invoices %}
+            <option value="{{ invoice.id }}" data-amount="{{ invoice.amount }}">
+              {{ invoice.invoice_number or invoice.id }} • {{ invoice.client_name or invoice.client or "No client" }} • {{ invoice.amount|currency }} • {{ invoice.status }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="ppt-field">
+        <label>Amount Received</label>
+        <input type="number" step="0.01" name="amount" id="amountInput" placeholder="0.00">
+      </div>
+
+      <div class="ppt-field">
+        <label>Payment Method</label>
+        <select name="method">
+          <option>Manual Entry</option>
+          <option>Cash</option>
+          <option>Check</option>
+          <option>Zelle</option>
+          <option>Cash App</option>
+          <option>Card Outside Portal</option>
+          <option>Bank Transfer</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="ppt-field">
+        <label>Reference / Confirmation</label>
+        <input name="reference" placeholder="Optional confirmation number">
+      </div>
+
+      <div class="ppt-field">
+        <label>Internal Note</label>
+        <input name="notes" placeholder="Optional payment note">
+      </div>
+
+      <div style="grid-column:1/-1">
+        <button type="submit" class="ppt-btn">Record Payment + Mark Invoice Paid</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="ppt-card">
+    <h2>Payment Summary</h2>
+    <p class="ppt-sub">What updates when a payment is recorded.</p>
+
+    <div class="ppt-note">
+      Recording a payment updates the invoice, payment history, bookkeeping income, and reports.
+    </div>
+
+    <div class="ppt-mini">
+      <strong>Invoice Status</strong><br>
+      <span class="ppt-sub">The selected invoice changes to Paid.</span>
+    </div>
+
+    <div class="ppt-mini">
+      <strong>Bookkeeping Income</strong><br>
+      <span class="ppt-sub">The payment is added as income automatically.</span>
+    </div>
+
+    <div class="ppt-mini">
+      <strong>Reports</strong><br>
+      <span class="ppt-sub">Collected and outstanding totals stay updated.</span>
+    </div>
+  </div>
 </div>
 
-<div class="card metric">
-<span>Invoices Paid</span>
-<strong>{{ paid_count }}</strong>
+<div class="ppt-card">
+  <h2>Payment History</h2>
+  <div class="ppt-table-wrap">
+    <table class="ppt-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Invoice</th>
+          <th>Client</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payment in payments %}
+          <tr>
+            <td>{{ payment.created_at or "—" }}</td>
+            <td>{{ payment.invoice_number or payment.invoice_id or payment.invoice }}</td>
+            <td>{{ payment.client_name or payment.client or "—" }}</td>
+            <td><span class="ppt-pill">{{ payment.method or "Manual Entry" }}</span></td>
+            <td>{{ payment.reference or "—" }}</td>
+            <td>{{ payment.amount|currency }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6">No payments recorded yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<div class="card metric">
-<span>Invoices Unpaid</span>
-<strong>{{ unpaid_count }}</strong>
-</div>
-
-</div>
-
-<div class="card">
-<h2>Record Payment</h2>
-
-<form method="POST">
-<select name="invoice_id">
-{% for i in invoices %}
-<option value="{{ i.id }}">
-Invoice {{ i.id }} - ${{ i.amount }} - {{ i.status }}
-</option>
-{% endfor %}
-</select>
-
-<input name="amount" placeholder="Amount">
-
-<button>Record Payment</button>
-</form>
-</div>
-
-<div class="card">
-<h2>Payment History</h2>
-
-{% for p in payments %}
-<p>Invoice {{ p.invoice }} - ${{ p.amount }}</p>
-{% endfor %}
-
-</div>
-
-</div>
-
-</body>
-</html>
+<script>
+const invoiceSelect = document.getElementById("invoiceSelect");
+const amountInput = document.getElementById("amountInput");
+if (invoiceSelect && amountInput) {
+  invoiceSelect.addEventListener("change", function () {
+    const selected = invoiceSelect.options[invoiceSelect.selectedIndex];
+    const amount = selected.getAttribute("data-amount");
+    if (amount) amountInput.value = Number(amount).toFixed(2);
+  });
+}
+</script>
+{% endblock %}

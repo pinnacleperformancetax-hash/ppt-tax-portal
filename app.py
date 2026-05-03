@@ -257,7 +257,6 @@ def init_db() -> None:
         for col, definition in cols:
             add_column_if_missing(table, col, definition)
 
-    # Clean duplicate categories from older versions.
     rows = conn.execute("SELECT id, name, kind FROM categories ORDER BY id").fetchall()
     seen = {}
     for r in rows:
@@ -348,9 +347,11 @@ def dashboard():
         income = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", one=True)["total"]
         expenses = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", one=True)["total"]
         unpaid = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+        paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE status='Paid'", one=True)["total"]
         counts = {
             "clients": query_db("SELECT COUNT(*) c FROM clients", one=True)["c"],
-            "invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", one=True)["c"],
+            "open_invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", one=True)["c"],
+            "paid_invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status='Paid'", one=True)["c"],
             "documents": query_db("SELECT COUNT(*) c FROM documents", one=True)["c"],
             "returns": query_db("SELECT COUNT(*) c FROM tax_returns", one=True)["c"],
             "appointments": query_db("SELECT COUNT(*) c FROM appointments", one=True)["c"],
@@ -360,8 +361,10 @@ def dashboard():
         income = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income' AND client_id=?", (current_user.client_id,), one=True)["total"]
         expenses = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense' AND client_id=?", (current_user.client_id,), one=True)["total"]
         unpaid = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid' AND client_id=?", (current_user.client_id,), one=True)["total"]
+        paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE status='Paid' AND client_id=?", (current_user.client_id,), one=True)["total"]
         counts = {"clients": 1,
-                  "invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid' AND client_id=?", (current_user.client_id,), one=True)["c"],
+                  "open_invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid' AND client_id=?", (current_user.client_id,), one=True)["c"],
+                  "paid_invoices": query_db("SELECT COUNT(*) c FROM invoices WHERE status='Paid' AND client_id=?", (current_user.client_id,), one=True)["c"],
                   "documents": query_db("SELECT COUNT(*) c FROM documents WHERE client_id=?", (current_user.client_id,), one=True)["c"],
                   "returns": query_db("SELECT COUNT(*) c FROM tax_returns WHERE client_id=?", (current_user.client_id,), one=True)["c"],
                   "appointments": query_db("SELECT COUNT(*) c FROM appointments WHERE client_id=?", (current_user.client_id,), one=True)["c"],
@@ -376,7 +379,7 @@ def dashboard():
                                   FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id
                                   ORDER BY i.id DESC LIMIT 5""")
     return render_template("dashboard.html", income=income, expenses=expenses, balance=income-expenses,
-                           unpaid=unpaid, counts=counts, recent_transactions=recent_transactions,
+                           unpaid=unpaid, paid=paid, counts=counts, recent_transactions=recent_transactions,
                            recent_invoices=recent_invoices)
 
 

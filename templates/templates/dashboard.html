@@ -6,17 +6,18 @@
   <div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div>
   <div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div>
   <div class="metric"><span>Balance</span><strong>{{ balance|currency }}</strong></div>
-  <div class="metric"><span>Unpaid Invoices</span><strong>{{ unpaid_invoices|currency }}</strong></div>
-  <div class="metric"><span>Active Clients</span><strong>{{ active_clients }}</strong></div>
-  <div class="metric"><span>CRM Leads</span><strong>{{ crm_total }}</strong></div>
-  <div class="metric"><span>New Leads</span><strong>{{ crm_new }}</strong></div>
-  <div class="metric"><span>Converted</span><strong>{{ crm_converted }}</strong></div>
+  <div class="metric"><span>Unpaid Invoices</span><strong>{{ unpaid|currency }}</strong></div>
+  <div class="metric"><span>Active Clients</span><strong>{{ counts.clients }}</strong></div>
   <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices }}</strong></div>
-  <div class="metric"><span>Pending Docs</span><strong>{{ pending_docs }}</strong></div>
-  <div class="metric"><span>Tax Returns</span><strong>{{ tax_returns }}</strong></div>
-  <div class="metric"><span>Appointments</span><strong>{{ appointments }}</strong></div>
+  <div class="metric"><span>Tax Returns</span><strong>{{ counts.tax_returns }}</strong></div>
+  <div class="metric"><span>Appointments</span><strong>{{ counts.appointments }}</strong></div>
 </div>
-<div class="card"><h2>Recent CRM Leads</h2>{% for l in recent_leads %}<p><strong>{{ l.name }}</strong> — {{ l.status }} — {{ l.phone }}</p>{% else %}<p>No CRM leads yet.</p>{% endfor %}</div>
-<div class="card"><h2>Recent Transactions</h2><table><tr><th>Date</th><th>Description</th><th>Client</th><th>Category</th><th>Amount</th></tr>{% for t in recent_transactions %}<tr><td>{{ t.date }}</td><td>{{ t.description }}</td><td>{{ t.client_name }}</td><td>{{ t.category_name }}</td><td class="money">{{ t.amount|currency }}</td></tr>{% endfor %}</table></div>
-<div class="card"><h2>Upcoming Appointments</h2><table><tr><th>Client</th><th>Title</th><th>Start</th><th>Status</th></tr>{% for a in upcoming_appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.status }}</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>Recent Transactions</h2>
+<table><thead><tr><th>Date</th><th>Description</th><th>Client</th><th>Amount</th></tr></thead><tbody>
+{% for t in recent_transactions %}<tr><td>{{ t.date }}</td><td>{{ t.description }}</td><td>{{ t.client_name }}</td><td class="money">{{ t.amount|currency }}</td></tr>{% else %}<tr><td colspan="4">No transactions.</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card"><h2>Recent Invoices</h2>
+<table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Amount</th></tr></thead><tbody>
+{% for i in recent_invoices %}<tr><td>{{ i.invoice_number or i.id }}</td><td>{{ i.client_name }}</td><td>{{ i.status }}</td><td>{{ i.amount|currency }}</td></tr>{% else %}<tr><td colspan="4">No invoices.</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

@@ -1,4 +1,14 @@
-{% extends "base.html" %}{% block content %}
-<h1>Tax Returns</h1>{% if current_user.role == 'admin' %}<div class="card"><h2>Add Tax Return</h2><form method="POST" class="grid grid-2"><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select><input name="tax_year" placeholder="Tax year"><input name="service_type" placeholder="Service type"><input name="status" placeholder="Status"><input type="date" name="due_date"><input name="fee" placeholder="Fee"><textarea name="notes" placeholder="Notes"></textarea><button>Create</button></form></div>{% endif %}
-<div class="card"><h2>Returns</h2><table><tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Fee</th></tr>{% for r in returns %}<tr><td>{{ r.client_name }}</td><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td>{{ r.fee|currency }}</td></tr>{% endfor %}</table></div>
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Returns</h1>
+{% if current_user.role == 'admin' %}
+<div class="card"><h2>Add Tax Return</h2><form method="POST" class="grid grid-2">
+<select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<input name="tax_year" placeholder="Tax year"><input name="service_type" placeholder="Service type">
+<select name="status"><option>In Progress</option><option>Waiting on Client</option><option>Filed</option></select>
+<input type="date" name="due_date"><input type="number" step="0.01" name="fee" placeholder="Fee">
+<textarea name="notes" placeholder="Notes"></textarea><button>Save</button></form></div>{% endif %}
+<div class="card"><h2>Returns</h2><table><thead><tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Fee</th></tr></thead><tbody>
+{% for r in returns %}<tr><td>{{ r.client_name }}</td><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td>{{ r.fee|currency }}</td></tr>{% else %}<tr><td colspan="6">No tax returns.</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

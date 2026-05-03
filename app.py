@@ -245,7 +245,7 @@ def init_db() -> None:
     CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
     CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
     """)
-
+    add_column_if_missing("tax_returns", "invoice"' paid_at", "TEXT")
     add_column_if_missing("tax_returns", "invoice_id", "INTEGER")
     add_column_if_missing("tax_returns", "completed_at", "TEXT")
     add_column_if_missing("payments", "method", "TEXT DEFAULT 'Manual Entry'")

@@ -3,7 +3,7 @@
 <div class="page-head">
   <div>
     <h1>Client Dashboard</h1>
-    <p class="sub">Welcome, {{ current_user.name }}. Upload documents and view your tax progress.</p>
+    <p class="sub">Welcome, {{ current_user.name }}. Upload tax and bookkeeping documents and view your progress.</p>
   </div>
 </div>
 
@@ -22,10 +22,23 @@
 </div>
 
 <div class="card">
-  <h2>Upload Your Documents</h2>
-  <p class="sub">Upload W-2s, 1099s, IDs, receipts, bank statements, business expenses, and other tax documents.</p>
+  <h2>Upload Documents</h2>
+  <p class="sub">Upload W-2s, 1099s, IDs, receipts, bank statements, bookkeeping files, payroll reports, and invoices.</p>
   <form method="POST" action="/client/upload" enctype="multipart/form-data" class="grid grid-3" style="margin-top:16px">
-    <div><label>Document Name</label><input name="name" placeholder="W-2, 1099, ID, receipts"></div>
+    <div><label>Document Name</label><input name="name" placeholder="Bank statement, W-2, receipts"></div>
+    <div>
+      <label>Category</label>
+      <select name="category">
+        <option>Tax Documents</option>
+        <option>Bookkeeping</option>
+        <option>Bank Statements</option>
+        <option>Receipts</option>
+        <option>Payroll</option>
+        <option>Invoices</option>
+        <option>Identification</option>
+        <option>Other</option>
+      </select>
+    </div>
     <div><label>Tax Year</label><input name="tax_year" placeholder="2025"></div>
     <div><label>File</label><input type="file" name="file" required></div>
     <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" placeholder="Add any note for the office"></textarea></div>
@@ -66,12 +79,15 @@
 <div class="card">
   <h2>My Uploaded Documents</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Name</th><th>Tax Year</th><th>Status</th><th>Notes</th></tr></thead>
+    <thead><tr><th>Date</th><th>Name</th><th>Category</th><th>Tax Year</th><th>Status</th><th>File</th></tr></thead>
     <tbody>
     {% for d in documents %}
-      <tr><td>{{ d.created_at }}</td><td>{{ d.name }}</td><td>{{ d.tax_year or '—' }}</td><td><span class="pill gray">{{ d.status }}</span></td><td>{{ d.notes or '—' }}</td></tr>
+      <tr>
+        <td>{{ d.created_at }}</td><td>{{ d.name }}</td><td><span class="pill gray">{{ d.category or 'Tax Documents' }}</span></td><td>{{ d.tax_year or '—' }}</td><td><span class="pill {% if d.status != 'Reviewed' %}warn{% endif %}">{{ d.status }}</span></td>
+        <td>{% if d.filename %}<a class="btn btn-dark" href="/documents/download/{{ d.id }}">Download</a>{% else %}No file{% endif %}</td>
+      </tr>
     {% else %}
-      <tr><td colspan="5">No documents uploaded yet.</td></tr>
+      <tr><td colspan="6">No documents uploaded yet.</td></tr>
     {% endfor %}
     </tbody>
   </table></div>

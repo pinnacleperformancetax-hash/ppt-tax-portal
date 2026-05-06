@@ -9,7 +9,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, Response, flash, g, redirect, render_template, request, url_for
+from flask import Flask, Response, flash, g, redirect, render_template, request, url_for, send_from_directory, abort
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -256,6 +256,9 @@ def init_db() -> None:
     add_column_if_missing("payments", "method", "TEXT DEFAULT 'Manual Entry'")
     add_column_if_missing("payments", "reference", "TEXT")
     add_column_if_missing("payments", "client_id", "INTEGER")
+    add_column_if_missing("documents", "category", "TEXT DEFAULT 'Tax Documents'")
+    add_column_if_missing("documents", "uploaded_by", "TEXT DEFAULT 'Admin'")
+    add_column_if_missing("documents", "reviewed_at", "TEXT")
 
     categories = [
         ("Tax Preparation Income", "income"),
@@ -282,11 +285,6 @@ def init_db() -> None:
     else:
         db.execute("INSERT INTO users(name, email, password_hash, role, is_active) VALUES (?, ?, ?, 'admin', 1)",
                    ("PPT Admin", admin_email, admin_hash))
-
-    if db.execute("SELECT COUNT(*) c FROM clients").fetchone()["c"] == 0:
-        db.execute("""INSERT INTO clients(name, business_name, email, phone, client_type, status, notes)
-                      VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                   ("Sample Client", "Sample Business LLC", "client@example.com", "478-555-0110", "Business", "Active", "Demo client"))
 
     db.commit()
 
@@ -315,9 +313,7 @@ def login():
         row = query_db("SELECT * FROM users WHERE lower(email)=? AND is_active=1", (email,), one=True)
         if row and check_password_hash(row["password_hash"], password):
             login_user(User(row))
-            if row["role"] == "admin":
-                return redirect(url_for("dashboard"))
-            return redirect(url_for("client_dashboard"))
+            return redirect(url_for("dashboard") if row["role"] == "admin" else url_for("client_dashboard"))
         flash("Invalid login.", "danger")
     return render_template("login.html")
 
@@ -378,15 +374,38 @@ def client_upload():
     filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(file.filename)}"
     file.save(UPLOAD_DIR / filename)
 
-    execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes)
-                  VALUES (?, ?, ?, ?, 'Uploaded by Client', ?)""",
+    execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes, category, uploaded_by)
+                  VALUES (?, ?, ?, ?, 'Uploaded by Client', ?, ?, 'Client')""",
                (current_user.client_id,
                 request.form.get("name") or file.filename,
                 filename,
                 request.form.get("tax_year"),
-                request.form.get("notes")))
+                request.form.get("notes"),
+                request.form.get("category") or "Tax Documents"))
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("client_dashboard"))
+
+
+@app.route("/documents/download/<int:document_id>")
+@login_required
+def download_document(document_id: int):
+    doc = query_db("SELECT * FROM documents WHERE id=?", (document_id,), one=True)
+    if not doc or not doc["filename"]:
+        abort(404)
+
+    if current_user.role != "admin" and doc["client_id"] != current_user.client_id:
+        abort(403)
+
+    return send_from_directory(UPLOAD_DIR, doc["filename"], as_attachment=True)
+
+
+@app.route("/documents/mark-reviewed/<int:document_id>", methods=["POST"])
+@login_required
+@admin_required
+def mark_document_reviewed(document_id: int):
+    execute_db("UPDATE documents SET status='Reviewed', reviewed_at=CURRENT_TIMESTAMP WHERE id=?", (document_id,))
+    flash("Document marked reviewed.", "success")
+    return redirect(url_for("documents"))
 
 
 @app.route("/dashboard")
@@ -414,9 +433,13 @@ def dashboard():
     recent_invoices = query_db("""SELECT i.*, cl.name client_name FROM invoices i
                                   LEFT JOIN clients cl ON cl.id=i.client_id
                                   ORDER BY i.id DESC LIMIT 5""")
+    recent_documents = query_db("""SELECT d.*, cl.name client_name FROM documents d
+                                   LEFT JOIN clients cl ON cl.id=d.client_id
+                                   ORDER BY d.id DESC LIMIT 5""")
     return render_template("dashboard.html", income=income, expenses=expenses, balance=income-expenses,
                            unpaid=unpaid, paid=paid, counts=counts,
-                           recent_transactions=recent_transactions, recent_invoices=recent_invoices)
+                           recent_transactions=recent_transactions, recent_invoices=recent_invoices,
+                           recent_documents=recent_documents)
 
 
 @app.route("/clients", methods=["GET", "POST"])
@@ -541,17 +564,22 @@ def documents():
     if request.method == "POST":
         if current_user.role == "admin":
             client_id = request.form.get("client_id")
+            uploaded_by = "Admin"
         else:
             client_id = current_user.client_id
+            uploaded_by = "Client"
+
         file = request.files.get("file")
         filename = ""
         if file and file.filename and allowed_file(file.filename):
             filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{secure_filename(file.filename)}"
             file.save(UPLOAD_DIR / filename)
-        execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes)
-                      VALUES (?, ?, ?, ?, ?, ?)""",
+
+        execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes, category, uploaded_by)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                    (client_id, request.form.get("name"), filename,
-                    request.form.get("tax_year"), request.form.get("status") or "Received", request.form.get("notes")))
+                    request.form.get("tax_year"), request.form.get("status") or "Received", request.form.get("notes"),
+                    request.form.get("category") or "Tax Documents", uploaded_by))
         flash("Document saved.", "success")
         return redirect(url_for("documents") if current_user.role == "admin" else url_for("client_dashboard"))
 

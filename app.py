@@ -107,6 +107,7 @@ def init_db() -> None:
     """)
     for table, column, definition in [
         ("documents","name","TEXT"),
+        ("documents", "filename", "TEXT"),
         ("users","client_id","INTEGER"),("invoices","paid_at","TEXT"),("tax_returns","invoice_id","INTEGER"),("tax_returns","completed_at","TEXT"),
         ("payments","method","TEXT DEFAULT 'Manual Entry'"),("payments","reference","TEXT"),("payments","client_id","INTEGER"),
         ("documents","category","TEXT DEFAULT 'Tax Documents'"),("documents","uploaded_by","TEXT DEFAULT 'Admin'"),("documents","reviewed_at","TEXT")

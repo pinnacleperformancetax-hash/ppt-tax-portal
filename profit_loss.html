@@ -1,0 +1,24 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PPT Profit & Loss Report</title>
+</head>
+<body>
+    <h1>Pinnacle Performance Tax and Accounting</h1>
+    <h2>Profit & Loss Summary</h2>
+
+    <div>
+        <strong>Total Income:</strong> {{ income.total or 0 }}
+    </div>
+
+    <div>
+        <strong>Total Expenses:</strong> {{ expenses.total or 0 }}
+    </div>
+
+    <div>
+        <strong>Net Profit:</strong>
+        {{ (income.total or 0) - (expenses.total or 0) }}
+    </div>
+</body>
+</html>

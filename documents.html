@@ -1,14 +1,41 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block content %}
-<div class="grid-2">
-<div class="card"><h3 class="section-title">{{ 'Upload / Request Document' if current_user.role=='admin' else 'Upload Document' }}</h3><form method="post" enctype="multipart/form-data"><div class="grid-3">
-{% if current_user.role=='admin' %}<select name="client_id" required><option value="">Client</option>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>{% endif %}
-<input name="document_name" placeholder="Document name" required>
-<input name="tax_year" placeholder="Tax year">
-<select name="status"><option>Received</option><option>Requested</option><option>Missing</option></select>
-<input type="file" name="file">
-</div><div style="margin-top:12px"><textarea name="notes" placeholder="Notes"></textarea></div><button class="btn" type="submit">Save Document</button></form></div>
-<div class="card"><h3 class="section-title">Document Tracker</h3><table><thead><tr><th>Client</th><th>Document</th><th>Status</th><th>File</th></tr></thead><tbody>
-{% for row in documents %}<tr><td>{{ row.client_name }}</td><td>{{ row.document_name }}<div class="muted">{{ row.tax_year or '' }}</div></td><td><span class="badge {% if row.status!='Received' %}warning{% endif %}">{{ row.status }}</span></td><td>{% if row.file_path %}<a href="/{{ row.file_path }}" target="_blank">Open</a>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="4">No documents yet.</td></tr>{% endfor %}
-</tbody></table></div></div>
+<div class="page-head">
+  <div>
+    <h1>{% if current_user.role == 'admin' %}Documents{% else %}My Uploads{% endif %}</h1>
+    <p class="sub">{% if current_user.role == 'admin' %}Review client uploads and save office documents.{% else %}Upload and track your tax documents securely.{% endif %}</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>{% if current_user.role == 'admin' %}Save Document{% else %}Upload Document{% endif %}</h2>
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    {% if current_user.role == 'admin' %}
+    <div><label>Client</label><select name="client_id" required>{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div><label>Document Name</label><input name="name" placeholder="W-2, 1099, ID, receipts"></div>
+    <div><label>Tax Year</label><input name="tax_year" placeholder="2025"></div>
+    <div><label>Status</label><select name="status"><option>Received</option><option>Uploaded by Client</option><option>Requested</option><option>Reviewed</option></select></div>
+    <div><label>File</label><input type="file" name="file"></div>
+    <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" placeholder="Notes"></textarea></div>
+    <div style="grid-column:1/-1"><button>Save Document</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Document Records</h2>
+  <div class="table-wrap"><table>
+    <thead><tr>{% if current_user.role == 'admin' %}<th>Client</th>{% endif %}<th>Date</th><th>Name</th><th>File</th><th>Tax Year</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+    {% for d in documents %}
+      <tr>
+        {% if current_user.role == 'admin' %}<td>{{ d.client_name or '—' }}</td>{% endif %}
+        <td>{{ d.created_at }}</td><td>{{ d.name or '—' }}</td><td>{{ d.filename or 'No file' }}</td><td>{{ d.tax_year or '—' }}</td><td><span class="pill gray">{{ d.status }}</span></td><td>{{ d.notes or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">No documents yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
 {% endblock %}

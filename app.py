@@ -105,7 +105,7 @@ def admin_required(fn):
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != "admin":
             flash("Admin access required.", "danger")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("client_dashboard"))
         return fn(*args, **kwargs)
     return wrapper
 
@@ -212,6 +212,8 @@ def init_db() -> None:
         due_date TEXT,
         fee REAL DEFAULT 0,
         notes TEXT,
+        invoice_id INTEGER,
+        completed_at TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -244,9 +246,11 @@ def init_db() -> None:
     CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
     CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+    CREATE INDEX IF NOT EXISTS idx_documents_client ON documents(client_id);
+    CREATE INDEX IF NOT EXISTS idx_tax_returns_client ON tax_returns(client_id);
     """)
-    add_column_if_missing("invoices", "paid_at", "TEXT")   
 
+    add_column_if_missing("invoices", "paid_at", "TEXT")
     add_column_if_missing("tax_returns", "invoice_id", "INTEGER")
     add_column_if_missing("tax_returns", "completed_at", "TEXT")
     add_column_if_missing("payments", "method", "TEXT DEFAULT 'Manual Entry'")
@@ -295,7 +299,11 @@ def init_route():
 
 @app.route("/")
 def home():
-    return redirect(url_for("dashboard") if current_user.is_authenticated else url_for("login"))
+    if not current_user.is_authenticated:
+        return redirect(url_for("login"))
+    if current_user.role == "admin":
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("client_dashboard"))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -307,7 +315,9 @@ def login():
         row = query_db("SELECT * FROM users WHERE lower(email)=? AND is_active=1", (email,), one=True)
         if row and check_password_hash(row["password_hash"], password):
             login_user(User(row))
-            return redirect(url_for("dashboard"))
+            if row["role"] == "admin":
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("client_dashboard"))
         flash("Invalid login.", "danger")
     return render_template("login.html")
 
@@ -319,8 +329,69 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/client")
+@app.route("/client-dashboard")
+@login_required
+def client_dashboard():
+    if current_user.role == "admin":
+        return redirect(url_for("dashboard"))
+
+    client_id = current_user.client_id
+    if not client_id:
+        flash("Your user account is not linked to a client profile yet. Contact the office.", "danger")
+        return render_template("client_dashboard.html", client=None, documents=[], invoices=[], payments=[], tax_returns=[])
+
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    documents = query_db("SELECT * FROM documents WHERE client_id=? ORDER BY id DESC LIMIT 50", (client_id,))
+    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC LIMIT 50", (client_id,))
+    payments = query_db("""SELECT p.*, i.invoice_number FROM payments p
+                           LEFT JOIN invoices i ON i.id=p.invoice_id
+                           WHERE p.client_id=? ORDER BY p.id DESC LIMIT 50""", (client_id,))
+    tax_returns = query_db("""SELECT tr.*, i.invoice_number, i.status invoice_status
+                              FROM tax_returns tr
+                              LEFT JOIN invoices i ON i.id=tr.invoice_id
+                              WHERE tr.client_id=? ORDER BY tr.id DESC LIMIT 50""", (client_id,))
+    return render_template("client_dashboard.html", client=client, documents=documents, invoices=invoices,
+                           payments=payments, tax_returns=tax_returns)
+
+
+@app.route("/client/upload", methods=["POST"])
+@login_required
+def client_upload():
+    if current_user.role == "admin":
+        flash("Admin uploads should be handled from Documents.", "danger")
+        return redirect(url_for("documents"))
+
+    if not current_user.client_id:
+        flash("Your account is not linked to a client profile.", "danger")
+        return redirect(url_for("client_dashboard"))
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        flash("Choose a file to upload.", "danger")
+        return redirect(url_for("client_dashboard"))
+
+    if not allowed_file(file.filename):
+        flash("File type not allowed.", "danger")
+        return redirect(url_for("client_dashboard"))
+
+    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(file.filename)}"
+    file.save(UPLOAD_DIR / filename)
+
+    execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes)
+                  VALUES (?, ?, ?, ?, 'Uploaded by Client', ?)""",
+               (current_user.client_id,
+                request.form.get("name") or file.filename,
+                filename,
+                request.form.get("tax_year"),
+                request.form.get("notes")))
+    flash("Document uploaded successfully.", "success")
+    return redirect(url_for("client_dashboard"))
+
+
 @app.route("/dashboard")
 @login_required
+@admin_required
 def dashboard():
     income = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'", one=True)["total"]
     expenses = query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'", one=True)["total"]
@@ -366,7 +437,9 @@ def clients():
 @app.route("/transactions", methods=["GET", "POST"])
 @login_required
 def transactions():
-    if request.method == "POST" and current_user.role == "admin":
+    if current_user.role != "admin":
+        return redirect(url_for("client_dashboard"))
+    if request.method == "POST":
         execute_db("""INSERT INTO transactions(date, description, type, category_id, client_id, amount, notes)
                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
                    (request.form.get("date"), request.form.get("description"), request.form.get("type"),
@@ -387,7 +460,9 @@ def transactions():
 @app.route("/invoices", methods=["GET", "POST"])
 @login_required
 def invoices():
-    if request.method == "POST" and current_user.role == "admin":
+    if current_user.role != "admin":
+        return redirect(url_for("client_dashboard"))
+    if request.method == "POST":
         inv_num = request.form.get("invoice_number") or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         execute_db("""INSERT INTO invoices(client_id, invoice_number, issue_date, due_date, amount, status, description)
                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -464,21 +539,31 @@ def payments():
 @login_required
 def documents():
     if request.method == "POST":
+        if current_user.role == "admin":
+            client_id = request.form.get("client_id")
+        else:
+            client_id = current_user.client_id
         file = request.files.get("file")
         filename = ""
         if file and file.filename and allowed_file(file.filename):
-            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secure_filename(file.filename)}"
+            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{secure_filename(file.filename)}"
             file.save(UPLOAD_DIR / filename)
         execute_db("""INSERT INTO documents(client_id, name, filename, tax_year, status, notes)
                       VALUES (?, ?, ?, ?, ?, ?)""",
-                   (request.form.get("client_id"), request.form.get("name"), filename,
-                    request.form.get("tax_year"), request.form.get("status"), request.form.get("notes")))
+                   (client_id, request.form.get("name"), filename,
+                    request.form.get("tax_year"), request.form.get("status") or "Received", request.form.get("notes")))
         flash("Document saved.", "success")
-        return redirect(url_for("documents"))
-    rows = query_db("""SELECT d.*, cl.name client_name FROM documents d
-                       LEFT JOIN clients cl ON cl.id=d.client_id
-                       ORDER BY d.id DESC LIMIT 300""")
-    return render_template("documents.html", documents=rows, clients=query_db("SELECT id, name FROM clients ORDER BY name"))
+        return redirect(url_for("documents") if current_user.role == "admin" else url_for("client_dashboard"))
+
+    if current_user.role == "admin":
+        rows = query_db("""SELECT d.*, cl.name client_name FROM documents d
+                           LEFT JOIN clients cl ON cl.id=d.client_id
+                           ORDER BY d.id DESC LIMIT 300""")
+        clients = query_db("SELECT id, name FROM clients ORDER BY name")
+        return render_template("documents.html", documents=rows, clients=clients)
+
+    rows = query_db("SELECT * FROM documents WHERE client_id=? ORDER BY id DESC LIMIT 300", (current_user.client_id,))
+    return render_template("documents.html", documents=rows, clients=[])
 
 
 @app.route("/tax-returns", methods=["GET", "POST"])
@@ -486,7 +571,10 @@ def documents():
 @login_required
 def tax_returns():
     init_db()
-    if request.method == "POST" and current_user.role == "admin":
+    if current_user.role != "admin":
+        return redirect(url_for("client_dashboard"))
+
+    if request.method == "POST":
         client_id = request.form.get("client_id")
         tax_year = request.form.get("tax_year")
         service_type = request.form.get("service_type")
@@ -521,7 +609,9 @@ def tax_returns():
 @app.route("/appointments", methods=["GET", "POST"])
 @login_required
 def appointments():
-    if request.method == "POST" and current_user.role == "admin":
+    if current_user.role != "admin":
+        return redirect(url_for("client_dashboard"))
+    if request.method == "POST":
         execute_db("""INSERT INTO appointments(client_id, title, start_at, end_at, location, meeting_link, status, notes)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                    (request.form.get("client_id"), request.form.get("title"), request.form.get("start_at"),
@@ -555,12 +645,15 @@ def crm():
 @admin_required
 def settings():
     if request.method == "POST":
+        name = request.form.get("name")
+        email = request.form.get("email", "").lower().strip()
+        password = request.form.get("password") or "Temp123!"
+        role = request.form.get("role") or "client"
+        client_id = request.form.get("client_id") or None
         execute_db("""INSERT INTO users(name, email, password_hash, role, client_id, is_active)
                       VALUES (?, ?, ?, ?, ?, 1)""",
-                   (request.form.get("name"), request.form.get("email").lower().strip(),
-                    generate_password_hash(request.form.get("password") or "Temp123!"),
-                    request.form.get("role"), request.form.get("client_id") or None))
-        flash("User created.", "success")
+                   (name, email, generate_password_hash(password), role, client_id))
+        flash("User created. Send the client their email and temporary password.", "success")
         return redirect(url_for("settings"))
     users = query_db("""SELECT u.*, cl.name client_name FROM users u
                        LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC""")

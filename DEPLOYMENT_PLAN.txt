@@ -1,0 +1,5 @@
+DEPLOYMENT
+1. Upload files to GitHub
+2. Allow Render redeploy
+3. Run /init
+4. Test all client portal modules

@@ -1,0 +1,13 @@
+PPT CLIENT CENTER UPGRADE
+
+- Client-only invoices
+- Client-only appointments
+- Client-only documents
+- Client-only CRM/messages
+- Client-only payments
+- Client-only tax returns
+- Duplicate bookkeeping category cleanup
+- Admin/client permission rebuild
+- Cleaner dashboard UI
+- Stripe-ready billing structure
+- AI-ready bookkeeping architecture

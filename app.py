@@ -186,7 +186,7 @@ def client_upload():
     if not allowed_file(file.filename): flash("File type not allowed.","danger"); return redirect(url_for("client_dashboard"))
     filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(file.filename)}"
     file.save(UPLOAD_DIR/filename)
-    execute_db("INSERT INTO documents(client_id,name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,?,?,'Client')",(current_user.client_id,request.form.get("name") or file.filename,filename,request.form.get("tax_year"),"Uploaded by Client",request.form.get("notes"),request.form.get("category") or "Tax Documents"))
+    execute_db("INSERT INTO documents(client_id,document_name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,?,?,'Client')",(current_user.client_id,request.form.get("name") or file.filename,filename,request.form.get("tax_year"),"Uploaded by Client",request.form.get("notes"),request.form.get("category") or "Tax Documents"))
     flash("Document uploaded successfully.","success")
     return redirect(url_for("client_dashboard"))
 

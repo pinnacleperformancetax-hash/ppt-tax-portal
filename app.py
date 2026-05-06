@@ -256,6 +256,8 @@ def init_db() -> None:
     add_column_if_missing("payments", "method", "TEXT DEFAULT 'Manual Entry'")
     add_column_if_missing("payments", "reference", "TEXT")
     add_column_if_missing("payments", "client_id", "INTEGER")
+    add_column_if_missing("payments", "client_id", "INTEGER")
+    add_column_if_missing("users", "client_id", "INTEGER")  
     add_column_if_missing("documents", "category", "TEXT DEFAULT 'Tax Documents'")
     add_column_if_missing("documents", "uploaded_by", "TEXT DEFAULT 'Admin'")
     add_column_if_missing("documents", "reviewed_at", "TEXT")

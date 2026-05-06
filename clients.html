@@ -1,1 +1,57 @@
-{% extends "base.html" %}{% block content %}<h1>Clients</h1><div class="card"><form method="POST" class="grid grid-3"><div><label>Name</label><input name="name" required></div><div><label>Business</label><input name="business_name"></div><div><label>Email</label><input name="email"></div><div><label>Phone</label><input name="phone"></div><div><label>Type</label><select name="client_type"><option>Individual</option><option>Business</option><option>Bookkeeping Only</option><option>Tax Only</option><option>Full Service</option></select></div><div><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><button>Save Client</button></form></div><div class="card"><h2>Client Records</h2><div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th></tr></thead><tbody>{% for c in clients %}<tr><td>{{ c.name }}</td><td>{{ c.business_name or "—" }}</td><td>{{ c.email or "—" }}</td><td>{{ c.phone or "—" }}</td><td>{{ c.client_type }}</td><td>{{ c.status }}</td></tr>{% else %}<tr><td colspan="6">No clients yet.</td></tr>{% endfor %}</tbody></table></div></div>{% endblock %}
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Clients</h1>
+
+<form method="POST">
+
+    <input type="text"
+           name="name"
+           placeholder="Client Name"
+           required>
+
+    <input type="email"
+           name="email"
+           placeholder="Email">
+
+    <input type="text"
+           name="phone"
+           placeholder="Phone">
+
+    <input type="text"
+           name="business_name"
+           placeholder="Business Name">
+
+    <textarea name="notes"
+              placeholder="Notes"></textarea>
+
+    <button type="submit">
+        Add Client
+    </button>
+
+</form>
+
+<hr>
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Business</th>
+        <th>Email</th>
+        <th>Phone</th>
+    </tr>
+
+    {% for client in clients %}
+    <tr>
+        <td>{{ client.name }}</td>
+        <td>{{ client.business_name }}</td>
+        <td>{{ client.email }}</td>
+        <td>{{ client.phone }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% endblock %}

@@ -60,6 +60,7 @@
       </tbody>
     </table></div>
   </div>
+
 </div><div class="split">
   <div class="card">
     <h2>My Tax Returns</h2>
@@ -80,7 +81,7 @@
             <td>{{ r.tax_year or "-" }}</td>
             <td>{{ r.service_type or "-" }}</td>
             <td>
-              <span class="pill {% if r.status not in ['Completed', 'Filed'] %}warn{% endif %}">
+              <span class="pill">
                 {{ r.status or "In Progress" }}
               </span>
             </td>

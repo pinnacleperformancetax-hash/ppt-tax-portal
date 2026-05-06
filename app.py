@@ -326,7 +326,6 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-
 @app.route("/client")
 @app.route("/client-dashboard")
 @login_required
@@ -334,24 +333,85 @@ def client_dashboard():
     if current_user.role == "admin":
         return redirect(url_for("dashboard"))
 
-    client_id = current_user.client_id
-    if not client_id:
-        flash("Your user account is not linked to a client profile yet. Contact the office.", "danger")
-        return render_template("client_dashboard.html", client=None, documents=[], invoices=[], payments=[], tax_returns=[])
+    user = query_db(
+        "SELECT * FROM users WHERE id=?",
+        (current_user.id,),
+        one=True
+    )
 
-    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
-    documents = query_db("SELECT * FROM documents WHERE client_id=? ORDER BY id DESC LIMIT 50", (client_id,))
-    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC LIMIT 50", (client_id,))
-    payments = query_db("""SELECT p.*, i.invoice_number FROM payments p
-                           LEFT JOIN invoices i ON i.id=p.invoice_id
-                           WHERE p.client_id=? ORDER BY p.id DESC LIMIT 50""", (client_id,))
-    tax_returns = query_db("""SELECT tr.*, i.invoice_number, i.status invoice_status
-                              FROM tax_returns tr
-                              LEFT JOIN invoices i ON i.id=tr.invoice_id
-                              WHERE tr.client_id=? ORDER BY tr.id DESC LIMIT 50""", (client_id,))
-    return render_template("client_dashboard.html", client=client, documents=documents, invoices=invoices,
-                           payments=payments, tax_returns=tax_returns)
+    if not user or not user["client_id"]:
+        flash("Your user account is not linked to a client profile yet.", "danger")
+        return render_template(
+            "client_dashboard.html",
+            client=None,
+            documents=[],
+            invoices=[],
+            payments=[],
+            tax_returns=[]
+        )
 
+    client_id = user["client_id"]
+
+    client = query_db(
+        "SELECT * FROM clients WHERE id=?",
+        (client_id,),
+        one=True
+    )
+
+    documents = query_db(
+        """
+        SELECT *
+        FROM documents
+        WHERE client_id=?
+        ORDER BY id DESC
+        LIMIT 50
+        """,
+        (client_id,)
+    )
+
+    invoices = query_db(
+        """
+        SELECT *
+        FROM invoices
+        WHERE client_id=?
+        ORDER BY id DESC
+        LIMIT 50
+        """,
+        (client_id,)
+    )
+
+    payments = query_db(
+        """
+        SELECT p.*, i.invoice_number
+        FROM payments p
+        LEFT JOIN invoices i ON i.id=p.invoice_id
+        WHERE p.client_id=?
+        ORDER BY p.id DESC
+        LIMIT 50
+        """,
+        (client_id,)
+    )
+
+    tax_returns = query_db(
+        """
+        SELECT tr.*, i.invoice_number, i.status invoice_status
+        FROM tax_returns tr
+        LEFT JOIN invoices i ON i.id=tr.invoice_id
+        WHERE tr.client_id=?
+        ORDER BY tr.id DESC
+        LIMIT 50
+        """,
+        (client_id,)
+    )
+
+    return render_template(
+        "client_dashboard.html",
+        client=client,
+        documents=documents,
+        invoices=invoices,
+        payments=payments,
+        tax_returns=tax_returns
+    )
 
 @app.route("/client/upload", methods=["POST"])
 @login_required

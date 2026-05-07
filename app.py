@@ -434,3 +434,197 @@ def document_storage_status():
     return render_template("storage_status.html", upload_dir=str(UPLOAD_DIR), total=total, with_files=with_files, missing=missing)
 
 
+# === PPT CLIENT SIDE FULL MODULE REPAIR START ===
+
+@app.route("/my/invoices")
+@login_required
+@client_required
+def my_invoices():
+    invoices = query_db(
+        """
+        SELECT *
+        FROM invoices
+        WHERE client_id=?
+        ORDER BY
+          CASE WHEN status='Paid' THEN 1 ELSE 0 END,
+          due_date DESC,
+          id DESC
+        """,
+        (current_user.client_id,),
+    )
+    payments = query_db(
+        """
+        SELECT p.*, i.invoice_number
+        FROM payments p
+        LEFT JOIN invoices i ON i.id=p.invoice_id
+        WHERE p.client_id=?
+        ORDER BY p.id DESC
+        """,
+        (current_user.client_id,),
+    )
+    return render_template("my_invoices.html", invoices=invoices, payments=payments)
+
+
+@app.route("/my/payments")
+@login_required
+@client_required
+def my_payments():
+    payments = query_db(
+        """
+        SELECT p.*, i.invoice_number, i.description invoice_description
+        FROM payments p
+        LEFT JOIN invoices i ON i.id=p.invoice_id
+        WHERE p.client_id=?
+        ORDER BY p.id DESC
+        """,
+        (current_user.client_id,),
+    )
+    open_invoices = query_db(
+        "SELECT * FROM invoices WHERE client_id=? AND status!='Paid' ORDER BY due_date DESC,id DESC",
+        (current_user.client_id,),
+    )
+    return render_template("my_payments.html", payments=payments, open_invoices=open_invoices)
+
+
+@app.route("/my/appointments")
+@login_required
+@client_required
+def my_appointments():
+    appointments = query_db(
+        """
+        SELECT *
+        FROM appointments
+        WHERE client_id=?
+        ORDER BY start_at DESC, id DESC
+        """,
+        (current_user.client_id,),
+    )
+    return render_template("my_appointments.html", appointments=appointments)
+
+
+@app.route("/my/appointment-request", methods=["POST"])
+@login_required
+@client_required
+def my_appointment_request():
+    title = request.form.get("title") or "Client Appointment Request"
+    preferred_date = request.form.get("preferred_date") or ""
+    preferred_time = request.form.get("preferred_time") or ""
+    notes = request.form.get("notes") or ""
+    start_at = (preferred_date + " " + preferred_time).strip()
+    execute_db(
+        """
+        INSERT INTO appointments(client_id,title,start_at,end_at,location,meeting_link,status,notes)
+        VALUES (?,?,?,?,?,?,?,?)
+        """,
+        (
+            current_user.client_id,
+            title,
+            start_at,
+            "",
+            request.form.get("location") or "To be confirmed",
+            "",
+            "Requested",
+            notes,
+        ),
+    )
+    execute_db(
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (
+            current_user.client_id,
+            "client",
+            current_user.name,
+            "Appointment Request",
+            f"Preferred: {start_at}. Notes: {notes}",
+        ),
+    )
+    flash("Appointment request sent to the office.", "success")
+    return redirect(url_for("my_appointments"))
+
+
+@app.route("/my/bookkeeping")
+@login_required
+@client_required
+def my_bookkeeping():
+    year = request.args.get("year") or str(datetime.now().year)
+    transactions = query_db(
+        """
+        SELECT t.*, c.name category_name
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        WHERE t.client_id=? AND substr(t.date,1,4)=?
+        ORDER BY t.date DESC, t.id DESC
+        """,
+        (current_user.client_id, year),
+    )
+    income = query_db(
+        "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?",
+        (current_user.client_id, year),
+        one=True,
+    )["total"]
+    expenses = query_db(
+        "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?",
+        (current_user.client_id, year),
+        one=True,
+    )["total"]
+    categories = query_db(
+        """
+        SELECT COALESCE(c.name,'Uncategorized') category, t.type, COALESCE(SUM(t.amount),0) total
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        WHERE t.client_id=? AND substr(t.date,1,4)=?
+        GROUP BY COALESCE(c.name,'Uncategorized'), t.type
+        ORDER BY t.type, total DESC
+        """,
+        (current_user.client_id, year),
+    )
+    return render_template(
+        "my_bookkeeping.html",
+        year=year,
+        transactions=transactions,
+        categories=categories,
+        income=income,
+        expenses=expenses,
+        profit=money(income) - money(expenses),
+    )
+
+
+@app.route("/my/tax-returns")
+@login_required
+@client_required
+def my_tax_returns():
+    returns = query_db(
+        """
+        SELECT tr.*, i.invoice_number, i.status invoice_status, i.amount invoice_amount
+        FROM tax_returns tr
+        LEFT JOIN invoices i ON i.id=tr.invoice_id
+        WHERE tr.client_id=?
+        ORDER BY tr.tax_year DESC, tr.id DESC
+        """,
+        (current_user.client_id,),
+    )
+    documents = query_db(
+        """
+        SELECT *, COALESCE(document_name,name,'Document') display_name
+        FROM documents
+        WHERE client_id=? AND category IN ('Tax Documents','Identification','Payroll','Receipts','Bank Statements')
+        ORDER BY id DESC
+        """,
+        (current_user.client_id,),
+    )
+    return render_template("my_tax_returns.html", returns=returns, documents=documents)
+
+
+@app.route("/my/tax-return-question", methods=["POST"])
+@login_required
+@client_required
+def my_tax_return_question():
+    body = request.form.get("body") or ""
+    execute_db(
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (current_user.client_id, "client", current_user.name, "Tax Return Question", body),
+    )
+    flash("Tax return question sent to the office.", "success")
+    return redirect(url_for("my_tax_returns"))
+
+# === PPT CLIENT SIDE FULL MODULE REPAIR END ===
+

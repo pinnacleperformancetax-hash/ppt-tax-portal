@@ -1,1 +1,32 @@
-{% extends "base.html" %}{% block content %}<h1>My Appointments</h1><div class="card"><table><thead><tr><th>Title</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody>{% for a in appointments %}<tr><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.end_at }}</td><td>{{ a.status }}</td></tr>{% else %}<tr><td colspan="4">No appointments.</td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% extends "base.html" %}{% block content %}
+<h1>My Appointments</h1>
+<p class="sub">View scheduled appointments and request a new appointment.</p>
+
+<div class="card">
+  <h2>Request Appointment</h2>
+  <form method="POST" action="/my/appointment-request" class="grid grid-3">
+    <div><label>Title</label><input name="title" placeholder="Tax consultation"></div>
+    <div><label>Preferred Date</label><input type="date" name="preferred_date"></div>
+    <div><label>Preferred Time</label><input type="time" name="preferred_time"></div>
+    <div><label>Preferred Location</label><select name="location"><option>Phone Call</option><option>Zoom / Virtual</option><option>Office</option></select></div>
+    <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" placeholder="Tell us what you need help with"></textarea></div>
+    <div><button>Send Appointment Request</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Appointments</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Title</th><th>Start</th><th>End</th><th>Location</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for a in appointments %}
+        <tr><td>{{ a.title }}</td><td>{{ a.start_at or "—" }}</td><td>{{ a.end_at or "—" }}</td><td>{{ a.location or "—" }}</td><td><span class="pill {% if a.status == 'Requested' %}warn{% endif %}">{{ a.status }}</span></td><td>{{ a.notes or "—" }}</td></tr>
+        {% else %}
+        <tr><td colspan="6">No appointments yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

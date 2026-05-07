@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Invoice {{ invoice.invoice_number or invoice.id }}</title>
+<style>body{font-family:Arial;margin:40px;color:#111827}.top{display:flex;justify-content:space-between;border-bottom:4px solid #11823b;padding-bottom:20px}.brand{font-size:28px;font-weight:900;color:#11823b}.box{border:1px solid #e5e7eb;border-radius:16px;padding:20px;margin-top:25px}.total{font-size:32px;font-weight:900;color:#11823b}.btn{background:#11823b;color:white;padding:12px 18px;border-radius:10px;text-decoration:none}@media print{.noprint{display:none}}</style>
+</head><body>
+<div class="noprint"><a class="btn" href="#" onclick="window.print()">Print / Save PDF</a></div>
+<div class="top"><div><div class="brand">Pinnacle Performance Tax and Accounting</div><p>www.pinnacleperformancetax.com<br>pinnacleperformancetax@gmail.com<br>478-338-1632</p></div><div><h1>INVOICE</h1><p><b>#:</b> {{ invoice.invoice_number or invoice.id }}<br><b>Issue:</b> {{ invoice.issue_date or "—" }}<br><b>Due:</b> {{ invoice.due_date or "—" }}</p></div></div>
+<div class="box"><h2>Bill To</h2><p>{{ invoice.client_name or "" }}<br>{{ invoice.business_name or "" }}<br>{{ invoice.client_email or "" }}<br>{{ invoice.client_phone or "" }}</p></div>
+<div class="box"><h2>Description</h2><p>{{ invoice.description or "Professional services" }}</p><p>Status: <b>{{ invoice.status }}</b></p><p class="total">{{ invoice.amount|currency }}</p></div>
+</body></html>

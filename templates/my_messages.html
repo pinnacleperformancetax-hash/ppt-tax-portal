@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block content %}
+<h1>My Messages</h1>
+<div class="card">
+<h2>Send Office Message</h2>
+<form method="POST" class="grid grid-2">
+<input name="subject" placeholder="Subject">
+<textarea name="body" placeholder="Message"></textarea>
+<button>Send Message</button>
+</form>
+</div>
+<div class="card">
+<h2>Message History</h2>
+<table>
+<thead><tr><th>Date</th><th>From</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead>
+<tbody>
+{% for m in messages %}
+<tr><td>{{ m.created_at }}</td><td>{{ m.sender_name }}</td><td>{{ m.subject }}</td><td>{{ m.body }}</td><td>{{ m.status }}</td></tr>
+{% else %}<tr><td colspan="5">No messages yet.</td></tr>{% endfor %}
+</tbody></table>
+</div>
+{% endblock %}

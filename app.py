@@ -253,3 +253,184 @@ def settings(): return render_template('settings.html',users=query_db('SELECT u.
 if __name__=='__main__':
     with app.app_context(): init_db()
     app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
+# === PPT MY MESSAGES + YEAR END FIX START ===
+
+@app.route("/my/messages", methods=["GET", "POST"])
+@login_required
+@client_required
+def my_messages():
+    if request.method == "POST":
+        subject = request.form.get("subject") or "Client Message"
+        body = request.form.get("body") or ""
+        execute_db(
+            "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+            (current_user.client_id, "client", current_user.name, subject, body),
+        )
+        flash("Message sent to the office.", "success")
+        return redirect(url_for("my_messages"))
+    messages = query_db(
+        "SELECT * FROM messages WHERE client_id=? ORDER BY id DESC",
+        (current_user.client_id,),
+    )
+    return render_template("my_messages.html", messages=messages)
+
+
+@app.route("/my/year-end")
+@login_required
+@client_required
+def my_year_end():
+    year = request.args.get("year") or str(datetime.now().year)
+
+    income = query_db(
+        "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?",
+        (current_user.client_id, year),
+        one=True,
+    )["total"]
+
+    expenses = query_db(
+        "SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?",
+        (current_user.client_id, year),
+        one=True,
+    )["total"]
+
+    by_category = query_db(
+        """
+        SELECT COALESCE(c.name,'Uncategorized') category,
+               t.type,
+               COALESCE(SUM(t.amount),0) total
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        WHERE t.client_id=? AND substr(t.date,1,4)=?
+        GROUP BY COALESCE(c.name,'Uncategorized'), t.type
+        ORDER BY t.type, total DESC
+        """,
+        (current_user.client_id, year),
+    )
+
+    transactions = query_db(
+        """
+        SELECT t.*, c.name category_name
+        FROM transactions t
+        LEFT JOIN categories c ON c.id=t.category_id
+        WHERE t.client_id=? AND substr(t.date,1,4)=?
+        ORDER BY t.date DESC, t.id DESC
+        """,
+        (current_user.client_id, year),
+    )
+
+    documents = query_db(
+        """
+        SELECT *, COALESCE(document_name,name,'Document') display_name
+        FROM documents
+        WHERE client_id=? AND (tax_year=? OR substr(created_at,1,4)=?)
+        ORDER BY id DESC
+        """,
+        (current_user.client_id, year, year),
+    )
+
+    invoices = query_db(
+        """
+        SELECT *
+        FROM invoices
+        WHERE client_id=? AND (substr(issue_date,1,4)=? OR substr(created_at,1,4)=?)
+        ORDER BY id DESC
+        """,
+        (current_user.client_id, year, year),
+    )
+
+    returns = query_db(
+        """
+        SELECT tr.*, i.invoice_number
+        FROM tax_returns tr
+        LEFT JOIN invoices i ON i.id=tr.invoice_id
+        WHERE tr.client_id=? AND tr.tax_year=?
+        ORDER BY tr.id DESC
+        """,
+        (current_user.client_id, year),
+    )
+
+    return render_template(
+        "my_year_end.html",
+        year=year,
+        income=income,
+        expenses=expenses,
+        profit=money(income) - money(expenses),
+        by_category=by_category,
+        transactions=transactions,
+        documents=documents,
+        invoices=invoices,
+        returns=returns,
+    )
+
+
+@app.route("/messages/reply/<int:message_id>", methods=["POST"])
+@login_required
+@admin_required
+def reply_message(message_id):
+    original = query_db("SELECT * FROM messages WHERE id=?", (message_id,), one=True)
+    if not original:
+        abort(404)
+    execute_db(
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (
+            original["client_id"],
+            "admin",
+            current_user.name,
+            "RE: " + (original["subject"] or "Client Message"),
+            request.form.get("body") or "",
+        ),
+    )
+    flash("Reply added to client portal.", "success")
+    return redirect(url_for("messages"))
+
+
+@app.route("/messages/close/<int:message_id>", methods=["POST"])
+@login_required
+@admin_required
+def close_message(message_id):
+    execute_db("UPDATE messages SET status='Closed' WHERE id=?", (message_id,))
+    flash("Message closed.", "success")
+    return redirect(url_for("messages"))
+
+# === PPT MY MESSAGES + YEAR END FIX END ===
+
+
+def document_file_exists(doc):
+    try:
+        if not doc or not doc["filename"]:
+            return False
+        return (UPLOAD_DIR / doc["filename"]).exists()
+    except Exception:
+        return False
+
+
+def sync_missing_document_flags():
+    rows = query_db("SELECT id, filename FROM documents")
+    for d in rows:
+        missing = 1 if d["filename"] and not (UPLOAD_DIR / d["filename"]).exists() else 0
+        execute_db("UPDATE documents SET file_missing=? WHERE id=?", (missing, d["id"]))
+
+
+
+@app.route("/documents/sync-missing")
+@login_required
+@admin_required
+def sync_documents_missing_route():
+    sync_missing_document_flags()
+    flash("Document file check complete. Missing files are now flagged.", "success")
+    return redirect(url_for("documents"))
+
+
+@app.route("/documents/storage-status")
+@login_required
+@admin_required
+def document_storage_status():
+    total = query_db("SELECT COUNT(*) c FROM documents", one=True)["c"]
+    with_files = query_db("SELECT COUNT(*) c FROM documents WHERE filename IS NOT NULL AND filename != ''", one=True)["c"]
+    missing = 0
+    for d in query_db("SELECT filename FROM documents WHERE filename IS NOT NULL AND filename != ''"):
+        if not (UPLOAD_DIR / d["filename"]).exists():
+            missing += 1
+    return render_template("storage_status.html", upload_dir=str(UPLOAD_DIR), total=total, with_files=with_files, missing=missing)
+
+

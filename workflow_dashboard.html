@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Workflow Dashboard</h1>
+<p class="sub">Admin alerts for missing documents, open invoices, appointment requests, and tax return progress.</p>
+<div class="metric-grid">
+  <div class="metric"><span>Open Doc Requests</span><strong>{{ missing_docs|length }}</strong></div>
+  <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices|length }}</strong></div>
+  <div class="metric"><span>Appointment Requests</span><strong>{{ requested_appointments|length }}</strong></div>
+  <div class="metric"><span>Open Returns</span><strong>{{ open_returns|length }}</strong></div>
+</div>
+<div class="quickbar">
+  <a class="btn" href="/document-requests">Request Documents</a>
+  <a class="btn" href="/tax-tracker">Tax Tracker</a>
+  <a class="btn" href="/appointments/review">Appointments Review</a>
+  <a class="btn btn-dark" href="/activity-log">Activity Log</a>
+</div>
+<div class="card"><h2>Document Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>{% for r in missing_docs %}<tr><td>{{ r.client_name }}</td><td>{{ r.title }}</td><td>{{ r.tax_year }}</td><td><span class="pill warn">{{ r.status }}</span></td><td>{{ r.due_date }}</td></tr>{% else %}<tr><td colspan="5">No open document requests.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="card"><h2>Appointment Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Start</th><th>Status</th></tr></thead><tbody>{% for a in requested_appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.status }}</td></tr>{% else %}<tr><td colspan="4">No appointment requests.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

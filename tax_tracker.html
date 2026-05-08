@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Return Tracker</h1>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Stage</th><th>Update</th></tr></thead><tbody>{% for r in returns %}<tr><td>{{ r.client_name }}</td><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.workflow_stage or r.status }}</td><td><form method="POST" action="/tax-tracker/{{ r.id }}/stage"><select name="workflow_stage"><option>Pending</option><option>Waiting on Docs</option><option>In Preparation</option><option>Review</option><option>Filed</option><option>Completed</option></select><button>Update</button></form></td></tr>{% else %}<tr><td colspan="6">No tax returns.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

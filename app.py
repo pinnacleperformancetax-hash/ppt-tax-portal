@@ -192,8 +192,60 @@ def ensure_client_template_columns():
     for column, definition in fields:
         add_column_if_missing("clients", column, definition)
 
+
+# === PPT WORKFLOW STABILITY UPGRADE V1 START ===
+def ensure_workflow_tables():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS document_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            title TEXT NOT NULL,
+            category TEXT DEFAULT 'Tax Documents',
+            tax_year TEXT,
+            status TEXT DEFAULT 'Requested',
+            due_date TEXT,
+            notes TEXT,
+            requested_by TEXT DEFAULT 'Admin',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            completed_at TEXT
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS activity_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            activity_type TEXT,
+            title TEXT,
+            details TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+    # Safe column checks for existing tables
+    try:
+        add_column_if_missing("tax_returns", "workflow_stage", "TEXT DEFAULT 'Pending'")
+    except Exception:
+        pass
+    try:
+        add_column_if_missing("appointments", "admin_decision", "TEXT")
+    except Exception:
+        pass
+    try:
+        add_column_if_missing("invoices", "payment_badge", "TEXT")
+    except Exception:
+        pass
+
+def log_activity(client_id, activity_type, title, details=""):
+    ensure_workflow_tables()
+    execute_db(
+        "INSERT INTO activity_logs(client_id,activity_type,title,details) VALUES (?,?,?,?)",
+        (client_id, activity_type, title, details),
+    )
+# === PPT WORKFLOW STABILITY UPGRADE V1 END ===
+
 @app.route('/init')
-def init_route(): init_db(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
+def init_route(): init_db(); ensure_workflow_tables(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
 
@@ -326,6 +378,171 @@ def my_statement():
     totals = ppt_client_money_totals(current_user.client_id)
     return render_template("client_statement.html", client=client, invoices=invoices, payments=payments, totals=totals)
 # === PPT INVOICE STATEMENT UPGRADE END ===
+
+
+# === PPT WORKFLOW STABILITY UPGRADE V1 ROUTES START ===
+@app.route('/workflow')
+@login_required
+@admin_required
+def workflow_dashboard():
+    ensure_workflow_tables()
+    missing_docs = query_db("""SELECT dr.*, c.name client_name
+                               FROM document_requests dr
+                               LEFT JOIN clients c ON c.id=dr.client_id
+                               WHERE dr.status!='Completed'
+                               ORDER BY dr.id DESC LIMIT 25""")
+    open_invoices = query_db("""SELECT i.*, c.name client_name
+                                FROM invoices i
+                                LEFT JOIN clients c ON c.id=i.client_id
+                                WHERE i.status!='Paid'
+                                ORDER BY i.id DESC LIMIT 25""")
+    requested_appointments = query_db("""SELECT a.*, c.name client_name
+                                         FROM appointments a
+                                         LEFT JOIN clients c ON c.id=a.client_id
+                                         WHERE a.status='Requested'
+                                         ORDER BY a.id DESC LIMIT 25""")
+    open_returns = query_db("""SELECT tr.*, c.name client_name
+                               FROM tax_returns tr
+                               LEFT JOIN clients c ON c.id=tr.client_id
+                               WHERE tr.status NOT IN ('Completed','Filed')
+                               ORDER BY tr.id DESC LIMIT 25""")
+    return render_template(
+        "workflow_dashboard.html",
+        missing_docs=missing_docs,
+        open_invoices=open_invoices,
+        requested_appointments=requested_appointments,
+        open_returns=open_returns,
+    )
+
+@app.route('/document-requests', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def document_requests():
+    ensure_workflow_tables()
+    if request.method == 'POST':
+        client_id = request.form.get('client_id')
+        title = request.form.get('title') or 'Requested Document'
+        category = request.form.get('category') or 'Tax Documents'
+        tax_year = request.form.get('tax_year') or ''
+        due_date = request.form.get('due_date') or ''
+        notes = request.form.get('notes') or ''
+        execute_db(
+            "INSERT INTO document_requests(client_id,title,category,tax_year,due_date,notes,requested_by) VALUES (?,?,?,?,?,?,?)",
+            (client_id, title, category, tax_year, due_date, notes, current_user.name),
+        )
+        log_activity(client_id, "Document Request", title, notes)
+        flash("Document request created.", "success")
+        return redirect(url_for("document_requests"))
+    clients = query_db("SELECT id,name,email FROM clients ORDER BY name")
+    requests = query_db("""SELECT dr.*, c.name client_name
+                           FROM document_requests dr
+                           LEFT JOIN clients c ON c.id=dr.client_id
+                           ORDER BY dr.id DESC LIMIT 200""")
+    return render_template("document_requests.html", clients=clients, requests=requests)
+
+@app.route('/document-requests/<int:req_id>/complete', methods=['POST'])
+@login_required
+def complete_document_request(req_id):
+    ensure_workflow_tables()
+    req = query_db("SELECT * FROM document_requests WHERE id=?", (req_id,), one=True)
+    if not req:
+        abort(404)
+    if current_user.role != 'admin' and req['client_id'] != current_user.client_id:
+        abort(403)
+    execute_db("UPDATE document_requests SET status='Completed', completed_at=CURRENT_TIMESTAMP WHERE id=?", (req_id,))
+    log_activity(req["client_id"], "Document Request Completed", req["title"], "Marked complete")
+    flash("Document request marked complete.", "success")
+    return redirect(url_for("document_requests") if current_user.role == "admin" else url_for("my_document_requests"))
+
+@app.route('/my/document-requests')
+@login_required
+@client_required
+def my_document_requests():
+    ensure_workflow_tables()
+    requests = query_db("SELECT * FROM document_requests WHERE client_id=? ORDER BY id DESC", (current_user.client_id,))
+    return render_template("my_document_requests.html", requests=requests)
+
+@app.route('/tax-tracker', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def tax_tracker():
+    ensure_workflow_tables()
+    if request.method == 'POST':
+        return_id = request.form.get('return_id')
+        stage = request.form.get('workflow_stage') or request.form.get('status') or 'Pending'
+        execute_db("UPDATE tax_returns SET workflow_stage=?, status=? WHERE id=?", (stage, stage, return_id))
+        row = query_db("SELECT client_id,tax_year FROM tax_returns WHERE id=?", (return_id,), one=True)
+        if row:
+            log_activity(row["client_id"], "Tax Return Stage", f"Tax return moved to {stage}", f"Tax year {row['tax_year']}")
+        flash("Tax return stage updated.", "success")
+        return redirect(url_for("tax_tracker"))
+    returns = query_db("""SELECT tr.*, c.name client_name
+                          FROM tax_returns tr
+                          LEFT JOIN clients c ON c.id=tr.client_id
+                          ORDER BY tr.tax_year DESC, tr.id DESC LIMIT 300""")
+    return render_template("tax_tracker.html", returns=returns)
+
+@app.route('/tax-tracker/<int:return_id>/stage', methods=['POST'])
+@login_required
+@admin_required
+def tax_tracker_stage(return_id):
+    ensure_workflow_tables()
+    stage = request.form.get('workflow_stage') or 'Pending'
+    execute_db("UPDATE tax_returns SET workflow_stage=?, status=? WHERE id=?", (stage, stage, return_id))
+    row = query_db("SELECT client_id,tax_year FROM tax_returns WHERE id=?", (return_id,), one=True)
+    if row:
+        log_activity(row["client_id"], "Tax Return Stage", f"Tax return moved to {stage}", f"Tax year {row['tax_year']}")
+    flash("Tax return stage updated.", "success")
+    return redirect(url_for("tax_tracker"))
+
+@app.route('/appointments/review')
+@login_required
+@admin_required
+def appointments_review():
+    ensure_workflow_tables()
+    appointments = query_db("""SELECT a.*, c.name client_name
+                               FROM appointments a
+                               LEFT JOIN clients c ON c.id=a.client_id
+                               ORDER BY a.id DESC LIMIT 200""")
+    return render_template("appointments_review.html", appointments=appointments)
+
+@app.route('/appointments/<int:appointment_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def approve_appointment(appointment_id):
+    ensure_workflow_tables()
+    appt = query_db("SELECT * FROM appointments WHERE id=?", (appointment_id,), one=True)
+    if not appt:
+        abort(404)
+    execute_db("UPDATE appointments SET status='Approved', admin_decision='Approved' WHERE id=?", (appointment_id,))
+    log_activity(appt["client_id"], "Appointment Approved", appt["title"] or "Appointment", appt["start_at"] or "")
+    flash("Appointment approved.", "success")
+    return redirect(url_for("appointments_review"))
+
+@app.route('/appointments/<int:appointment_id>/decline', methods=['POST'])
+@login_required
+@admin_required
+def decline_appointment(appointment_id):
+    ensure_workflow_tables()
+    appt = query_db("SELECT * FROM appointments WHERE id=?", (appointment_id,), one=True)
+    if not appt:
+        abort(404)
+    execute_db("UPDATE appointments SET status='Declined', admin_decision='Declined' WHERE id=?", (appointment_id,))
+    log_activity(appt["client_id"], "Appointment Declined", appt["title"] or "Appointment", appt["start_at"] or "")
+    flash("Appointment declined.", "success")
+    return redirect(url_for("appointments_review"))
+
+@app.route('/activity-log')
+@login_required
+@admin_required
+def activity_log():
+    ensure_workflow_tables()
+    logs = query_db("""SELECT al.*, c.name client_name
+                       FROM activity_logs al
+                       LEFT JOIN clients c ON c.id=al.client_id
+                       ORDER BY al.id DESC LIMIT 300""")
+    return render_template("activity_log.html", logs=logs)
+# === PPT WORKFLOW STABILITY UPGRADE V1 ROUTES END ===
 
 @app.route('/logout')
 @login_required

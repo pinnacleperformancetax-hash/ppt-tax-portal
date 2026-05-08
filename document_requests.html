@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Document Requests</h1>
+<div class="card"><h2>Request Document</h2><form method="POST" class="grid grid-3">
+<div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}{% if c.email %} - {{ c.email }}{% endif %}</option>{% endfor %}</select></div>
+<div><label>Title</label><input name="title" placeholder="Bank statements"></div>
+<div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Identification</option><option>Other</option></select></div>
+<div><label>Tax Year</label><input name="tax_year"></div><div><label>Due Date</label><input type="date" name="due_date"></div>
+<div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><div style="grid-column:1/-1"><button>Create Request</button></div>
+</form></div>
+<div class="card"><h2>All Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Category</th><th>Year</th><th>Status</th><th>Due</th><th>Action</th></tr></thead><tbody>{% for r in requests %}<tr><td>{{ r.client_name }}</td><td>{{ r.title }}</td><td>{{ r.category }}</td><td>{{ r.tax_year }}</td><td><span class="pill {% if r.status!='Completed' %}warn{% endif %}">{{ r.status }}</span></td><td>{{ r.due_date }}</td><td>{% if r.status!='Completed' %}<form method="POST" action="/document-requests/{{ r.id }}/complete"><button>Complete</button></form>{% else %}Done{% endif %}</td></tr>{% else %}<tr><td colspan="7">No requests yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

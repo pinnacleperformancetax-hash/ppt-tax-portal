@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>My Document Requests</h1>
+<p class="sub">Documents requested by Pinnacle Performance Tax.</p>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Requested</th><th>Title</th><th>Category</th><th>Year</th><th>Status</th><th>Due</th><th>Notes</th><th>Action</th></tr></thead><tbody>{% for r in requests %}<tr><td>{{ r.created_at }}</td><td>{{ r.title }}</td><td>{{ r.category }}</td><td>{{ r.tax_year }}</td><td><span class="pill {% if r.status!='Completed' %}warn{% endif %}">{{ r.status }}</span></td><td>{{ r.due_date }}</td><td>{{ r.notes }}</td><td>{% if r.status!='Completed' %}<form method="POST" action="/document-requests/{{ r.id }}/complete"><button>Mark Complete</button></form>{% else %}Done{% endif %}</td></tr>{% else %}<tr><td colspan="8">No document requests.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="quickbar"><a class="btn" href="/client-dashboard">Upload Documents</a></div>
+{% endblock %}

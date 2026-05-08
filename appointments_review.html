@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Appointment Review</h1>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Start</th><th>Location</th><th>Status</th><th>Decision</th></tr></thead><tbody>{% for a in appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.location }}</td><td><span class="pill">{{ a.status }}</span></td><td><form method="POST" action="/appointments/{{ a.id }}/approve" style="display:inline"><button>Approve</button></form> <form method="POST" action="/appointments/{{ a.id }}/decline" style="display:inline"><button class="btn-dark">Decline</button></form></td></tr>{% else %}<tr><td colspan="6">No appointments.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

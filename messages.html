@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Messages</h1>
-<p class="sub">Send, track, close, and reopen client portal messages.</p>
+<p class="sub">Send and review client portal messages.</p>
 
 <div class="card">
   <h2>Send Message</h2>
@@ -33,7 +33,7 @@
   <h2>Message History</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Client</th><th>From</th><th>Subject</th><th>Message</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th>Date</th><th>Client</th><th>From</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead>
       <tbody>
       {% for m in messages %}
         <tr>
@@ -43,16 +43,9 @@
           <td>{{ m.subject }}</td>
           <td>{{ m.body }}</td>
           <td><span class="pill">{{ m.status }}</span></td>
-          <td>
-            {% if m.status == 'Open' %}
-              <form method="POST" action="/messages/close/{{ m.id }}"><button class="btn-dark">Close</button></form>
-            {% else %}
-              <form method="POST" action="/messages/reopen/{{ m.id }}"><button>Reopen</button></form>
-            {% endif %}
-          </td>
         </tr>
       {% else %}
-        <tr><td colspan="7">No messages yet.</td></tr>
+        <tr><td colspan="6">No messages yet.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block content %}
+<h1>Messages</h1>
+<p class="sub">Admin message center for client portal communication.</p>
+<div class="card">
+  <h2>Send Client Message</h2>
+  <form method="POST" class="grid grid-2">
+    <div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div><label>Subject</label><input name="subject" placeholder="Subject"></div>
+    <div style="grid-column:1/-1"><label>Message</label><textarea name="body" placeholder="Message"></textarea></div>
+    <div><button>Send Message</button></div>
+  </form>
+</div>
+<div class="card">
+  <h2>Message History</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Client</th><th>From</th><th>Subject</th><th>Message</th><th>Status</th><th>Reply</th><th>Close</th></tr></thead>
+      <tbody>
+        {% for m in messages %}
+        <tr>
+          <td>{{ m.created_at }}</td><td>{{ m.client_name }}</td><td>{{ m.sender_name }}<br><small>{{ m.sender_role }}</small></td><td>{{ m.subject }}</td><td>{{ m.body }}</td>
+          <td><span class="pill {% if m.status != 'Closed' %}warn{% endif %}">{{ m.status }}</span></td>
+          <td><form method="POST" action="/messages/reply/{{ m.id }}"><textarea name="body" placeholder="Reply"></textarea><button>Reply</button></form></td>
+          <td>{% if m.status != 'Closed' %}<form method="POST" action="/messages/close/{{ m.id }}"><button>Close</button></form>{% else %}—{% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="8">No messages.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

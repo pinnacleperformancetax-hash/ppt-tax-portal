@@ -174,8 +174,26 @@ def ensure_messages_table():
     )''')
     db.commit()
 
+
+def ensure_client_template_columns():
+    fields = [
+        ("tax_year", "TEXT"),
+        ("service_package", "TEXT"),
+        ("entity_type", "TEXT"),
+        ("ein", "TEXT"),
+        ("ssn_last4", "TEXT"),
+        ("dob", "TEXT"),
+        ("occupation", "TEXT"),
+        ("spouse_name", "TEXT"),
+        ("filing_status", "TEXT"),
+        ("preferred_contact", "TEXT"),
+        ("onboarding_status", "TEXT DEFAULT 'New'"),
+    ]
+    for column, definition in fields:
+        add_column_if_missing("clients", column, definition)
+
 @app.route('/init')
-def init_route(): init_db(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
+def init_route(): init_db(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
 
@@ -350,6 +368,33 @@ def admin_table_route(table_name, template_name, select_sql, insert_sql=None, re
 def clients():
     if request.method=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
     return render_template('clients.html',clients=query_db('SELECT * FROM clients ORDER BY name'))
+
+@app.route('/clients/<int:client_id>/edit')
+@login_required
+@admin_required
+def edit_client(client_id):
+    ensure_client_template_columns()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client:
+        abort(404)
+    return render_template("client_edit.html", client=client)
+
+@app.route('/clients/<int:client_id>/update', methods=['POST'])
+@login_required
+@admin_required
+def update_client(client_id):
+    ensure_client_template_columns()
+    fields = [
+        "name", "business_name", "email", "phone", "address", "client_type", "status", "notes",
+        "tax_year", "service_package", "entity_type", "ein", "ssn_last4", "dob", "occupation",
+        "spouse_name", "filing_status", "preferred_contact", "onboarding_status"
+    ]
+    values = [request.form.get(f) for f in fields]
+    set_clause = ",".join([f"{f}=?" for f in fields])
+    execute_db(f"UPDATE clients SET {set_clause} WHERE id=?", tuple(values + [client_id]))
+    flash("Client template updated successfully.", "success")
+    return redirect(url_for("clients"))
+
 @app.route('/transactions',methods=['GET','POST'])
 @login_required
 @admin_required

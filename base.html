@@ -1,18 +1,38 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>PPT Portal</title><meta name="viewport" content="width=device-width, initial-scale=1">
+<html>
+<head>
+<meta charset="utf-8">
+<title>PPT Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root{--g:#123d22;--bg:#f4f6f4;--card:#fff;--line:#dfe7df;--text:#111827}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}a{text-decoration:none;color:inherit}.layout{display:flex;min-height:100vh}aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow:auto}.brand{font-size:24px;font-weight:900;line-height:1.05;margin-bottom:18px}.contact{font-size:12px;line-height:1.4;margin-bottom:24px;opacity:.95}nav a{display:block;padding:11px 12px;border-radius:10px;font-weight:800;margin:3px 0}nav a:hover{background:rgba(255,255,255,.13)}main{flex:1;padding:32px;overflow:auto}h1{font-size:32px;margin:0 0 8px}h2{margin:0 0 14px}.sub{color:#475569;margin-top:0}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin:18px 0;box-shadow:0 10px 28px rgba(15,23,42,.06)}.grid{display:grid;gap:14px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}label{display:block;font-size:13px;font-weight:800;margin:0 0 6px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:white}textarea{min-height:90px}button,.btn{border:0;border-radius:12px;padding:12px 16px;background:var(--g);color:white;font-weight:900;display:inline-block}.btn-dark{background:#0f172a}.quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.metric{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}.metric span{display:block;font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b}.metric strong{font-size:27px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:10px;font-size:14px;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:#475569}.pill{display:inline-block;border-radius:999px;background:#e8f5ec;color:#123d22;padding:5px 9px;font-size:12px;font-weight:900}.pill.warn{background:#fff7ed;color:#9a3412}.flash{padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;margin-bottom:12px}.danger{background:#fef2f2;border-color:#fecaca}@media(max-width:900px){.layout{display:block}aside{width:100%;height:auto;position:relative}.grid-2,.grid-3,.metric-grid{grid-template-columns:1fr}main{padding:20px}}
-</style></head><body>
-{% if request.path != '/login' %}
-<div class="layout"><aside><div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div><div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div><nav>
+:root{--navy:#0f172a;--green:#11823b;--green2:#0b5f2a;--bg:#f8fafc;--card:#fff;--line:#e5e7eb;--text:#111827;--muted:#64748b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}a{text-decoration:none;color:inherit}
+.layout{display:flex;min-height:100vh}aside{width:270px;background:var(--navy);color:white;padding:26px 18px;position:sticky;top:0;height:100vh;overflow:auto;border-right:5px solid var(--green)}
+.brand-mark{width:50px;height:50px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:13px}
+.brand{font-size:23px;font-weight:900;line-height:1.05;margin-bottom:14px}.contact{font-size:12px;line-height:1.45;margin-bottom:22px;color:#dbeafe}
+nav a{display:block;padding:11px 12px;border-radius:12px;font-weight:800;margin:4px 0;color:#f8fafc}nav a:hover{background:rgba(255,255,255,.10)}
+main{flex:1;padding:34px;overflow:auto}h1{font-size:34px;margin:0 0 8px;color:var(--navy)}h2{margin:0 0 14px;color:var(--navy)}.sub{color:var(--muted);margin-top:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;margin:18px 0;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+.grid{display:grid;gap:15px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+label{display:block;font-size:13px;font-weight:900;margin:0 0 6px;color:#334155}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:12px;background:white;color:#111827}
+textarea{min-height:100px}button,.btn{border:0;border-radius:13px;padding:12px 16px;background:var(--green);color:white;font-weight:900;display:inline-block;cursor:pointer}.btn-dark{background:var(--navy)}.btn-light{background:#e2e8f0;color:#0f172a}
+.quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:18px 0}.metric{background:white;border:1px solid var(--line);border-radius:20px;padding:20px}.metric span{display:block;font-size:12px;font-weight:900;text-transform:uppercase;color:var(--muted)}.metric strong{font-size:28px;color:var(--green);display:block;margin-top:6px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px}table{width:100%;border-collapse:collapse;background:white}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:12px;font-size:14px;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:#475569;background:#f8fafc}.pill{display:inline-block;border-radius:999px;background:#e8f5ec;color:#0b5f2a;padding:5px 10px;font-size:12px;font-weight:900}.pill.warn{background:#fff7ed;color:#9a3412}.flash{padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;margin-bottom:12px;color:#14532d}.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}.section-title{border-left:5px solid var(--green);padding-left:12px;margin:8px 0 16px}
+@media(max-width:980px){.layout{display:block}aside{width:100%;height:auto;position:relative}.grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}main{padding:20px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+<div class="brand-mark">PPT</div><div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div><div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
+<nav>
 {% if current_user.is_authenticated and current_user.role == 'admin' %}
 <a href="/dashboard">Dashboard</a><a href="/clients">Clients</a><a href="/transactions">Bookkeeping</a><a href="/tax-returns">Tax Returns</a><a href="/documents">Documents</a><a href="/invoices">Invoices</a><a href="/payments">Payments</a><a href="/appointments">Appointments</a><a href="/crm">CRM</a><a href="/messages">Messages</a><a href="/settings">Users</a>
 {% elif current_user.is_authenticated %}
 <a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a>
 {% endif %}
 {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
-</nav></aside><main>{% with messages = get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></div>
-{% else %}
-{% block login_content %}{% endblock %}
-{% endif %}
+</nav></aside>
+<main>{% with messages = get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main>
+</div>
 </body></html>

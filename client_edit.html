@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block content %}
+<h1>Edit Client Template</h1><p class="sub">Update all editable client profile, tax, bookkeeping, and onboarding fields.</p>
+<div class="quickbar"><a class="btn btn-light" href="/clients">Back to Clients</a><a class="btn" href="/client-statement/{{ client.id }}">Client Statement</a></div>
+<form method="POST" action="/clients/{{ client.id }}/update">
+<div class="card"><h2 class="section-title">Basic Client Information</h2><div class="grid grid-3">
+<div><label>Client Name</label><input name="name" value="{{ client.name or '' }}"></div><div><label>Business Name</label><input name="business_name" value="{{ client.business_name or '' }}"></div><div><label>Email</label><input name="email" value="{{ client.email or '' }}"></div><div><label>Phone</label><input name="phone" value="{{ client.phone or '' }}"></div><div><label>Address</label><input name="address" value="{{ client.address or '' }}"></div><div><label>Preferred Contact</label><input name="preferred_contact" value="{{ client.preferred_contact or '' }}"></div>
+</div></div>
+<div class="card"><h2 class="section-title">Service Template</h2><div class="grid grid-4">
+<div><label>Client Type</label><input name="client_type" value="{{ client.client_type or '' }}"></div><div><label>Service Package</label><input name="service_package" value="{{ client.service_package or '' }}"></div><div><label>Tax Year</label><input name="tax_year" value="{{ client.tax_year or '' }}"></div><div><label>Status</label><input name="status" value="{{ client.status or '' }}"></div><div><label>Onboarding Status</label><input name="onboarding_status" value="{{ client.onboarding_status or '' }}"></div><div><label>Filing Status</label><input name="filing_status" value="{{ client.filing_status or '' }}"></div><div><label>Entity Type</label><input name="entity_type" value="{{ client.entity_type or '' }}"></div><div><label>Occupation</label><input name="occupation" value="{{ client.occupation or '' }}"></div>
+</div></div>
+<div class="card"><h2 class="section-title">Tax/ID Fields</h2><div class="grid grid-3"><div><label>EIN</label><input name="ein" value="{{ client.ein or '' }}"></div><div><label>SSN Last 4</label><input name="ssn_last4" value="{{ client.ssn_last4 or '' }}"></div><div><label>Date of Birth</label><input name="dob" value="{{ client.dob or '' }}"></div><div><label>Spouse Name</label><input name="spouse_name" value="{{ client.spouse_name or '' }}"></div></div></div>
+<div class="card"><h2 class="section-title">Notes</h2><textarea name="notes">{{ client.notes or '' }}</textarea></div><button type="submit">Save Client Template</button></form>
+{% endblock %}

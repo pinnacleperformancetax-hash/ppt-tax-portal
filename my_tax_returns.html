@@ -1,1 +1,44 @@
-{% extends "base.html" %}{% block content %}<h1>My Tax Returns</h1><div class="card"><table><thead><tr><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Invoice</th></tr></thead><tbody>{% for r in returns %}<tr><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td>{{ r.invoice_number }}</td></tr>{% else %}<tr><td colspan="5">No tax returns.</td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% extends "base.html" %}{% block content %}
+<h1>My Tax Returns</h1>
+<p class="sub">Track tax preparation progress and related invoices/documents.</p>
+
+<div class="card">
+  <h2>Ask a Tax Return Question</h2>
+  <form method="POST" action="/my/tax-return-question" class="grid grid-2">
+    <div style="grid-column:1/-1"><textarea name="body" placeholder="Type your tax return question here"></textarea></div>
+    <div><button>Send Question</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Tax Return Records</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Fee</th><th>Invoice</th><th>Invoice Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for r in returns %}
+        <tr><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td><span class="pill {% if r.status not in ['Completed','Filed'] %}warn{% endif %}">{{ r.status }}</span></td><td>{{ r.due_date or "—" }}</td><td>{{ r.fee|currency }}</td><td>{{ r.invoice_number or "—" }}</td><td>{{ r.invoice_status or "—" }}</td><td>{{ r.notes or "—" }}</td></tr>
+        {% else %}
+        <tr><td colspan="8">No tax return records assigned yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Tax Documents</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Name</th><th>Category</th><th>Year</th><th>Status</th><th>File</th></tr></thead>
+      <tbody>
+        {% for d in documents %}
+        <tr><td>{{ d.created_at }}</td><td>{{ d.display_name }}</td><td>{{ d.category }}</td><td>{{ d.tax_year }}</td><td>{{ d.status }}</td><td>{% if d.filename and not d.file_missing %}<a class="btn btn-dark" href="/documents/download/{{ d.id }}">Download</a>{% elif d.file_missing %}<span class="pill warn">Missing</span>{% else %}No file{% endif %}</td></tr>
+        {% else %}
+        <tr><td colspan="6">No tax documents yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

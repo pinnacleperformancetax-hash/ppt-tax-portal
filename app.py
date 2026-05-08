@@ -147,33 +147,6 @@ def client_dashboard():
     if not current_user.client_id: return render_template('client_dashboard.html',client=None,invoices=[],payments=[],appointments=[],documents=[],tax_returns=[],transactions=[],crm_items=[],messages=[])
     cid=current_user.client_id
     return render_template('client_dashboard.html',client=query_db('SELECT * FROM clients WHERE id=?',(cid,),one=True),invoices=query_db('SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC',(cid,)),payments=query_db('SELECT p.*,i.invoice_number FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id WHERE p.client_id=? ORDER BY p.id DESC',(cid,)),appointments=query_db('SELECT * FROM appointments WHERE client_id=? ORDER BY id DESC',(cid,)),documents=query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC",(cid,)),tax_returns=query_db('SELECT tr.*,i.invoice_number FROM tax_returns tr LEFT JOIN invoices i ON i.id=tr.invoice_id WHERE tr.client_id=? ORDER BY tr.id DESC',(cid,)),transactions=query_db('SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? ORDER BY t.date DESC,t.id DESC',(cid,)),crm_items=query_db('SELECT * FROM crm_leads WHERE client_id=? ORDER BY id DESC',(cid,)),messages=query_db('SELECT * FROM messages WHERE client_id=? ORDER BY id DESC',(cid,)))
-@app.route('/my/invoices')
-@login_required
-@client_required
-def my_invoices(): return render_template('my_invoices.html',invoices=query_db('SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC',(current_user.client_id,)))
-@app.route('/my/payments')
-@login_required
-@client_required
-def my_payments(): return render_template('my_payments.html',payments=query_db('SELECT p.*,i.invoice_number FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id WHERE p.client_id=? ORDER BY p.id DESC',(current_user.client_id,)))
-@app.route('/my/appointments')
-@login_required
-@client_required
-def my_appointments(): return render_template('my_appointments.html',appointments=query_db('SELECT * FROM appointments WHERE client_id=? ORDER BY id DESC',(current_user.client_id,)))
-@app.route('/my/bookkeeping')
-@login_required
-@client_required
-def my_bookkeeping(): return render_template('my_bookkeeping.html',transactions=query_db('SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? ORDER BY t.date DESC,t.id DESC',(current_user.client_id,)))
-@app.route('/my/tax-returns')
-@login_required
-@client_required
-def my_tax_returns(): return render_template('my_tax_returns.html',returns=query_db('SELECT tr.*,i.invoice_number FROM tax_returns tr LEFT JOIN invoices i ON i.id=tr.invoice_id WHERE tr.client_id=? ORDER BY tr.id DESC',(current_user.client_id,)))
-@app.route('/my/crm',methods=['GET','POST'])
-@login_required
-@client_required
-def my_crm():
-    if request.method=='POST':
-        execute_db('INSERT INTO crm_leads(name,email,status,source,notes,client_id) VALUES (?,?,?,?,?,?)',(current_user.name,current_user.email,'New','Client Portal',request.form.get('notes'),current_user.client_id)); flash('Request sent.','success'); return redirect(url_for('my_crm'))
-    return render_template('my_crm.html',crm_items=query_db('SELECT * FROM crm_leads WHERE client_id=? ORDER BY id DESC',(current_user.client_id,)))
 @app.route('/client/upload',methods=['POST'])
 @login_required
 @client_required

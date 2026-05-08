@@ -255,6 +255,60 @@ def my_messages():
     items = query_db("SELECT * FROM messages WHERE client_id=? OR client_id IS NULL ORDER BY id DESC LIMIT 100", (current_user.client_id,))
     return render_template('my_messages.html', messages=items)
 
+
+# === PPT INVOICE STATEMENT UPGRADE START ===
+def ppt_client_money_totals(client_id):
+    billed_row = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE client_id=?", (client_id,), one=True)
+    paid_row = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE client_id=?", (client_id,), one=True)
+    billed = money(billed_row["total"] if billed_row else 0)
+    paid = money(paid_row["total"] if paid_row else 0)
+    return {"billed": billed, "paid": paid, "balance": billed - paid}
+
+@app.route('/invoice/<int:invoice_id>/print')
+@login_required
+def invoice_print(invoice_id):
+    invoice = query_db("""SELECT i.*, c.name client_name, c.business_name, c.email client_email, c.phone client_phone, c.address client_address
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.id=?""", (invoice_id,), one=True)
+    if not invoice:
+        abort(404)
+    if current_user.role != 'admin' and invoice['client_id'] != current_user.client_id:
+        abort(403)
+    payments = query_db("SELECT * FROM payments WHERE invoice_id=? ORDER BY id DESC", (invoice_id,))
+    paid = sum([money(p["amount"]) for p in payments])
+    balance = money(invoice["amount"]) - paid
+    return render_template("invoice_print.html", invoice=invoice, payments=payments, paid=paid, balance=balance)
+
+@app.route('/client-statement/<int:client_id>')
+@login_required
+@admin_required
+def client_statement(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client:
+        abort(404)
+    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC", (client_id,))
+    payments = query_db("""SELECT p.*, i.invoice_number
+                           FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id
+                           WHERE p.client_id=? ORDER BY p.id DESC""", (client_id,))
+    totals = ppt_client_money_totals(client_id)
+    return render_template("client_statement.html", client=client, invoices=invoices, payments=payments, totals=totals)
+
+@app.route('/my/statement')
+@login_required
+@client_required
+def my_statement():
+    client = query_db("SELECT * FROM clients WHERE id=?", (current_user.client_id,), one=True)
+    if not client:
+        flash("Client profile not linked.", "danger")
+        return redirect(url_for("client_dashboard"))
+    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC", (current_user.client_id,))
+    payments = query_db("""SELECT p.*, i.invoice_number
+                           FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id
+                           WHERE p.client_id=? ORDER BY p.id DESC""", (current_user.client_id,))
+    totals = ppt_client_money_totals(current_user.client_id)
+    return render_template("client_statement.html", client=client, invoices=invoices, payments=payments, totals=totals)
+# === PPT INVOICE STATEMENT UPGRADE END ===
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

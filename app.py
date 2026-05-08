@@ -159,8 +159,23 @@ button{width:100%;margin-top:18px;border:0;border-radius:12px;padding:14px;backg
 </html>
 """
 
+
+def ensure_messages_table():
+    db = get_db()
+    db.execute('''CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        sender_role TEXT DEFAULT 'admin',
+        sender_name TEXT,
+        subject TEXT,
+        body TEXT,
+        status TEXT DEFAULT 'Open',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )''')
+    db.commit()
+
 @app.route('/init')
-def init_route(): init_db(); return 'INIT COMPLETE - client modules repaired and categories deduped'
+def init_route(): init_db(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
 
@@ -184,30 +199,61 @@ def login():
         if row and check_password_hash(row['password_hash'], password):
             login_user(User(row))
             return redirect(url_for('dashboard') if row['role'] == 'admin' else url_for('client_dashboard'))
-        error = "<div style='background:#fee2e2;border:2px solid #991b1b;color:#991b1b;padding:12px;margin:12px 0;font-weight:bold;'>Invalid login.</div>"
+        error = "<div style='background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px;margin:12px 0;border-radius:12px;font-weight:bold;'>Invalid login.</div>"
 
     return f"""<!doctype html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>PPT LOGIN</title>
-</head>
-<body style="margin:0;background:#123d22;font-family:Arial,Helvetica,sans-serif;">
-<div style="max-width:460px;margin:80px auto;background:white;padding:32px;border-radius:18px;border:4px solid #0f172a;">
-<h1 style="margin:0 0 10px;color:#123d22;font-size:30px;">Pinnacle Performance Tax Portal</h1>
-<p style="font-size:16px;color:#111827;">Secure Admin and Client Login</p>
+<head><meta charset="utf-8"><title>PPT Portal Login</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;background:#f4f7f4;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#f8fafc 0%,#e8f5ec 55%,#ffffff 100%);">
+<div style="width:100%;max-width:460px;background:white;padding:34px;border-radius:24px;border:1px solid #dfe7df;box-shadow:0 22px 60px rgba(15,23,42,.13);">
+<div style="color:#123d22;font-weight:900;font-size:30px;line-height:1.05;margin-bottom:8px;">Pinnacle<br>Performance Tax<br>Portal</div>
+<div style="height:5px;background:#123d22;border-radius:999px;width:120px;margin:14px 0 18px;"></div>
+<p style="font-size:15px;color:#475569;margin-bottom:18px;">Secure Admin and Client Login</p>
 {error}
 <form method="POST" action="/login">
-<label style="display:block;font-weight:bold;margin-top:14px;">Email</label>
-<input style="width:100%;padding:13px;font-size:16px;border:1px solid #999;border-radius:8px;box-sizing:border-box;" type="email" name="email" required autofocus>
-<label style="display:block;font-weight:bold;margin-top:14px;">Password</label>
-<input style="width:100%;padding:13px;font-size:16px;border:1px solid #999;border-radius:8px;box-sizing:border-box;" type="password" name="password" required>
-<button style="width:100%;margin-top:20px;background:#123d22;color:white;padding:14px;font-size:16px;font-weight:bold;border:0;border-radius:8px;" type="submit">SIGN IN</button>
+<label style="display:block;font-weight:800;margin:14px 0 6px;">Email</label>
+<input style="width:100%;padding:13px;font-size:16px;border:1px solid #cbd5e1;border-radius:12px;box-sizing:border-box;background:#fff;" type="email" name="email" required autofocus>
+<label style="display:block;font-weight:800;margin:14px 0 6px;">Password</label>
+<input style="width:100%;padding:13px;font-size:16px;border:1px solid #cbd5e1;border-radius:12px;box-sizing:border-box;background:#fff;" type="password" name="password" required>
+<button style="width:100%;margin-top:20px;background:#123d22;color:white;padding:14px;font-size:16px;font-weight:900;border:0;border-radius:12px;" type="submit">SIGN IN</button>
 </form>
-<p style="font-size:12px;color:#475569;margin-top:18px;">If this login box is visible, the portal route is working.</p>
-</div>
-</body>
-</html>"""
+<p style="font-size:12px;color:#64748b;margin-top:18px;">Pinnacle Performance Tax and Accounting</p>
+</div></div></body></html>"""
+
+@app.route('/messages', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def messages():
+    ensure_messages_table()
+    clients = query_db("SELECT id,name,email FROM clients ORDER BY name")
+    if request.method == 'POST':
+        client_id = request.form.get('client_id') or None
+        subject = request.form.get('subject') or 'Message from Pinnacle Performance Tax'
+        body = request.form.get('body') or ''
+        execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                   (client_id, 'admin', current_user.name, subject, body))
+        flash('Message sent.', 'success')
+        return redirect(url_for('messages'))
+    items = query_db("""SELECT m.*, c.name client_name
+                        FROM messages m LEFT JOIN clients c ON c.id=m.client_id
+                        ORDER BY m.id DESC LIMIT 100""")
+    return render_template('messages.html', messages=items, clients=clients)
+
+@app.route('/my/messages', methods=['GET', 'POST'])
+@login_required
+@client_required
+def my_messages():
+    ensure_messages_table()
+    if request.method == 'POST':
+        subject = request.form.get('subject') or 'Client Message'
+        body = request.form.get('body') or ''
+        execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                   (current_user.client_id, 'client', current_user.name, subject, body))
+        flash('Message sent to the office.', 'success')
+        return redirect(url_for('my_messages'))
+    items = query_db("SELECT * FROM messages WHERE client_id=? OR client_id IS NULL ORDER BY id DESC LIMIT 100", (current_user.client_id,))
+    return render_template('my_messages.html', messages=items)
 
 @app.route('/logout')
 @login_required
@@ -306,25 +352,6 @@ if __name__=='__main__':
     with app.app_context(): init_db()
     app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
 # === PPT MY MESSAGES + YEAR END FIX START ===
-
-@app.route("/my/messages", methods=["GET", "POST"])
-@login_required
-@client_required
-def my_messages():
-    if request.method == "POST":
-        subject = request.form.get("subject") or "Client Message"
-        body = request.form.get("body") or ""
-        execute_db(
-            "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
-            (current_user.client_id, "client", current_user.name, subject, body),
-        )
-        flash("Message sent to the office.", "success")
-        return redirect(url_for("my_messages"))
-    messages = query_db(
-        "SELECT * FROM messages WHERE client_id=? ORDER BY id DESC",
-        (current_user.client_id,),
-    )
-    return render_template("my_messages.html", messages=messages)
 
 
 @app.route("/my/year-end")

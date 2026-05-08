@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invoice {{ inv.invoice_number or inv.id }}</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;margin:40px;color:#111827}
+.header{display:flex;justify-content:space-between;border-bottom:5px solid #123d22;padding-bottom:18px;margin-bottom:24px}
+.brand{font-size:28px;font-weight:900;color:#123d22;line-height:1.05}
+.box{border:1px solid #d1d5db;border-radius:12px;padding:16px;margin:16px 0}
+table{width:100%;border-collapse:collapse;margin-top:18px}
+th,td{border-bottom:1px solid #e5e7eb;text-align:left;padding:12px}
+.total{font-size:20px;font-weight:900}
+.print{margin-bottom:20px}
+@media print{.print{display:none}body{margin:20px}}
+</style>
+</head>
+<body>
+<button class="print" onclick="window.print()">Print / Save PDF</button>
+<div class="header">
+  <div>
+    <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
+    <p>www.pinnacleperformancetax.com<br>pinnacleperformancetax@gmail.com<br>478-338-1632</p>
+  </div>
+  <div>
+    <h1>INVOICE</h1>
+    <p><b>Invoice #:</b> {{ inv.invoice_number or inv.id }}<br>
+    <b>Issue Date:</b> {{ inv.issue_date }}<br>
+    <b>Due Date:</b> {{ inv.due_date }}<br>
+    <b>Status:</b> {{ inv.status }}</p>
+  </div>
+</div>
+
+<div class="box">
+  <h2>Bill To</h2>
+  <p><b>{{ inv.business_name or inv.client_name }}</b><br>
+  {{ inv.client_email or '' }}<br>
+  {{ inv.client_phone or '' }}<br>
+  {{ inv.client_address or '' }}</p>
+</div>
+
+<table>
+  <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+  <tbody>
+    <tr><td>{{ inv.description or 'Professional Services' }}</td><td>{{ inv.amount|currency }}</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <p class="total">Invoice Total: {{ inv.amount|currency }}</p>
+  <p class="total">Payments: {{ paid|currency }}</p>
+  <p class="total">Balance Due: {{ balance|currency }}</p>
+</div>
+</body>
+</html>

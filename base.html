@@ -8,7 +8,7 @@
 {% if current_user.is_authenticated and current_user.role == 'admin' %}
 <a href="/dashboard">Dashboard</a><a href="/clients">Clients</a><a href="/transactions">Bookkeeping</a><a href="/tax-returns">Tax Returns</a><a href="/documents">Documents</a><a href="/invoices">Invoices</a><a href="/payments">Payments</a><a href="/appointments">Appointments</a><a href="/crm">CRM</a><a href="/messages">Messages</a><a href="/settings">Users</a>
 {% elif current_user.is_authenticated %}
-<a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a>
+<a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/my/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a>
 {% endif %}
 {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
 </nav></aside><main>{% with messages = get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></div>

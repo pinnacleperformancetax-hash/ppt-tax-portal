@@ -255,6 +255,84 @@ def my_messages():
     items = query_db("SELECT * FROM messages WHERE client_id=? OR client_id IS NULL ORDER BY id DESC LIMIT 100", (current_user.client_id,))
     return render_template('my_messages.html', messages=items)
 
+
+# === PPT NEXT STABLE UPGRADE START ===
+def invoice_totals_for_client(client_id):
+    inv = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE client_id=?", (client_id,), one=True)
+    paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE client_id=?", (client_id,), one=True)
+    total = money(inv["total"] if inv else 0)
+    paid_total = money(paid["total"] if paid else 0)
+    return {"total": total, "paid": paid_total, "balance": total - paid_total}
+
+@app.route('/invoice/<int:invoice_id>/print')
+@login_required
+def invoice_print(invoice_id):
+    inv = query_db("""SELECT i.*, c.name client_name, c.business_name, c.email client_email, c.phone client_phone, c.address client_address
+                      FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.id=?""", (invoice_id,), one=True)
+    if not inv:
+        abort(404)
+    if current_user.role != 'admin' and inv['client_id'] != current_user.client_id:
+        abort(403)
+    pays = query_db("SELECT * FROM payments WHERE invoice_id=? ORDER BY id DESC", (invoice_id,))
+    paid = sum([money(p["amount"]) for p in pays])
+    balance = money(inv["amount"]) - paid
+    return render_template("invoice_print.html", inv=inv, payments=pays, paid=paid, balance=balance)
+
+@app.route('/my/documents')
+@login_required
+@client_required
+def my_documents():
+    docs = query_db("""SELECT *, COALESCE(document_name,name,'Document') display_name
+                       FROM documents WHERE client_id=? ORDER BY id DESC""", (current_user.client_id,))
+    return render_template("my_documents.html", documents=docs)
+
+@app.route('/client-statement/<int:client_id>')
+@login_required
+@admin_required
+def client_statement(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client:
+        abort(404)
+    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC", (client_id,))
+    payments = query_db("SELECT p.*, i.invoice_number FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id WHERE p.client_id=? ORDER BY p.id DESC", (client_id,))
+    totals = invoice_totals_for_client(client_id)
+    return render_template("client_statement.html", client=client, invoices=invoices, payments=payments, totals=totals)
+
+@app.route('/my/statement')
+@login_required
+@client_required
+def my_statement():
+    return redirect(url_for("client_statement", client_id=current_user.client_id))
+
+@app.route('/documents/preview/<int:document_id>')
+@login_required
+def document_preview(document_id):
+    doc = query_db("SELECT d.*, c.name client_name FROM documents d LEFT JOIN clients c ON c.id=d.client_id WHERE d.id=?", (document_id,), one=True)
+    if not doc:
+        abort(404)
+    if current_user.role != 'admin' and doc['client_id'] != current_user.client_id:
+        abort(403)
+    return render_template("document_preview.html", doc=doc)
+
+@app.route('/messages/close/<int:message_id>', methods=['POST'])
+@login_required
+@admin_required
+def close_message(message_id):
+    ensure_messages_table()
+    execute_db("UPDATE messages SET status='Closed' WHERE id=?", (message_id,))
+    flash("Message closed.", "success")
+    return redirect(url_for("messages"))
+
+@app.route('/messages/reopen/<int:message_id>', methods=['POST'])
+@login_required
+@admin_required
+def reopen_message(message_id):
+    ensure_messages_table()
+    execute_db("UPDATE messages SET status='Open' WHERE id=?", (message_id,))
+    flash("Message reopened.", "success")
+    return redirect(url_for("messages"))
+# === PPT NEXT STABLE UPGRADE END ===
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Document Preview</h1>
+<div class="card">
+  <h2>{{ doc.document_name or doc.name or 'Document' }}</h2>
+  <p><b>Client:</b> {{ doc.client_name or 'My Portal' }}</p>
+  <p><b>Category:</b> {{ doc.category }}</p>
+  <p><b>Tax Year:</b> {{ doc.tax_year }}</p>
+  <p><b>Status:</b> <span class="pill">{{ doc.status }}</span></p>
+  <p><b>Notes:</b> {{ doc.notes or 'None' }}</p>
+  {% if doc.filename %}
+    <a class="btn" href="/documents/download/{{ doc.id }}">Download File</a>
+  {% else %}
+    <p class="sub">No file attached.</p>
+  {% endif %}
+</div>
+{% endblock %}

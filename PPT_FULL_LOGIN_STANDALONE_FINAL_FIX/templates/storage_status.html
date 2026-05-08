@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block content %}
+<h1>Document Storage Status</h1>
+<div class="card">
+  <h2>Upload Storage</h2>
+  <p><b>Current upload folder:</b><br>{{ upload_dir }}</p>
+  <p class="sub">On Render, files inside the app folder can disappear after redeploy unless you use a Persistent Disk or outside storage.</p>
+</div>
+<div class="metric-grid">
+  <div class="metric"><span>Total Document Records</span><strong>{{ total }}</strong></div>
+  <div class="metric"><span>Records With Files</span><strong>{{ with_files }}</strong></div>
+  <div class="metric"><span>Missing Physical Files</span><strong>{{ missing }}</strong></div>
+  <div class="metric"><span>Fix</span><strong>Disk</strong></div>
+</div>
+<div class="card">
+  <h2>Render Persistent Disk Setup</h2>
+  <p>Recommended environment variable after adding a Render Persistent Disk:</p>
+  <pre>UPLOAD_DIR=/var/data/uploads</pre>
+  <p>Create or attach a disk mounted at:</p>
+  <pre>/var/data</pre>
+  <p>After redeploy, run:</p>
+  <pre>https://ppt-tax-portal.onrender.com/init</pre>
+</div>
+{% endblock %}

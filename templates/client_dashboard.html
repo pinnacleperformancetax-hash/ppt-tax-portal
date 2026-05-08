@@ -1,1 +1,42 @@
-{% extends "base.html" %}{% block content %}<h1>Client Dashboard</h1>{% if not client %}<div class="card"><h2>Client profile not linked</h2></div>{% else %}<div class="metric-grid"><div class="metric"><span>Invoices</span><strong>{{ invoices|length }}</strong></div><div class="metric"><span>Payments</span><strong>{{ payments|length }}</strong></div><div class="metric"><span>Appointments</span><strong>{{ appointments|length }}</strong></div><div class="metric"><span>Documents</span><strong>{{ documents|length }}</strong></div><div class="metric"><span>Bookkeeping</span><strong>{{ transactions|length }}</strong></div><div class="metric"><span>Tax Returns</span><strong>{{ tax_returns|length }}</strong></div><div class="metric"><span>CRM Requests</span><strong>{{ crm_items|length }}</strong></div><div class="metric"><span>Messages</span><strong>{{ messages|length }}</strong></div></div><div class="card"><h2>Upload Documents</h2><p class="sub">Files are saved to the Document Center and linked to your client profile.</p><form method="POST" action="/client/upload" enctype="multipart/form-data" class="grid grid-3"><input name="document_name" placeholder="Document name"><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Invoices</option><option>Identification</option><option>Other</option></select><input name="tax_year" placeholder="Tax year"><input type="file" name="file" required><textarea name="notes" placeholder="Notes"></textarea><button>Upload</button></form></div><div class="quickbar"><a class="btn" href="/my/invoices">My Invoices</a><a class="btn" href="/my/payments">My Payments</a><a class="btn" href="/my/appointments">My Appointments</a><a class="btn" href="/my/bookkeeping">My Bookkeeping</a><a class="btn" href="/my/tax-returns">My Tax Returns</a><a class="btn" href="/my/crm">My CRM / Requests</a></div>{% endif %}{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<h1>Client Dashboard</h1>
+{% if not client %}
+  <div class="card"><h2>Client profile not linked</h2><p class="sub">Please contact Pinnacle Performance Tax and Accounting so your login can be connected to your client record.</p></div>
+{% else %}
+  <p class="sub">Welcome, {{ current_user.name }}. Upload tax and bookkeeping documents and view your progress.</p>
+  <div class="metric-grid">
+    <div class="metric"><span>Tax Returns</span><strong>{{ tax_returns|length }}</strong></div>
+    <div class="metric"><span>Invoices</span><strong>{{ invoices|length }}</strong></div>
+    <div class="metric"><span>Documents</span><strong>{{ documents|length }}</strong></div>
+    <div class="metric"><span>Payments</span><strong>{{ payments|length }}</strong></div>
+  </div>
+  <div class="card">
+    <h2>Upload Documents</h2>
+    <p class="sub">Files are saved to the Document Center and linked to your client profile.</p>
+    <form method="POST" action="/client/upload" enctype="multipart/form-data" class="grid grid-3">
+      <div><label>Document Name</label><input name="document_name" placeholder="Document name"></div>
+      <div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Invoices</option><option>Identification</option><option>Other</option></select></div>
+      <div><label>Tax Year</label><input name="tax_year" placeholder="2026"></div>
+      <div><label>File</label><input type="file" name="file" required></div>
+      <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" placeholder="Notes"></textarea></div>
+      <div style="grid-column:1/-1"><button>Upload Document</button></div>
+    </form>
+  </div>
+  <div class="quickbar">
+    <a class="btn" href="/my/invoices">My Invoices</a><a class="btn" href="/my/payments">My Payments</a><a class="btn" href="/my/appointments">My Appointments</a><a class="btn" href="/my/bookkeeping">My Bookkeeping</a><a class="btn" href="/my/tax-returns">My Tax Returns</a><a class="btn" href="/my/crm">My CRM / Requests</a><a class="btn" href="/my/messages">My Messages</a><a class="btn" href="/my/year-end">My Year-End Summary</a>
+  </div>
+  <div class="card"><h2>My Tax Returns</h2><div class="table-wrap"><table><thead><tr><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Invoice</th></tr></thead><tbody>
+    {% for r in tax_returns %}<tr><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td>{{ r.invoice_number }}</td></tr>{% else %}<tr><td colspan="5">No tax return records yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+  <div class="card"><h2>My Invoices</h2><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Amount</th></tr></thead><tbody>
+    {% for i in invoices %}<tr><td>{{ i.invoice_number or i.id }}</td><td>{{ i.status }}</td><td>{{ i.amount|currency }}</td></tr>{% else %}<tr><td colspan="3">No invoices yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+  <div class="card"><h2>My Uploaded Documents</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Category</th><th>Year</th><th>Status</th><th>File</th></tr></thead><tbody>
+    {% for d in documents %}<tr><td>{{ d.created_at }}</td><td>{{ d.display_name }}</td><td>{{ d.category }}</td><td>{{ d.tax_year }}</td><td>{{ d.status }}</td><td>{% if d.filename and not d.file_missing %}<a class="btn btn-dark" href="/documents/download/{{ d.id }}">Download</a>{% elif d.file_missing %}<span class="pill warn">Missing</span>{% else %}No file{% endif %}</td></tr>{% else %}<tr><td colspan="6">No documents uploaded yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+  <div class="card"><h2>My Payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Amount</th></tr></thead><tbody>
+    {% for p in payments %}<tr><td>{{ p.created_at }}</td><td>{{ p.invoice_number }}</td><td>{{ p.method }}</td><td>{{ p.amount|currency }}</td></tr>{% else %}<tr><td colspan="4">No payments recorded yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endif %}
+{% endblock %}

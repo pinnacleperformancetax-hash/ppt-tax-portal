@@ -3,7 +3,7 @@ import os, sqlite3
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from flask import Flask, abort, flash, g, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, render_template_string, request, send_from_directory, url_for
 from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -118,18 +118,97 @@ def init_db():
         db.execute("INSERT OR IGNORE INTO users(name,email,password_hash,role,client_id,is_active) VALUES (?,?,?,'client',?,1)",("Sample Client","client@example.com",generate_password_hash("Temp123!"),cid))
     db.commit()
 
+LOGIN_PAGE_HTML = """
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PPT Portal Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#123d22,#0f172a);font-family:Arial,Helvetica,sans-serif}
+.card{width:100%;max-width:440px;background:white;border-radius:24px;padding:34px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+h1{margin:0 0 8px;color:#123d22;font-size:30px;line-height:1.05}
+p{color:#475569}
+label{display:block;font-size:13px;font-weight:800;margin:14px 0 6px}
+input{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:13px}
+button{width:100%;margin-top:18px;border:0;border-radius:12px;padding:14px;background:#123d22;color:white;font-weight:900}
+.flash{padding:12px 14px;border-radius:14px;background:#fef2f2;border:1px solid #fecaca;margin:12px 0;color:#991b1b}
+.small{font-size:12px;color:#64748b;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Pinnacle<br>Performance Tax<br>Portal</h1>
+<p>Secure client and admin login</p>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat,msg in messages %}
+    <div class="flash">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+<form method="POST" action="/login">
+<label>Email</label>
+<input type="email" name="email" placeholder="Email" required autofocus>
+<label>Password</label>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Sign In</button>
+</form>
+<div class="small">Pinnacle Performance Tax and Accounting</div>
+</div>
+</body>
+</html>
+"""
+
 @app.route('/init')
 def init_route(): init_db(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
-@app.route('/login',methods=['GET','POST'])
+
+
+@app.route('/login-test')
+def login_test():
+    return '<h1 style="font-family:Arial;color:green;">PPT LOGIN TEST VISIBLE</h1><p>If you see this, browser display works.</p>'
+
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     init_db()
-    if request.method=='POST':
-        row=query_db('SELECT * FROM users WHERE lower(email)=? AND is_active=1',(request.form.get('email','').strip().lower(),),one=True)
-        if row and check_password_hash(row['password_hash'],request.form.get('password','')): login_user(User(row)); return redirect(url_for('dashboard') if row['role']=='admin' else url_for('client_dashboard'))
-        flash('Invalid login.','danger')
-    return render_template('login.html')
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard') if current_user.role == 'admin' else url_for('client_dashboard'))
+
+    error = ""
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        row = query_db("SELECT * FROM users WHERE lower(email)=? AND is_active=1", (email,), one=True)
+        if row and check_password_hash(row['password_hash'], password):
+            login_user(User(row))
+            return redirect(url_for('dashboard') if row['role'] == 'admin' else url_for('client_dashboard'))
+        error = "<div style='background:#fee2e2;border:2px solid #991b1b;color:#991b1b;padding:12px;margin:12px 0;font-weight:bold;'>Invalid login.</div>"
+
+    return f"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PPT LOGIN</title>
+</head>
+<body style="margin:0;background:#123d22;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:460px;margin:80px auto;background:white;padding:32px;border-radius:18px;border:4px solid #0f172a;">
+<h1 style="margin:0 0 10px;color:#123d22;font-size:30px;">Pinnacle Performance Tax Portal</h1>
+<p style="font-size:16px;color:#111827;">Secure Admin and Client Login</p>
+{error}
+<form method="POST" action="/login">
+<label style="display:block;font-weight:bold;margin-top:14px;">Email</label>
+<input style="width:100%;padding:13px;font-size:16px;border:1px solid #999;border-radius:8px;box-sizing:border-box;" type="email" name="email" required autofocus>
+<label style="display:block;font-weight:bold;margin-top:14px;">Password</label>
+<input style="width:100%;padding:13px;font-size:16px;border:1px solid #999;border-radius:8px;box-sizing:border-box;" type="password" name="password" required>
+<button style="width:100%;margin-top:20px;background:#123d22;color:white;padding:14px;font-size:16px;font-weight:bold;border:0;border-radius:8px;" type="submit">SIGN IN</button>
+</form>
+<p style="font-size:12px;color:#475569;margin-top:18px;">If this login box is visible, the portal route is working.</p>
+</div>
+</body>
+</html>"""
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

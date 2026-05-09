@@ -1,1 +1,50 @@
-{% extends "base.html" %}{% block content %}<h1>My CRM / Requests</h1><div class="card"><form method="POST"><input name="subject" placeholder="Subject"><textarea name="notes" placeholder="Request or question"></textarea><button>Send Request</button></form></div><div class="card"><h2>Requests</h2><table><tbody>{% for c in crm_items %}<tr><td>{{ c.created_at }}</td><td>{{ c.status }}</td><td>{{ c.notes }}</td></tr>{% else %}<tr><td>No requests.</td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<h1>My CRM / Requests</h1>
+<p class="sub">Send service requests, questions, or updates directly to Pinnacle Performance Tax.</p>
+
+<div class="card">
+  <h2>Submit a Request</h2>
+  <form method="POST" class="grid grid-2">
+    <div>
+      <label>Request Topic</label>
+      <select name="topic">
+        <option>General Question</option>
+        <option>Tax Return Question</option>
+        <option>Bookkeeping Request</option>
+        <option>Invoice / Payment Question</option>
+        <option>Appointment Request</option>
+        <option>Document Help</option>
+      </select>
+    </div>
+    <div style="grid-column:1/-1">
+      <label>Notes</label>
+      <textarea name="notes" placeholder="Type your request here..."></textarea>
+    </div>
+    <div style="grid-column:1/-1">
+      <button>Send Request</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>My Request History</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Status</th><th>Source</th><th>Notes</th></tr></thead>
+      <tbody>
+      {% for r in requests %}
+        <tr>
+          <td>{{ r.created_at }}</td>
+          <td><span class="pill">{{ r.status }}</span></td>
+          <td>{{ r.source }}</td>
+          <td>{{ r.notes }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No requests yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

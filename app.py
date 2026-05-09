@@ -735,6 +735,39 @@ def crm_upgrade():
     return render_template("crm_upgrade.html", leads=leads)
 # === PPT ELITE OPERATIONS SUITE V2.2 ROUTES END ===
 
+
+# === PPT CLIENT CRM FIX START ===
+@app.route('/my/crm', methods=['GET', 'POST'])
+@login_required
+@client_required
+def my_crm():
+    if request.method == 'POST':
+        topic = request.form.get('topic') or 'Client Request'
+        notes = request.form.get('notes') or ''
+        try:
+            execute_db(
+                "INSERT INTO crm_leads(name,email,status,source,notes,client_id) VALUES (?,?,?,?,?,?)",
+                (current_user.name, current_user.email, 'Client Request', 'Client Portal', f"{topic}: {notes}", current_user.client_id)
+            )
+        except Exception:
+            pass
+        try:
+            ensure_messages_table()
+            execute_db(
+                "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                (current_user.client_id, 'client', current_user.name, topic, notes)
+            )
+        except Exception:
+            pass
+        flash("Your request was sent to the office.", "success")
+        return redirect(url_for("my_crm"))
+    try:
+        requests = query_db("SELECT * FROM crm_leads WHERE client_id=? ORDER BY id DESC LIMIT 100", (current_user.client_id,))
+    except Exception:
+        requests = []
+    return render_template("my_crm.html", requests=requests)
+# === PPT CLIENT CRM FIX END ===
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

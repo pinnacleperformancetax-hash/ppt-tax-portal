@@ -1,1 +1,23 @@
-{% extends "base.html" %}{% block content %}<h1>Dashboard</h1><div class="metric-grid"><div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div><div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div><div class="metric"><span>Unpaid</span><strong>{{ unpaid|currency }}</strong></div><div class="metric"><span>Clients</span><strong>{{ counts.clients }}</strong></div><div class="metric"><span>Invoices</span><strong>{{ counts.open_invoices }}</strong></div><div class="metric"><span>Docs</span><strong>{{ counts.documents }}</strong></div><div class="metric"><span>Returns</span><strong>{{ counts.returns }}</strong></div><div class="metric"><span>Messages</span><strong>{{ counts.messages }}</strong></div></div><div class="split"><div class="card"><h2>Recent Documents</h2><table>{% for d in recent_documents %}<tr><td>{{ d.client_name }}</td><td>{{ d.display_name }}</td><td>{{ d.status }}</td></tr>{% else %}<tr><td>No documents.</td></tr>{% endfor %}</table></div><div class="card"><h2>Open Messages</h2><table>{% for m in open_messages %}<tr><td>{{ m.client_name }}</td><td>{{ m.subject }}</td></tr>{% else %}<tr><td>No messages.</td></tr>{% endfor %}</table></div></div>{% endblock %}
+{% extends "base.html" %}{% block content %}{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <div>
+    <div style="font-size:34px;font-weight:900;color:#11283b;">
+      PPT Executive Dashboard
+    </div>
+    <div style="color:#64748b;font-size:15px;margin-top:4px;">
+      Pinnacle Performance Tax & Accounting
+    </div>
+  </div>
+
+  <div style="
+    background:linear-gradient(135deg,#11823b,#16a34a);
+    color:white;
+    padding:14px 20px;
+    border-radius:18px;
+    font-weight:800;
+    box-shadow:0 10px 30px rgba(17,130,59,.25);
+  ">
+    Tax Season Active
+  </div>
+</div>h1>Dashboard</h1><div class="metric-grid"><div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div><div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div><div class="metric"><span>Unpaid</span><strong>{{ unpaid|currency }}</strong></div><div class="metric"><span>Clients</span><strong>{{ counts.clients }}</strong></div><div class="metric"><span>Invoices</span><strong>{{ counts.open_invoices }}</strong></div><div class="metric"><span>Docs</span><strong>{{ counts.documents }}</strong></div><div class="metric"><span>Returns</span><strong>{{ counts.returns }}</strong></div><div class="metric"><span>Messages</span><strong>{{ counts.messages }}</strong></div></div><div class="split"><div class="card"><h2>Recent Documents</h2><table>{% for d in recent_documents %}<tr><td>{{ d.client_name }}</td><td>{{ d.display_name }}</td><td>{{ d.status }}</td></tr>{% else %}<tr><td>No documents.</td></tr>{% endfor %}</table></div><div class="card"><h2>Open Messages</h2><table>{% for m in open_messages %}<tr><td>{{ m.client_name }}</td><td>{{ m.subject }}</td></tr>{% else %}<tr><td>No messages.</td></tr>{% endfor %}</table></div></div>{% endblock %}

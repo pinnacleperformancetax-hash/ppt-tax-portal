@@ -40,7 +40,27 @@
     .searchbar{display:flex;gap:10px;margin:12px 0 18px}.searchbar input{max-width:420px}
     .upload-zone{border:2px dashed #11823b!important;background:#f1faf4!important;border-radius:22px!important;padding:26px!important;text-align:center!important;color:#0b5f2a!important;font-weight:900!important}
     @media(max-width:980px){.layout{display:block}aside{width:100%;height:auto;position:relative}main{padding:20px}.grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}}
-  </style>
+  </style><style>
+aside,
+.sidebar,
+[class*="sidebar"] {
+  background: linear-gradient(180deg, #11823b 0%, #0b5f2a 100%) !important;
+  color: white !important;
+}
+
+aside *,
+.sidebar *,
+[class*="sidebar"] * {
+  color: white !important;
+}
+
+aside a:hover,
+.sidebar a:hover {
+  background: rgba(255,255,255,.18) !important;
+}
+</style>
+
+<link rel="stylesheet" href="/ppt-ui-v3.css">  
 <link rel="stylesheet" href="/ppt-ui-v3.css?v=3"><style id="PPT_UI_V3_FORCE">aside,.sidebar,[class*="sidebar"]{background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:#fff!important}aside *, .sidebar *, [class*="sidebar"] *{color:#fff!important}button,.btn{background:#11823b!important;color:#fff!important}.card,.metric{background:#fff!important;border-color:#d8e2dc!important}.metric strong{color:#11823b!important}</style>
 </head>
 <body>

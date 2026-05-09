@@ -47,8 +47,7 @@
 <body>
 {% if request.path != '/login' %}
 <div class="layout">
-  <aside style="background:#11823b !important; background-image:none !important; color:white !important;'>
-    <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
+  <aside style="background:#11823b !important; background-image:none !important; color:white !important; width:260px; min-height:100vh; padding:24px 18px; box-sizing:border-box;">    <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
     <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
     <nav>
       {% if current_user.is_authenticated and current_user.role == 'admin' %}

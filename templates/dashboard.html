@@ -1,23 +1,138 @@
-{% extends "base.html" %}{% block content %}{% block content %}
+{% extends "base.html" %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-  <div>
-    <div style="font-size:34px;font-weight:900;color:#11283b;">
-      PPT Executive Dashboard
-    </div>
-    <div style="color:#64748b;font-size:15px;margin-top:4px;">
-      Pinnacle Performance Tax & Accounting
-    </div>
-  </div>
+{% block content %}
 
-  <div style="
-    background:linear-gradient(135deg,#11823b,#16a34a);
-    color:white;
-    padding:14px 20px;
-    border-radius:18px;
-    font-weight:800;
-    box-shadow:0 10px 30px rgba(17,130,59,.25);
-  ">
-    Tax Season Active
-  </div>
-</div>h1>Dashboard</h1><div class="metric-grid"><div class="metric"><span>Income</span><strong>{{ income|currency }}</strong></div><div class="metric"><span>Expenses</span><strong>{{ expenses|currency }}</strong></div><div class="metric"><span>Unpaid</span><strong>{{ unpaid|currency }}</strong></div><div class="metric"><span>Clients</span><strong>{{ counts.clients }}</strong></div><div class="metric"><span>Invoices</span><strong>{{ counts.open_invoices }}</strong></div><div class="metric"><span>Docs</span><strong>{{ counts.documents }}</strong></div><div class="metric"><span>Returns</span><strong>{{ counts.returns }}</strong></div><div class="metric"><span>Messages</span><strong>{{ counts.messages }}</strong></div></div><div class="split"><div class="card"><h2>Recent Documents</h2><table>{% for d in recent_documents %}<tr><td>{{ d.client_name }}</td><td>{{ d.display_name }}</td><td>{{ d.status }}</td></tr>{% else %}<tr><td>No documents.</td></tr>{% endfor %}</table></div><div class="card"><h2>Open Messages</h2><table>{% for m in open_messages %}<tr><td>{{ m.client_name }}</td><td>{{ m.subject }}</td></tr>{% else %}<tr><td>No messages.</td></tr>{% endfor %}</table></div></div>{% endblock %}
+<div style="margin-bottom:24px;padding:24px;border-radius:20px;background:linear-gradient(135deg,#11823b,#16a34a);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+    
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
+        
+        <div>
+            <div style="font-size:34px;font-weight:900;line-height:1.1;">
+                PPT Executive Dashboard
+            </div>
+
+            <div style="margin-top:8px;font-size:15px;opacity:.95;">
+                Pinnacle Performance Tax & Accounting
+            </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.15);padding:14px 18px;border-radius:16px;font-weight:800;">
+            Tax Season Active
+        </div>
+
+    </div>
+
+</div>
+
+<h1 style="margin-bottom:20px;">Dashboard</h1>
+
+<div class="metric-grid">
+
+    <div class="metric">
+        <span>Income</span>
+        <strong>${{ income or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Expenses</span>
+        <strong>${{ expenses or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Unpaid</span>
+        <strong>${{ unpaid or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Clients</span>
+        <strong>{{ client_count or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Invoices</span>
+        <strong>{{ invoice_count or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Docs</span>
+        <strong>{{ doc_count or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Returns</span>
+        <strong>{{ return_count or 0 }}</strong>
+    </div>
+
+    <div class="metric">
+        <span>Messages</span>
+        <strong>{{ message_count or 0 }}</strong>
+    </div>
+
+</div>
+
+<div style="margin-top:28px;background:white;padding:22px;border-radius:18px;border:1px solid #dbe2dc;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+
+    <div style="font-size:28px;font-weight:900;color:#11283b;margin-bottom:16px;">
+        Recent Documents
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Document</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for d in recent_documents %}
+
+            <tr>
+                <td>{{ d.client_name }}</td>
+                <td>{{ d.display_name }}</td>
+                <td>{{ d.status }}</td>
+            </tr>
+
+        {% else %}
+
+            <tr>
+                <td colspan="3">No recent documents.</td>
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+    </table>
+
+</div>
+
+<div style="margin-top:24px;background:white;padding:22px;border-radius:18px;border:1px solid #dbe2dc;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+
+    <div style="font-size:28px;font-weight:900;color:#11283b;margin-bottom:16px;">
+        Open Messages
+    </div>
+
+    {% if recent_messages %}
+
+        {% for m in recent_messages %}
+
+            <div style="padding:14px;border-bottom:1px solid #eef2f7;">
+                <strong>{{ m.subject }}</strong><br>
+                <span style="color:#64748b;">{{ m.body }}</span>
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div style="color:#64748b;">
+            No messages.
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

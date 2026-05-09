@@ -1,3 +1,59 @@
+
+<style id="PPT_GREEN_HARD_OVERRIDE">
+:root{
+  --ppt-green:#134f2c!important;
+  --ppt-green-dark:#0f3d22!important;
+  --ppt-green-light:#1f6f3d!important;
+  --ppt-bg:#f4f6f4!important;
+}
+html,body{background:#f4f6f4!important;color:#1f2937!important}
+aside,.sidebar,[class*="sidebar"],nav.sidebar{
+  background:linear-gradient(180deg,#134f2c 0%,#0f3d22 100%)!important;
+  color:white!important;
+  border-right:0!important;
+}
+aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
+aside a,.sidebar a,[class*="sidebar"] a{
+  color:white!important;
+  background:transparent!important;
+  font-weight:900!important;
+}
+aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
+aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
+  background:rgba(255,255,255,.18)!important;
+}
+button,.btn,input[type="submit"]{
+  background:#134f2c!important;
+  color:white!important;
+  border:0!important;
+  border-radius:12px!important;
+  font-weight:900!important;
+}
+button:hover,.btn:hover,input[type="submit"]:hover{
+  background:#1f6f3d!important;
+}
+.card,.metric,.box,.panel,section{
+  background:white!important;
+  border-color:#d8e2dc!important;
+}
+.metric strong,.amount,.total{
+  color:#1f6f3d!important;
+}
+h1,h2,h3{color:#1f2937!important}
+input,select,textarea{
+  border-color:#cbd5d1!important;
+  background:white!important;
+}
+input:focus,select:focus,textarea:focus{
+  outline:3px solid rgba(19,79,44,.16)!important;
+  border-color:#1f6f3d!important;
+}
+.pill,.badge{
+  background:#e7f5eb!important;
+  color:#134f2c!important;
+}
+</style>
+
 {% extends "base.html" %}
 {% block content %}
 <h1>Client Statement</h1>

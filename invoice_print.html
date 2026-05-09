@@ -1,7 +1,7 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>Invoice {{ invoice.invoice_number or invoice.id }}</title>
 <style>
-body{font-family:Arial,Helvetica,sans-serif;margin:38px;color:#111827;background:white}
+body{font-family:Arial,Helvetica,sans-serif;margin:38px;color:#1f2937;background:white}
 .header{display:flex;justify-content:space-between;gap:24px;border-bottom:5px solid #123d22;padding-bottom:18px;margin-bottom:24px}
 .brand{font-size:28px;font-weight:900;color:#123d22;line-height:1.05}.small{color:#475569;font-size:13px;line-height:1.45}
 .box{border:1px solid #d1d5db;border-radius:14px;padding:16px;margin:16px 0}
@@ -11,7 +11,63 @@ th{background:#f8fafc;color:#334155;font-size:12px;text-transform:uppercase}
 .row{display:flex;justify-content:space-between;border-bottom:1px solid #e5e7eb;padding:9px 0}.row:last-child{border-bottom:0;font-size:20px;font-weight:900;color:#123d22}
 .print{margin-bottom:20px;background:#123d22;color:white;border:0;border-radius:10px;padding:12px 18px;font-weight:900}
 @media print{.print{display:none}body{margin:20px}.box,.total-box{break-inside:avoid}}
-</style></head><body>
+</style>
+<style id="PPT_GREEN_HARD_OVERRIDE">
+:root{
+  --ppt-green:#134f2c!important;
+  --ppt-green-dark:#0f3d22!important;
+  --ppt-green-light:#1f6f3d!important;
+  --ppt-bg:#f4f6f4!important;
+}
+html,body{background:#f4f6f4!important;color:#1f2937!important}
+aside,.sidebar,[class*="sidebar"],nav.sidebar{
+  background:linear-gradient(180deg,#134f2c 0%,#0f3d22 100%)!important;
+  color:white!important;
+  border-right:0!important;
+}
+aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
+aside a,.sidebar a,[class*="sidebar"] a{
+  color:white!important;
+  background:transparent!important;
+  font-weight:900!important;
+}
+aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
+aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
+  background:rgba(255,255,255,.18)!important;
+}
+button,.btn,input[type="submit"]{
+  background:#134f2c!important;
+  color:white!important;
+  border:0!important;
+  border-radius:12px!important;
+  font-weight:900!important;
+}
+button:hover,.btn:hover,input[type="submit"]:hover{
+  background:#1f6f3d!important;
+}
+.card,.metric,.box,.panel,section{
+  background:white!important;
+  border-color:#d8e2dc!important;
+}
+.metric strong,.amount,.total{
+  color:#1f6f3d!important;
+}
+h1,h2,h3{color:#1f2937!important}
+input,select,textarea{
+  border-color:#cbd5d1!important;
+  background:white!important;
+}
+input:focus,select:focus,textarea:focus{
+  outline:3px solid rgba(19,79,44,.16)!important;
+  border-color:#1f6f3d!important;
+}
+.pill,.badge{
+  background:#e7f5eb!important;
+  color:#134f2c!important;
+}
+</style>
+
+</head><body>
 <button class="print" onclick="window.print()">Print / Save as PDF</button>
 <div class="header"><div><div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
 <p class="small">www.pinnacleperformancetax.com<br>pinnacleperformancetax@gmail.com<br>478-338-1632</p></div>

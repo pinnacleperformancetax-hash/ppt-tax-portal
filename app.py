@@ -768,6 +768,17 @@ def my_crm():
     return render_template("my_crm.html", requests=requests)
 # === PPT CLIENT CRM FIX END ===
 
+
+@app.route('/ppt-green-theme.css')
+def ppt_green_theme_css():
+    return '''html,body{background:#f4f6f4!important;color:#1f2937!important}
+aside,.sidebar,[class*="sidebar"]{background:linear-gradient(180deg,#134f2c 0%,#0f3d22 100%)!important;color:#fff!important;border-right:0!important}
+aside *, .sidebar *, [class*="sidebar"] *{color:#fff!important}
+button,.btn,input[type="submit"]{background:#134f2c!important;color:#fff!important;border:0!important}
+button:hover,.btn:hover{background:#1f6f3d!important}
+.card,.metric,.box,.panel,section{background:#fff!important;border-color:#d8e2dc!important}
+.metric strong,.amount,.total{color:#1f6f3d!important}''', 200, {'Content-Type': 'text/css'}
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

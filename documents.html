@@ -1,190 +1,236 @@
+{% extends "base.html" %}
 
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#11823b!important;
-  --ppt-green-dark:#0b5f2a!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#11823b!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#11823b!important;
-}
-</style>
+{% block content %}
 
-{% extends "base.html" %}{% block content %}
-<h1>{% if current_user.role == 'admin' %}Document Center{% else %}My Documents{% endif %}</h1>
-{% if current_user.role == 'admin' %}
-<div class="quickbar">
-  <a class="btn btn-dark" href="/documents/sync-missing">Check Missing Files</a>
-  <a class="btn btn-dark" href="/documents/storage-status">Storage Status</a>
+<h1>Documents</h1>
+<p class="sub">Upload, review, and track client tax documents from one command center.</p>
+
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div>
+      <h2 style="margin:0;color:#11823b;">Client Upload Command Center</h2>
+      <p style="margin:6px 0 0;color:#64748b;">Secure document intake, status tracking, and missing-document visibility.</p>
+    </div>
+    <div style="background:linear-gradient(135deg,#11823b,#16a34a);color:white;padding:12px 18px;border-radius:16px;font-weight:900;">
+      Tax Year 2026
+    </div>
+  </div>
 </div>
-{% endif %}
 
 <div class="card">
-  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+  <h2 style="margin-top:0;">Upload Document</h2>
+
+  <form method="POST" enctype="multipart/form-data" action="/documents" class="grid grid-3">
+
     {% if current_user.role == 'admin' %}
-    <div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div>
+      <label>Client</label>
+      <select name="client_id">
+        {% for c in clients %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% else %}
+          <option>Sample Client</option>
+        {% endfor %}
+      </select>
+    </div>
     {% endif %}
-    <div><label>Document Name</label><input name="document_name" placeholder="Document"></div>
-    <div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Invoices</option><option>Identification</option><option>Other</option></select></div>
-    <div><label>Tax Year</label><input name="tax_year" placeholder="Year"></div>
-    <div><label>Status</label><select name="status"><option>Received</option><option>Uploaded by Client</option><option>Requested</option><option>Reviewed</option><option>Missing File</option></select></div>
-    <div><label>File</label><input type="file" name="file"></div>
-    <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div>
-    <div><button>Save Document</button></div>
+
+    <div>
+      <label>Document Name</label>
+      <input name="document_name" placeholder="W-2, ID, 1099, Bank Statement">
+    </div>
+
+    <div>
+      <label>Category</label>
+      <select name="category">
+        <option>Tax Documents</option>
+        <option>Identification</option>
+        <option>W-2 / Income</option>
+        <option>1099 / Contractor Income</option>
+        <option>Business Expenses</option>
+        <option>Bank Statements</option>
+        <option>Bookkeeping</option>
+        <option>Receipts</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Tax Year</label>
+      <input name="tax_year" value="2026">
+    </div>
+
+    <div>
+      <label>Status</label>
+      <select name="status">
+        <option>Requested</option>
+        <option>Uploaded</option>
+        <option>In Review</option>
+        <option>Completed</option>
+        <option>Missing</option>
+      </select>
+    </div>
+
+    <div>
+      <label>File</label>
+      <input type="file" name="file">
+    </div>
+
+    <div style="grid-column:1/-1;">
+      <label>Notes</label>
+      <textarea name="notes" placeholder="Add internal or client-facing notes here."></textarea>
+    </div>
+
+    <div style="grid-column:1/-1;">
+      <button type="submit">Upload / Save Document</button>
+    </div>
+
   </form>
 </div>
 
 <div class="card">
-  <h2>{% if current_user.role == 'admin' %}All Client Documents{% else %}Your Documents{% endif %}</h2>
+  <h2 style="margin-top:0;">Drag & Drop Intake Zone</h2>
+
+  <div class="upload-zone">
+    <div style="font-size:46px;margin-bottom:10px;">📁</div>
+    <div style="font-size:24px;font-weight:900;color:#11823b;margin-bottom:8px;">Drop client tax files here</div>
+    <div style="color:#64748b;">Accepted: PDF, PNG, JPG, JPEG, DOC, DOCX, XLS, XLSX, CSV</div>
+    <div style="margin-top:14px;color:#0b5f2a;font-weight:900;">Use the upload form above to attach the file.</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+
+  <div class="card" style="border-left:6px solid #11823b!important;">
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Uploaded</div>
+    <div style="font-size:30px;font-weight:900;color:#11823b;">
+      {{ documents|selectattr('status', 'equalto', 'Uploaded')|list|length if documents is defined else 0 }}
+    </div>
+  </div>
+
+  <div class="card" style="border-left:6px solid #f59e0b!important;">
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">In Review</div>
+    <div style="font-size:30px;font-weight:900;color:#f59e0b;">
+      {{ documents|selectattr('status', 'equalto', 'In Review')|list|length if documents is defined else 0 }}
+    </div>
+  </div>
+
+  <div class="card" style="border-left:6px solid #ef4444!important;">
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Missing</div>
+    <div style="font-size:30px;font-weight:900;color:#ef4444;">
+      {{ documents|selectattr('status', 'equalto', 'Missing')|list|length if documents is defined else 0 }}
+    </div>
+  </div>
+
+  <div class="card" style="border-left:6px solid #0b5f2a!important;">
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Total Docs</div>
+    <div style="font-size:30px;font-weight:900;color:#0b5f2a;">
+      {{ documents|length if documents is defined else 0 }}
+    </div>
+  </div>
+
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    <div>
+      <h2 style="margin:0;">Document Tracker</h2>
+      <p style="margin:6px 0 0;color:#64748b;">Review status, category, upload owner, and file availability.</p>
+    </div>
+
+    <input id="docSearch" placeholder="Search documents..." style="max-width:320px;" onkeyup="
+      const q=this.value.toLowerCase();
+      document.querySelectorAll('.doc-row').forEach(r=>{
+        r.style.display=r.innerText.toLowerCase().includes(q)?'':'none';
+      });
+    ">
+  </div>
+
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
           {% if current_user.role == 'admin' %}<th>Client</th>{% endif %}
-          <th>Date</th><th>Document</th><th>Original File</th><th>Category</th><th>Year</th><th>Status</th><th>Uploaded By</th><th>File</th>
+          <th>Date</th>
+          <th>Document</th>
+          <th>Original File</th>
+          <th>Category</th>
+          <th>Year</th>
+          <th>Status</th>
+          <th>Uploaded By</th>
+          <th>File</th>
         </tr>
       </thead>
+
       <tbody>
         {% for d in documents %}
-        <tr>
-          {% if current_user.role == 'admin' %}<td>{{ d.client_name }}</td>{% endif %}
-          <td>{{ d.created_at }}</td>
-          <td>{{ d.display_name }}</td>
-          <td>{{ d.original_filename or d.filename or "—" }}</td>
-          <td>{{ d.category }}</td>
-          <td>{{ d.tax_year }}</td>
+        <tr class="doc-row">
+          {% if current_user.role == 'admin' %}
+            <td>{{ d.client_name if d.client_name is defined else "" }}</td>
+          {% endif %}
+          <td>{{ d.created_at if d.created_at is defined else "" }}</td>
+          <td>{{ d.display_name if d.display_name is defined else d.document_name if d.document_name is defined else d.name if d.name is defined else "Document" }}</td>
+          <td>{{ d.original_filename if d.original_filename is defined else d.filename if d.filename is defined else "-" }}</td>
+          <td>{{ d.category if d.category is defined else "Tax Documents" }}</td>
+          <td>{{ d.tax_year if d.tax_year is defined else "2026" }}</td>
           <td>
-            {% if d.file_missing %}
-              <span class="pill warn">File missing after deploy</span>
+            {% if d.file_missing is defined and d.file_missing %}
+              <span class="pill" style="background:#fef2f2!important;color:#ef4444!important;">File Missing</span>
+            {% elif d.status == 'Completed' %}
+              <span class="pill" style="background:#e8f5ec!important;color:#0b5f2a!important;">Completed</span>
+            {% elif d.status == 'In Review' %}
+              <span class="pill" style="background:#fff7ed!important;color:#f59e0b!important;">In Review</span>
+            {% elif d.status == 'Missing' %}
+              <span class="pill" style="background:#fef2f2!important;color:#ef4444!important;">Missing</span>
             {% else %}
-              <span class="pill">{{ d.status }}</span>
+              <span class="pill">{{ d.status if d.status is defined else "Requested" }}</span>
             {% endif %}
           </td>
-          <td>{{ d.uploaded_by }}</td>
+          <td>{{ d.uploaded_by if d.uploaded_by is defined else "" }}</td>
           <td>
-            {% if d.filename and not d.file_missing %}
-              <a class="btn btn-dark" href="/documents/download/{{ d.id }}">Download</a>
-            {% elif d.filename and d.file_missing %}
-              <span class="pill warn">Re-upload needed</span>
+            {% if d.filename is defined and d.filename and not d.file_missing %}
+              <a class="btn btn-light" href="/documents/download/{{ d.id }}">Download</a>
+            {% elif d.filename is defined and d.filename and d.file_missing %}
+              <span class="pill" style="background:#fff7ed!important;color:#f59e0b!important;">Re-upload needed</span>
             {% else %}
-              No file
+              <span style="color:#64748b;">No file</span>
             {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="9">No documents.</td></tr>
+        <tr>
+          <td colspan="9">No documents yet.</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div><div class="card" style="margin-top:24px;padding:24px;background:white;border-radius:18px;box-shadow:0 8px 24px rgba(15,23,42,.08);">
-
-<h2 style="margin-top:0;color:#11823b;font-size:28px;font-weight:900;">
-Client Upload Center
-</h2>
-
-<p style="color:#64748b;margin-bottom:22px;">
-Securely upload tax documents, bookkeeping files, IDs, and supporting records.
-</p>
-
-<div style="border:2px dashed #11823b;border-radius:18px;padding:40px;text-align:center;background:#f0fdf4;margin-bottom:24px;">
-
-<div style="font-size:48px;margin-bottom:12px;">📁</div>
-
-<h3 style="margin:0 0 10px 0;color:#11823b;">
-Drag & Drop Files Here
-</h3>
-
-<p style="color:#64748b;margin-bottom:18px;">
-Accepted: PDF, JPG, PNG, DOCX, XLSX
-</p>
-
-<input type="file" multiple style="padding:12px;background:white;border-radius:12px;border:1px solid #d1d5db;">
-
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;">
+<div class="card">
+  <h2 style="margin-top:0;">IRS-Ready Checklist</h2>
 
-<div style="background:#f8fafc;border-radius:16px;padding:18px;border-left:6px solid #11823b;">
-<div style="font-size:13px;color:#64748b;">STATUS</div>
-<div style="font-size:22px;font-weight:900;color:#11823b;">Uploaded</div>
-<div style="margin-top:8px;">W-2_Form_2025.pdf</div>
-</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div style="padding:16px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;">
+      <strong>✓ Identification</strong><br>
+      <span style="color:#64748b;">Driver license, Social Security cards, business documents.</span>
+    </div>
 
-<div style="background:#f8fafc;border-radius:16px;padding:18px;border-left:6px solid #f59e0b;">
-<div style="font-size:13px;color:#64748b;">STATUS</div>
-<div style="font-size:22px;font-weight:900;color:#f59e0b;">In Review</div>
-<div style="margin-top:8px;">Bank_Statements.zip</div>
-</div>
+    <div style="padding:16px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;">
+      <strong>✓ Income Documents</strong><br>
+      <span style="color:#64748b;">W-2, 1099, K-1, brokerage, business income.</span>
+    </div>
 
-<div style="background:#f8fafc;border-radius:16px;padding:18px;border-left:6px solid #ef4444;">
-<div style="font-size:13px;color:#64748b;">STATUS</div>
-<div style="font-size:22px;font-weight:900;color:#ef4444;">Missing</div>
-<div style="margin-top:8px;">1099 NEC Needed</div>
-</div>
+    <div style="padding:16px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;">
+      <strong>⏳ Expenses</strong><br>
+      <span style="color:#64748b;">Receipts, mileage, home office, supplies, deductions.</span>
+    </div>
 
-</div>
-
-<div style="margin-top:28px;background:#f0fdf4;border-radius:18px;padding:20px;">
-
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-<div style="font-size:20px;font-weight:900;color:#11823b;">
-Upload Progress
-</div>
-<div style="font-size:18px;font-weight:900;color:#11823b;">
-75%
-</div>
+    <div style="padding:16px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;">
+      <strong>Missing Items</strong><br>
+      <span style="color:#64748b;">Use document status to request missing records.</span>
+    </div>
+  </div>
 </div>
 
-<div style="height:16px;background:#d1fae5;border-radius:999px;overflow:hidden;">
-<div style="width:75%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div>
-</div>
-
-</div>
-
-</div>
 {% endblock %}

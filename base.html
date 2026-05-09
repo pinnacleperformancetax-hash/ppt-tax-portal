@@ -1,38 +1,285 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>PPT Portal</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-:root{--navy:#0f172a;--green:#11823b;--green2:#0b5f2a;--bg:#f8fafc;--card:#fff;--line:#e5e7eb;--text:#111827;--muted:#64748b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}a{text-decoration:none;color:inherit}
-.layout{display:flex;min-height:100vh}aside{width:270px;background:var(--navy);color:white;padding:26px 18px;position:sticky;top:0;height:100vh;overflow:auto;border-right:5px solid var(--green)}
-.brand-mark{width:50px;height:50px;background:var(--green);border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:13px}
-.brand{font-size:23px;font-weight:900;line-height:1.05;margin-bottom:14px}.contact{font-size:12px;line-height:1.45;margin-bottom:22px;color:#dbeafe}
-nav a{display:block;padding:11px 12px;border-radius:12px;font-weight:800;margin:4px 0;color:#f8fafc}nav a:hover{background:rgba(255,255,255,.10)}
-main{flex:1;padding:34px;overflow:auto}h1{font-size:34px;margin:0 0 8px;color:var(--navy)}h2{margin:0 0 14px;color:var(--navy)}.sub{color:var(--muted);margin-top:0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;margin:18px 0;box-shadow:0 10px 30px rgba(15,23,42,.06)}
-.grid{display:grid;gap:15px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-label{display:block;font-size:13px;font-weight:900;margin:0 0 6px;color:#334155}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:13px;padding:12px;background:white;color:#111827}
-textarea{min-height:100px}button,.btn{border:0;border-radius:13px;padding:12px 16px;background:var(--green);color:white;font-weight:900;display:inline-block;cursor:pointer}.btn-dark{background:var(--navy)}.btn-light{background:#e2e8f0;color:#0f172a}
-.quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:18px 0}.metric{background:white;border:1px solid var(--line);border-radius:20px;padding:20px}.metric span{display:block;font-size:12px;font-weight:900;text-transform:uppercase;color:var(--muted)}.metric strong{font-size:28px;color:var(--green);display:block;margin-top:6px}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px}table{width:100%;border-collapse:collapse;background:white}th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:12px;font-size:14px;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:#475569;background:#f8fafc}.pill{display:inline-block;border-radius:999px;background:#e8f5ec;color:#0b5f2a;padding:5px 10px;font-size:12px;font-weight:900}.pill.warn{background:#fff7ed;color:#9a3412}.flash{padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;margin-bottom:12px;color:#14532d}.danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}.section-title{border-left:5px solid var(--green);padding-left:12px;margin:8px 0 16px}
-@media(max-width:980px){.layout{display:block}aside{width:100%;height:auto;position:relative}.grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}main{padding:20px}}
-</style>
+  <meta charset="utf-8">
+  <title>PPT Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{
+      --ppt-navy:#0f172a;
+      --ppt-green:#11823b;
+      --ppt-green-dark:#0b5f2a;
+      --ppt-bg:#f8fafc;
+      --ppt-card:#ffffff;
+      --ppt-line:#dbe3ea;
+      --ppt-text:#111827;
+      --ppt-muted:#64748b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--ppt-bg) !important;
+      color:var(--ppt-text);
+      font-family:Arial,Helvetica,sans-serif;
+    }
+    a{text-decoration:none;color:inherit}
+    .layout{
+      display:flex;
+      min-height:100vh;
+      background:linear-gradient(135deg,#f8fafc 0%,#eef7f1 100%) !important;
+    }
+    aside{
+      width:270px;
+      background:var(--ppt-navy) !important;
+      color:#fff !important;
+      min-height:100vh;
+      height:100vh;
+      position:sticky;
+      top:0;
+      padding:26px 18px;
+      overflow:auto;
+      border-right:6px solid var(--ppt-green);
+      box-shadow:10px 0 30px rgba(15,23,42,.10);
+    }
+    .brand{
+      font-size:23px;
+      font-weight:900;
+      line-height:1.05;
+      letter-spacing:-.4px;
+      color:white !important;
+      margin-bottom:14px;
+    }
+    .brand:before{
+      content:"PPT";
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:52px;
+      height:52px;
+      margin-bottom:14px;
+      border-radius:16px;
+      background:var(--ppt-green);
+      color:white;
+      font-size:18px;
+      font-weight:900;
+      box-shadow:0 10px 24px rgba(17,130,59,.26);
+    }
+    .contact{
+      color:#dbeafe !important;
+      font-size:12px;
+      line-height:1.45;
+      margin:10px 0 24px;
+    }
+    nav a, aside a{
+      display:block;
+      padding:11px 13px;
+      margin:4px 0;
+      border-radius:12px;
+      color:#f8fafc !important;
+      font-weight:800;
+    }
+    nav a:hover, aside a:hover{
+      background:rgba(17,130,59,.26) !important;
+    }
+    main{
+      flex:1;
+      padding:34px;
+      background:transparent !important;
+    }
+    h1{
+      font-size:34px;
+      margin:0 0 8px;
+      color:var(--ppt-navy) !important;
+      letter-spacing:-.6px;
+    }
+    h2,h3{
+      color:var(--ppt-navy) !important;
+    }
+    .sub,p{
+      color:var(--ppt-muted);
+    }
+    .card{
+      background:var(--ppt-card) !important;
+      border:1px solid var(--ppt-line) !important;
+      border-radius:22px !important;
+      padding:24px !important;
+      margin:18px 0 !important;
+      box-shadow:0 12px 30px rgba(15,23,42,.07) !important;
+    }
+    .metric-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:15px;
+      margin:18px 0;
+    }
+    .metric{
+      background:white !important;
+      border:1px solid var(--ppt-line) !important;
+      border-radius:20px !important;
+      padding:20px !important;
+      box-shadow:0 10px 24px rgba(15,23,42,.06) !important;
+    }
+    .metric span{
+      display:block;
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+      color:var(--ppt-muted) !important;
+    }
+    .metric strong{
+      display:block;
+      margin-top:6px;
+      color:var(--ppt-green) !important;
+      font-size:28px;
+      font-weight:900;
+    }
+    .grid{display:grid;gap:15px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    label{
+      display:block;
+      margin:0 0 6px;
+      color:#334155;
+      font-weight:900;
+      font-size:13px;
+    }
+    input,select,textarea{
+      width:100%;
+      border:1px solid #cbd5e1 !important;
+      background:white !important;
+      color:#111827 !important;
+      border-radius:13px !important;
+      padding:12px !important;
+      font-size:14px;
+    }
+    textarea{min-height:100px}
+    input:focus,select:focus,textarea:focus{
+      outline:3px solid rgba(17,130,59,.18) !important;
+      border-color:var(--ppt-green) !important;
+    }
+    button,.btn{
+      display:inline-block;
+      border:0;
+      border-radius:13px !important;
+      padding:12px 16px !important;
+      background:var(--ppt-green) !important;
+      color:white !important;
+      font-weight:900 !important;
+      cursor:pointer;
+    }
+    button:hover,.btn:hover{background:var(--ppt-green-dark) !important}
+    .btn-dark{background:var(--ppt-navy) !important}
+    .btn-light{background:#e2e8f0 !important;color:#0f172a !important}
+    .quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--ppt-line) !important;
+      border-radius:18px !important;
+      background:white;
+    }
+    table{width:100%;border-collapse:collapse;background:white !important}
+    th,td{
+      text-align:left;
+      border-bottom:1px solid #e5e7eb !important;
+      padding:12px !important;
+      font-size:14px;
+      vertical-align:top;
+      color:#111827;
+    }
+    th{
+      font-size:12px;
+      text-transform:uppercase;
+      color:#475569 !important;
+      background:#f8fafc !important;
+      letter-spacing:.03em;
+    }
+    .pill{
+      display:inline-block;
+      border-radius:999px;
+      background:#e8f5ec !important;
+      color:#0b5f2a !important;
+      padding:5px 10px;
+      font-size:12px;
+      font-weight:900;
+    }
+    .flash{
+      padding:12px 14px;
+      border-radius:14px;
+      background:#ecfdf5 !important;
+      border:1px solid #bbf7d0 !important;
+      margin-bottom:12px;
+      color:#14532d !important;
+    }
+    .danger{background:#fef2f2 !important;border-color:#fecaca !important;color:#991b1b !important}
+    .section-title{
+      border-left:5px solid var(--ppt-green);
+      padding-left:12px;
+      margin:8px 0 16px;
+    }
+    @media(max-width:980px){
+      .layout{display:block}
+      aside{width:100%;height:auto;position:relative}
+      main{padding:20px}
+      .grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
+{% if request.path == '/login' %}
+  {% block content %}{% endblock %}
+{% else %}
 <div class="layout">
-<aside>
-<div class="brand-mark">PPT</div><div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div><div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
-<nav>
-{% if current_user.is_authenticated and current_user.role == 'admin' %}
-<a href="/dashboard">Dashboard</a><a href="/clients">Clients</a><a href="/transactions">Bookkeeping</a><a href="/tax-returns">Tax Returns</a><a href="/documents">Documents</a><a href="/invoices">Invoices</a><a href="/payments">Payments</a><a href="/appointments">Appointments</a><a href="/crm">CRM</a><a href="/messages">Messages</a><a href="/settings">Users</a><a href="/workflow">Workflow</a><a href="/elite-dashboard">Elite Dashboard</a><a href="/client-workflow">Client Workflow</a><a href="/template-center">Template Center</a><a href="/automation-templates">Automation Templates</a><a href="/crm-upgrade">CRM Upgrade</a><a href="/document-requests">Doc Requests</a><a href="/tax-tracker">Tax Tracker</a><a href="/appointments/review">Appointment Review</a><a href="/activity-log">Activity Log</a>
-{% elif current_user.is_authenticated %}
-<a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a><a href="/my/document-requests">My Doc Requests</a>
-{% endif %}
-{% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
-</nav></aside>
-<main>{% with messages = get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main>
+  <aside>
+    <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
+    <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
+    <nav>
+      {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        <a href="/dashboard">Dashboard</a>
+        <a href="/clients">Clients</a>
+        <a href="/transactions">Bookkeeping</a>
+        <a href="/tax-returns">Tax Returns</a>
+        <a href="/documents">Documents</a>
+        <a href="/invoices">Invoices</a>
+        <a href="/payments">Payments</a>
+        <a href="/appointments">Appointments</a>
+        <a href="/crm">CRM</a>
+        <a href="/messages">Messages</a>
+        <a href="/settings">Users</a>
+        <a href="/workflow">Workflow</a>
+        <a href="/document-requests">Doc Requests</a>
+        <a href="/tax-tracker">Tax Tracker</a>
+        <a href="/appointments/review">Appointment Review</a>
+        <a href="/activity-log">Activity Log</a>
+        <a href="/elite-dashboard">Elite Dashboard</a>
+        <a href="/client-workflow">Client Workflow</a>
+        <a href="/template-center">Template Center</a>
+        <a href="/automation-templates">Automation Templates</a>
+        <a href="/crm-upgrade">CRM Upgrade</a>
+      {% elif current_user.is_authenticated %}
+        <a href="/client-dashboard">Dashboard</a>
+        <a href="/my/invoices">My Invoices</a>
+        <a href="/my/payments">My Payments</a>
+        <a href="/my/appointments">My Appointments</a>
+        <a href="/my/bookkeeping">My Bookkeeping</a>
+        <a href="/my/tax-returns">My Tax Returns</a>
+        <a href="/documents">My Documents</a>
+        <a href="/my/crm">My CRM / Requests</a>
+        <a href="/my/messages">My Messages</a>
+        <a href="/my/year-end">My Year-End Summary</a>
+        <a href="/my/statement">My Statement</a>
+        <a href="/my/document-requests">My Doc Requests</a>
+      {% endif %}
+      {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
+    </nav>
+  </aside>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
 </div>
-</body></html>
+{% endif %}
+</body>
+</html>

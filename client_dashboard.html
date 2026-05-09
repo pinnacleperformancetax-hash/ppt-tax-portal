@@ -1,72 +1,245 @@
-
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#11823b!important;
-  --ppt-green-dark:#0b5f2a!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#11823b!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#11823b!important;
-}
-</style>
-
 {% extends "base.html" %}
+
 {% block content %}
+
 <h1>Client Dashboard</h1>
-{% if not client %}
-<div class="card"><h2>Client profile not linked</h2><p class="sub">Please contact Pinnacle Performance Tax and Accounting so your login can be connected to your client record.</p></div>
-{% else %}
-<p class="sub">Welcome, {{ current_user.name }}. Upload tax and bookkeeping documents and view your progress.</p>
-<div class="metric-grid"><div class="metric"><span>Tax Returns</span><strong>{{ tax_returns|length }}</strong></div><div class="metric"><span>Invoices</span><strong>{{ invoices|length }}</strong></div><div class="metric"><span>Documents</span><strong>{{ documents|length }}</strong></div><div class="metric"><span>Payments</span><strong>{{ payments|length }}</strong></div></div>
-<div class="card"><h2>Upload Documents</h2><p class="sub">Files are saved to the Document Center and linked to your client profile.</p><form method="POST" action="/client/upload" enctype="multipart/form-data" class="grid grid-3"><div><label>Document Name</label><input name="document_name" placeholder="Document name"></div><div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Invoices</option><option>Identification</option><option>Other</option></select></div><div><label>Tax Year</label><input name="tax_year" placeholder="2026"></div><div><label>File</label><input type="file" name="file" required></div><div style="grid-column:1/-1"><label>Notes</label><textarea name="notes" placeholder="Notes"></textarea></div><div style="grid-column:1/-1"><button>Upload Document</button></div></form></div>
-<div class="quickbar"><a class="btn" href="/my/invoices">My Invoices</a><a class="btn" href="/my/payments">My Payments</a><a class="btn" href="/my/appointments">My Appointments</a><a class="btn" href="/my/bookkeeping">My Bookkeeping</a><a class="btn" href="/my/tax-returns">My Tax Returns</a><a class="btn" href="/my/crm">My CRM / Requests</a><a class="btn" href="/my/messages">My Messages</a><a class="btn" href="/my/year-end">My Year-End Summary</a></div>
-<div class="card"><h2>My Tax Returns</h2><div class="table-wrap"><table><thead><tr><th>Year</th><th>Service</th><th>Status</th><th>Due</th><th>Invoice</th></tr></thead><tbody>{% for r in tax_returns %}<tr><td>{{ r.tax_year }}</td><td>{{ r.service_type }}</td><td>{{ r.status }}</td><td>{{ r.due_date }}</td><td>{{ r.invoice_number }}</td></tr>{% else %}<tr><td colspan="5">No tax return records yet.</td></tr>{% endfor %}</tbody></table></div></div>
-<div class="card"><h2>My Invoices</h2><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Status</th><th>Amount</th></tr></thead><tbody>{% for i in invoices %}<tr><td>{{ i.invoice_number or i.id }}</td><td>{{ i.status }}</td><td>{{ i.amount|currency }}</td></tr>{% else %}<tr><td colspan="3">No invoices yet.</td></tr>{% endfor %}</tbody></table></div></div>
-<div class="card"><h2>My Uploaded Documents</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Category</th><th>Year</th><th>Status</th><th>File</th></tr></thead><tbody>{% for d in documents %}<tr><td>{{ d.created_at }}</td><td>{{ d.display_name }}</td><td>{{ d.category }}</td><td>{{ d.tax_year }}</td><td>{{ d.status }}</td><td>{% if d.filename and not d.file_missing %}<a class="btn btn-dark" href="/documents/download/{{ d.id }}">Download</a>{% elif d.file_missing %}<span class="pill warn">Missing</span>{% else %}No file{% endif %}</td></tr>{% else %}<tr><td colspan="6">No documents uploaded yet.</td></tr>{% endfor %}</tbody></table></div></div>
-<div class="card"><h2>My Payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Amount</th></tr></thead><tbody>{% for p in payments %}<tr><td>{{ p.created_at }}</td><td>{{ p.invoice_number }}</td><td>{{ p.method }}</td><td>{{ p.amount|currency }}</td></tr>{% else %}<tr><td colspan="4">No payments recorded yet.</td></tr>{% endfor %}</tbody></table></div></div>
-{% endif %}
+<p class="sub">
+  Welcome, {{ current_user.name if current_user.name is defined else "Client" }}. Track your tax return, uploads, invoices, appointments, and messages.
+</p>
+
+<div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#11823b,#0b5f2a);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:32px;font-weight:900;line-height:1.1;">
+        My Tax Workflow
+      </div>
+      <div style="margin-top:8px;font-size:15px;opacity:.95;">
+        Your secure client progress center for Pinnacle Performance Tax & Accounting.
+      </div>
+    </div>
+
+    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">
+      Client Portal Active
+    </div>
+  </div>
+</div>
+
+<div class="metric-grid">
+
+  <div class="metric">
+    <span>Tax Returns</span>
+    <strong>{{ tax_returns|length if tax_returns is defined else 0 }}</strong>
+  </div>
+
+  <div class="metric">
+    <span>Invoices</span>
+    <strong>{{ invoices|length if invoices is defined else 0 }}</strong>
+  </div>
+
+  <div class="metric">
+    <span>Documents</span>
+    <strong>{{ documents|length if documents is defined else 0 }}</strong>
+  </div>
+
+  <div class="metric">
+    <span>Payments</span>
+    <strong>{{ payments|length if payments is defined else 0 }}</strong>
+  </div>
+
+</div>
+
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:20px;margin-bottom:24px;">
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px;">
+      <div>
+        <h2 style="margin:0;">Return Completion Meter</h2>
+        <p style="margin:6px 0 0;color:#64748b;">This shows your overall tax workflow progress.</p>
+      </div>
+      <span class="pill">Estimated Progress</span>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:10px;">
+      <span>Client Readiness</span>
+      <span>65%</span>
+    </div>
+
+    <div style="height:18px;background:#d1fae5;border-radius:999px;overflow:hidden;">
+      <div style="width:65%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px;">
+
+      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;">
+        <strong>✓ Intake Started</strong><br>
+        <span style="color:#64748b;">Client profile created</span>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;">
+        <strong>✓ Portal Access</strong><br>
+        <span style="color:#64748b;">Login active</span>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;">
+        <strong>⏳ Documents</strong><br>
+        <span style="color:#64748b;">Upload in progress</span>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;">
+        <strong>Missing Items</strong><br>
+        <span style="color:#64748b;">Review checklist</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Client Status</h2>
+
+    <div style="display:grid;gap:12px;">
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;">
+        <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Current Stage</div>
+        <div style="font-size:22px;font-weight:900;color:#11823b;">Waiting on Documents</div>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #f59e0b;">
+        <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Priority</div>
+        <div style="font-size:22px;font-weight:900;color:#f59e0b;">Standard Review</div>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #0b5f2a;">
+        <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Office Message</div>
+        <div style="font-size:15px;font-weight:800;color:#0f172a;">Upload all tax records to speed up preparation.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    <div>
+      <h2 style="margin:0;">Tax Return Stage Tracker</h2>
+      <p style="margin:6px 0 0;color:#64748b;">Track each major step from intake to completion.</p>
+    </div>
+    <a class="btn btn-light" href="/my/tax-returns">View My Tax Returns</a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+
+    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;">
+      <div style="font-size:26px;">✓</div>
+      <strong>1. Intake</strong>
+      <p style="color:#64748b;margin-bottom:0;">Client file opened.</p>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;">
+      <div style="font-size:26px;">✓</div>
+      <strong>2. Portal Setup</strong>
+      <p style="color:#64748b;margin-bottom:0;">Secure access created.</p>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;">
+      <div style="font-size:26px;">⏳</div>
+      <strong>3. Document Collection</strong>
+      <p style="color:#64748b;margin-bottom:0;">Waiting on client files.</p>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;">
+      <div style="font-size:26px;">○</div>
+      <strong>4. Preparation</strong>
+      <p style="color:#64748b;margin-bottom:0;">Return not started yet.</p>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;">
+      <div style="font-size:26px;">○</div>
+      <strong>5. Review</strong>
+      <p style="color:#64748b;margin-bottom:0;">Pending office review.</p>
+    </div>
+
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;">
+      <div style="font-size:26px;">○</div>
+      <strong>6. Filed</strong>
+      <p style="color:#64748b;margin-bottom:0;">Not yet submitted.</p>
+    </div>
+
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;">
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;">Missing Document Alerts</h2>
+      <a class="btn btn-light" href="/documents">Upload</a>
+    </div>
+
+    <div style="display:grid;gap:12px;">
+      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;">
+        <strong>1099 / Income Records</strong><br>
+        <span style="color:#64748b;">Upload any 1099, self-employment, gig work, or brokerage income forms.</span>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;">
+        <strong>Expense Support</strong><br>
+        <span style="color:#64748b;">Receipts, mileage, supplies, business costs, and bank statements.</span>
+      </div>
+
+      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;">
+        <strong>ID / Verification</strong><br>
+        <span style="color:#64748b;">Identification status can be completed once documents are reviewed.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;">Quick Actions</h2>
+      <span class="pill">Client Tools</span>
+    </div>
+
+    <div style="display:grid;gap:10px;">
+      <a class="btn" href="/documents">Upload Documents</a>
+      <a class="btn" href="/my/messages">Message Office</a>
+      <a class="btn" href="/my/appointments">Request Appointment</a>
+      <a class="btn" href="/my/invoices">View Invoices</a>
+      <a class="btn" href="/my/bookkeeping">View Bookkeeping</a>
+    </div>
+  </div>
+
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Recent Client Activity</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Activity</th>
+          <th>Status</th>
+          <th>Next Step</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Portal login active</td>
+          <td><span class="pill">Complete</span></td>
+          <td>Continue uploading documents</td>
+        </tr>
+        <tr>
+          <td>Tax document intake</td>
+          <td><span class="pill" style="background:#fff7ed!important;color:#f59e0b!important;">In Progress</span></td>
+          <td>Upload missing income and expense documents</td>
+        </tr>
+        <tr>
+          <td>Return preparation</td>
+          <td><span class="pill" style="background:#f8fafc!important;color:#64748b!important;">Pending</span></td>
+          <td>Begins after intake is complete</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}

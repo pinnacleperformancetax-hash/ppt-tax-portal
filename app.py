@@ -779,6 +779,32 @@ button:hover,.btn:hover{background:#1f6f3d!important}
 .card,.metric,.box,.panel,section{background:#fff!important;border-color:#d8e2dc!important}
 .metric strong,.amount,.total{color:#1f6f3d!important}''', 200, {'Content-Type': 'text/css'}
 
+
+@app.route('/ppt-ui-v3.css')
+def ppt_ui_v3_css():
+    css = """
+html,body{background:#f6f8f6!important;color:#1f2937!important;font-family:Arial,Helvetica,sans-serif!important}
+.layout{background:linear-gradient(135deg,#f8faf8 0%,#eef7f1 100%)!important}
+aside,.sidebar,[class*="sidebar"]{background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:#fff!important;border-right:0!important;box-shadow:10px 0 30px rgba(17,130,59,.18)!important}
+aside *, .sidebar *, [class*="sidebar"] *{color:#fff!important}
+aside a,.sidebar a,[class*="sidebar"] a{color:#fff!important;border-radius:12px!important;font-weight:900!important}
+aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover{background:rgba(255,255,255,.18)!important}
+.card,.metric,.box,.panel,section{background:#fff!important;border:1px solid #d8e2dc!important;border-radius:22px!important;box-shadow:0 12px 30px rgba(15,23,42,.06)!important}
+.metric strong,.amount,.total{color:#11823b!important}
+button,.btn,input[type="submit"]{background:#11823b!important;color:#fff!important;border:0!important;border-radius:13px!important;font-weight:900!important}
+button:hover,.btn:hover,input[type="submit"]:hover{background:#0b5f2a!important}
+.btn-dark{background:#0b5f2a!important}.btn-light{background:#e8f5ec!important;color:#0b5f2a!important}
+input,select,textarea{border:1px solid #cbd5d1!important;background:white!important;border-radius:13px!important}
+input:focus,select:focus,textarea:focus{outline:3px solid rgba(17,130,59,.16)!important;border-color:#11823b!important}
+.pill,.badge{background:#e8f5ec!important;color:#0b5f2a!important;border-radius:999px!important;font-weight:900!important}
+.badge-paid,.status-paid{background:#e8f5ec!important;color:#0b5f2a!important}.badge-pending,.status-pending{background:#fff7ed!important;color:#b7791f!important}.badge-overdue,.status-overdue{background:#fef2f2!important;color:#b91c1c!important}
+.table-wrap{border-radius:18px!important;border:1px solid #d8e2dc!important;overflow:auto!important;background:#fff!important}
+table{background:#fff!important}th{background:#f7faf8!important;color:#475569!important}
+.searchbar{display:flex;gap:10px;margin:12px 0 18px}.searchbar input{max-width:420px}
+.upload-zone{border:2px dashed #11823b!important;background:#f1faf4!important;border-radius:22px!important;padding:26px!important;text-align:center!important;color:#0b5f2a!important;font-weight:900!important}
+"""
+    return css, 200, {'Content-Type':'text/css'}
+
 @app.route('/logout')
 @login_required
 def logout(): logout_user(); return redirect(url_for('login'))

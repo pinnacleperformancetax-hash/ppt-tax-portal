@@ -4,114 +4,44 @@
   <meta charset="utf-8">
   <title>PPT Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/ppt-ui-v3.css?v=3">
   <style>
-    :root{
-      --ppt-green:#134f2c;
-      --ppt-green-2:#1f6f3d;
-      --ppt-green-3:#0f3d22;
-      --ppt-bg:#f4f6f4;
-      --ppt-card:#ffffff;
-      --ppt-line:#d8e2dc;
-      --ppt-text:#1f2937;
-      --ppt-muted:#64748b;
-    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--ppt-bg)!important;color:var(--ppt-text);font-family:Arial,Helvetica,sans-serif}
+    body{margin:0;background:#f6f8f6!important;color:#1f2937;font-family:Arial,Helvetica,sans-serif}
     a{text-decoration:none;color:inherit}
-    .layout{display:flex;min-height:100vh;background:linear-gradient(135deg,#f6f8f6 0%,#eef4ef 100%)!important}
-    aside{
-      width:265px;background:linear-gradient(180deg,var(--ppt-green) 0%,var(--ppt-green-3) 100%)!important;
-      color:white!important;min-height:100vh;height:100vh;position:sticky;top:0;padding:28px 18px;overflow:auto;
-      box-shadow:10px 0 30px rgba(19,79,44,.18);border-right:0!important
-    }
-    .brand{color:white!important;font-size:24px;font-weight:900;line-height:1.03;margin-bottom:14px;letter-spacing:-.5px}
-    .contact{color:#e7f5eb!important;font-size:12px;line-height:1.45;margin:12px 0 24px}
-    nav a,aside a{display:block;color:white!important;font-weight:900;padding:11px 13px;margin:4px 0;border-radius:12px}
-    nav a:hover,aside a:hover{background:rgba(255,255,255,.16)!important}
+    .layout{display:flex;min-height:100vh;background:linear-gradient(135deg,#f8faf8 0%,#eef7f1 100%)!important}
+    aside{width:270px;background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:white!important;min-height:100vh;height:100vh;position:sticky;top:0;padding:28px 18px;overflow:auto;box-shadow:10px 0 30px rgba(17,130,59,.18)}
+    .brand{font-size:24px;font-weight:900;line-height:1.04;letter-spacing:-.45px;color:white!important;margin-bottom:14px}
+    .brand:before{content:"PPT";display:flex;width:50px;height:50px;align-items:center;justify-content:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.22);border-radius:16px;margin-bottom:14px;font-weight:900}
+    .contact{font-size:12px;line-height:1.45;color:#e7f5eb!important;margin:12px 0 24px}
+    nav a,aside a{display:block;padding:11px 13px;margin:4px 0;border-radius:12px;color:white!important;font-weight:900}
+    nav a:hover,aside a:hover{background:rgba(255,255,255,.18)!important}
     main{flex:1;padding:34px;background:transparent!important}
-    h1{color:#1f2937!important;font-size:34px;margin:0 0 8px;letter-spacing:-.5px}
-    h2,h3{color:#1f2937!important}.sub,p{color:var(--ppt-muted)}
-    .card{background:white!important;border:1px solid var(--ppt-line)!important;border-radius:22px!important;padding:24px!important;margin:18px 0!important;box-shadow:0 10px 28px rgba(15,23,42,.06)!important}
+    h1{font-size:34px;margin:0 0 8px;color:#1f2937!important;letter-spacing:-.55px}
+    h2,h3{color:#1f2937!important}.sub,p{color:#64748b}
+    .card{background:white!important;border:1px solid #d8e2dc!important;border-radius:22px!important;padding:24px!important;margin:18px 0!important;box-shadow:0 12px 30px rgba(15,23,42,.06)!important}
     .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:18px 0}
-    .metric{background:white!important;border:1px solid var(--ppt-line)!important;border-radius:20px!important;padding:20px!important;box-shadow:0 8px 22px rgba(15,23,42,.05)!important}
+    .metric{background:white!important;border:1px solid #d8e2dc!important;border-radius:20px!important;padding:20px!important;box-shadow:0 8px 22px rgba(15,23,42,.05)!important}
     .metric span{display:block;color:#64748b!important;font-size:12px;font-weight:900;text-transform:uppercase}
-    .metric strong{color:var(--ppt-green-2)!important;display:block;font-size:28px;margin-top:6px;font-weight:900}
+    .metric strong{display:block;color:#11823b!important;font-size:28px;font-weight:900;margin-top:6px}
     .grid{display:grid;gap:15px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-    label{display:block;margin:0 0 6px;color:#334155;font-size:13px;font-weight:900}
-    input,select,textarea{width:100%;background:white!important;color:#1f2937!important;border:1px solid #cbd5d1!important;border-radius:13px!important;padding:12px!important;font-size:14px}
-    input:focus,select:focus,textarea:focus{outline:3px solid rgba(19,79,44,.14)!important;border-color:var(--ppt-green-2)!important}
+    label{display:block;font-size:13px;font-weight:900;color:#334155;margin:0 0 6px}
+    input,select,textarea{width:100%;border:1px solid #cbd5d1!important;border-radius:13px!important;background:white!important;color:#111827!important;padding:12px!important;font-size:14px}
     textarea{min-height:100px}
-    button,.btn{display:inline-block;background:var(--ppt-green)!important;color:white!important;border:0!important;border-radius:13px!important;padding:12px 16px!important;font-weight:900!important;cursor:pointer}
-    button:hover,.btn:hover{background:var(--ppt-green-2)!important}.btn-dark{background:var(--ppt-green-3)!important}.btn-light{background:#e7efe9!important;color:#134f2c!important}
+    button,.btn{display:inline-block;border:0!important;border-radius:13px!important;background:#11823b!important;color:white!important;padding:12px 16px!important;font-weight:900!important;cursor:pointer}
+    button:hover,.btn:hover{background:#0b5f2a!important}.btn-dark{background:#0b5f2a!important}.btn-light{background:#e8f5ec!important;color:#0b5f2a!important}
     .quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
-    .table-wrap{overflow:auto;border:1px solid var(--ppt-line)!important;border-radius:18px!important;background:white}
+    .table-wrap{overflow:auto;border:1px solid #d8e2dc!important;border-radius:18px!important;background:white}
     table{width:100%;border-collapse:collapse;background:white!important}
-    th,td{text-align:left;border-bottom:1px solid #e5e7eb!important;padding:12px!important;font-size:14px;vertical-align:top;color:#1f2937}
-    th{background:#f7faf8!important;color:#475569!important;text-transform:uppercase;font-size:12px;letter-spacing:.03em}
-    tr:last-child td{border-bottom:0}
-    .pill{display:inline-block;background:#e7f5eb!important;color:#134f2c!important;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900}
-    .pill.warn{background:#fff7ed!important;color:#9a3412!important}.pill.bad{background:#fef2f2!important;color:#991b1b!important}
-    .flash{padding:12px 14px;border-radius:14px;background:#e7f5eb!important;border:1px solid #b8dec5!important;color:#134f2c!important;margin-bottom:12px}
-    .danger{background:#fef2f2!important;border-color:#fecaca!important;color:#991b1b!important}
-    .section-title{border-left:5px solid var(--ppt-green-2);padding-left:12px;margin:8px 0 16px}
+    th,td{text-align:left;border-bottom:1px solid #e5e7eb!important;padding:12px!important;font-size:14px;vertical-align:top;color:#111827}
+    th{background:#f7faf8!important;color:#475569!important;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+    .pill,.badge{display:inline-block;border-radius:999px;background:#e8f5ec!important;color:#0b5f2a!important;padding:5px 10px;font-size:12px;font-weight:900}
+    .flash{padding:12px 14px;border-radius:14px;background:#e8f5ec!important;border:1px solid #b8dec5!important;color:#0b5f2a!important;margin-bottom:12px}
+    .searchbar{display:flex;gap:10px;margin:12px 0 18px}.searchbar input{max-width:420px}
+    .upload-zone{border:2px dashed #11823b!important;background:#f1faf4!important;border-radius:22px!important;padding:26px!important;text-align:center!important;color:#0b5f2a!important;font-weight:900!important}
     @media(max-width:980px){.layout{display:block}aside{width:100%;height:auto;position:relative}main{padding:20px}.grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}}
   </style>
-
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#134f2c!important;
-  --ppt-green-dark:#0f3d22!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#134f2c 0%,#0f3d22 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#134f2c!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#134f2c!important;
-}
-</style>
-
+<link rel="stylesheet" href="/ppt-ui-v3.css?v=3"><style id="PPT_UI_V3_FORCE">aside,.sidebar,[class*="sidebar"]{background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:#fff!important}aside *, .sidebar *, [class*="sidebar"] *{color:#fff!important}button,.btn{background:#11823b!important;color:#fff!important}.card,.metric{background:#fff!important;border-color:#d8e2dc!important}.metric strong{color:#11823b!important}</style>
 </head>
 <body>
 <div class="layout">
@@ -120,40 +50,9 @@ input:focus,select:focus,textarea:focus{
     <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
     <nav>
       {% if current_user.is_authenticated and current_user.role == 'admin' %}
-        <a href="/dashboard">Dashboard</a>
-        <a href="/clients">Clients</a>
-        <a href="/transactions">Bookkeeping</a>
-        <a href="/tax-returns">Tax Returns</a>
-        <a href="/documents">Documents</a>
-        <a href="/invoices">Invoices</a>
-        <a href="/payments">Payments</a>
-        <a href="/appointments">Appointments</a>
-        <a href="/crm">CRM</a>
-        <a href="/messages">Messages</a>
-        <a href="/settings">Users</a>
-        <a href="/workflow">Workflow</a>
-        <a href="/document-requests">Doc Requests</a>
-        <a href="/tax-tracker">Tax Tracker</a>
-        <a href="/appointments/review">Appointment Review</a>
-        <a href="/activity-log">Activity Log</a>
-        <a href="/elite-dashboard">Elite Dashboard</a>
-        <a href="/client-workflow">Client Workflow</a>
-        <a href="/template-center">Template Center</a>
-        <a href="/automation-templates">Automation Templates</a>
-        <a href="/crm-upgrade">CRM Upgrade</a>
+        <a href="/dashboard">Dashboard</a><a href="/clients">Clients</a><a href="/transactions">Bookkeeping</a><a href="/tax-returns">Tax Returns</a><a href="/documents">Documents</a><a href="/invoices">Invoices</a><a href="/payments">Payments</a><a href="/appointments">Appointments</a><a href="/crm">CRM</a><a href="/messages">Messages</a><a href="/settings">Users</a><a href="/workflow">Workflow</a><a href="/elite-dashboard">Elite Dashboard</a><a href="/client-workflow">Client Workflow</a><a href="/template-center">Template Center</a>
       {% elif current_user.is_authenticated %}
-        <a href="/client-dashboard">Dashboard</a>
-        <a href="/my/invoices">My Invoices</a>
-        <a href="/my/payments">My Payments</a>
-        <a href="/my/appointments">My Appointments</a>
-        <a href="/my/bookkeeping">My Bookkeeping</a>
-        <a href="/my/tax-returns">My Tax Returns</a>
-        <a href="/documents">My Documents</a>
-        <a href="/my/crm">My CRM / Requests</a>
-        <a href="/my/messages">My Messages</a>
-        <a href="/my/year-end">My Year-End Summary</a>
-        <a href="/my/statement">My Statement</a>
-        <a href="/my/document-requests">My Doc Requests</a>
+        <a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a>
       {% endif %}
       {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
     </nav>

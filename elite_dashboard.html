@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>PPT Elite Dashboard</h1>
+<p class="sub">Operations, revenue, client workflow, and recent activity in one control center.</p>
+<div class="metric-grid">
+  <div class="metric"><span>Total Billed</span><strong>{{ revenue.total|currency }}</strong></div>
+  <div class="metric"><span>Total Collected</span><strong>{{ payments_total.total|currency }}</strong></div>
+  <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices.c }}</strong></div>
+  <div class="metric"><span>Status Groups</span><strong>{{ status_rows|length }}</strong></div>
+</div>
+<div class="quickbar">
+  <a class="btn" href="/client-workflow">Client Workflow</a>
+  <a class="btn" href="/template-center">Template Center</a>
+  <a class="btn" href="/automation-templates">Automation Templates</a>
+  <a class="btn btn-dark" href="/crm-upgrade">CRM Upgrade</a>
+</div>
+<div class="card"><h2>Client Status Breakdown</h2><div class="table-wrap"><table><thead><tr><th>Status</th><th>Clients</th></tr></thead><tbody>{% for s in status_rows %}<tr><td>{{ s.status }}</td><td>{{ s.count }}</td></tr>{% else %}<tr><td colspan="2">No clients.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="card"><h2>Recent Client Timeline</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Title</th><th>Details</th></tr></thead><tbody>{% for t in recent_timeline %}<tr><td>{{ t.created_at }}</td><td>{{ t.client_name }}</td><td>{{ t.event_type }}</td><td>{{ t.title }}</td><td>{{ t.details }}</td></tr>{% else %}<tr><td colspan="5">No activity yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

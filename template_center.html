@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Editable Template Center</h1>
+<p class="sub">Create reusable intake, welcome, engagement, and document request templates.</p>
+<div class="card"><h2>New Template</h2><form method="POST" class="grid grid-2">
+<div><label>Name</label><input name="name" required></div>
+<div><label>Template Type</label><select name="template_type"><option>Client Intake</option><option>Welcome Message</option><option>Document Request</option><option>Engagement Letter</option><option>Bookkeeping Agreement</option></select></div>
+<div style="grid-column:1/-1"><label>Content</label><textarea name="content" placeholder="Template content..." required></textarea></div>
+<div style="grid-column:1/-1"><button>Save Template</button></div>
+</form></div>
+<div class="card"><h2>Saved Templates</h2><div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Active</th><th>Content</th><th>Action</th></tr></thead><tbody>{% for t in templates %}<tr><td>{{ t.name }}</td><td>{{ t.template_type }}</td><td>{{ t.is_active }}</td><td>{{ t.content }}</td><td><form method="POST" action="/template-center/{{ t.id }}/toggle"><button>Toggle</button></form></td></tr>{% else %}<tr><td colspan="5">No templates yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>CRM Upgrade</h1>
+<p class="sub">Lead source, priority, follow-up, and conversion tracking foundation.</p>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Source</th><th>Priority</th><th>Follow Up</th><th>Notes</th></tr></thead><tbody>{% for l in leads %}<tr><td>{{ l.name }}</td><td>{{ l.email }}</td><td>{{ l.phone }}</td><td>{{ l.status }}</td><td>{{ l.lead_source or l.source }}</td><td>{{ l.priority }}</td><td>{{ l.follow_up_date }}</td><td>{{ l.notes }}</td></tr>{% else %}<tr><td colspan="8">No CRM leads.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

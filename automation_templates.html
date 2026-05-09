@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Automation Templates</h1>
+<p class="sub">Reusable email/message templates for reminders and client follow-up.</p>
+<div class="card"><h2>New Automation Template</h2><form method="POST" class="grid grid-2">
+<div><label>Name</label><input name="name" required></div><div><label>Type</label><select name="template_type"><option>Email</option><option>Portal Message</option><option>Invoice Reminder</option><option>Missing Document Reminder</option><option>Appointment Reminder</option></select></div>
+<div style="grid-column:1/-1"><label>Subject</label><input name="subject"></div>
+<div style="grid-column:1/-1"><label>Body</label><textarea name="body"></textarea></div>
+<div style="grid-column:1/-1"><button>Save Automation Template</button></div>
+</form></div>
+<div class="card"><h2>Saved Automation Templates</h2><div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Subject</th><th>Active</th></tr></thead><tbody>{% for t in templates %}<tr><td>{{ t.name }}</td><td>{{ t.template_type }}</td><td>{{ t.subject }}</td><td>{{ t.is_active }}</td></tr>{% else %}<tr><td colspan="4">No automation templates.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

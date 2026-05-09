@@ -244,8 +244,87 @@ def log_activity(client_id, activity_type, title, details=""):
     )
 # === PPT WORKFLOW STABILITY UPGRADE V1 END ===
 
+
+# === PPT ELITE OPERATIONS SUITE V2.2 START ===
+def ensure_elite_operations_tables():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS intake_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            template_type TEXT DEFAULT 'Client Intake',
+            content TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS client_timeline (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            event_type TEXT,
+            title TEXT,
+            details TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS internal_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            note TEXT,
+            created_by TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS automation_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            subject TEXT,
+            body TEXT,
+            template_type TEXT DEFAULT 'Email',
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+
+    for col, definition in [
+        ("workflow_status", "TEXT DEFAULT 'Lead'"),
+        ("priority", "TEXT DEFAULT 'Standard'"),
+        ("assigned_preparer", "TEXT"),
+        ("lead_source", "TEXT"),
+        ("follow_up_date", "TEXT"),
+        ("service_type", "TEXT"),
+        ("conversion_status", "TEXT DEFAULT 'Open'")
+    ]:
+        try:
+            add_column_if_missing("clients", col, definition)
+        except Exception:
+            pass
+
+    for col, definition in [
+        ("priority", "TEXT DEFAULT 'Normal'"),
+        ("follow_up_date", "TEXT"),
+        ("lead_source", "TEXT"),
+        ("conversion_status", "TEXT DEFAULT 'Open'")
+    ]:
+        try:
+            add_column_if_missing("crm_leads", col, definition)
+        except Exception:
+            pass
+
+def elite_log(client_id, event_type, title, details=""):
+    ensure_elite_operations_tables()
+    execute_db(
+        "INSERT INTO client_timeline(client_id,event_type,title,details) VALUES (?,?,?,?)",
+        (client_id, event_type, title, details),
+    )
+# === PPT ELITE OPERATIONS SUITE V2.2 END ===
+
 @app.route('/init')
-def init_route(): init_db(); ensure_workflow_tables(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
+def init_route(): init_db(); ensure_elite_operations_tables(); ensure_workflow_tables(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
 
@@ -543,6 +622,118 @@ def activity_log():
                        ORDER BY al.id DESC LIMIT 300""")
     return render_template("activity_log.html", logs=logs)
 # === PPT WORKFLOW STABILITY UPGRADE V1 ROUTES END ===
+
+
+# === PPT ELITE OPERATIONS SUITE V2.2 ROUTES START ===
+@app.route('/elite-dashboard')
+@login_required
+@admin_required
+def elite_dashboard():
+    ensure_elite_operations_tables()
+    status_rows = query_db("SELECT COALESCE(workflow_status,'Lead') status, COUNT(*) count FROM clients GROUP BY COALESCE(workflow_status,'Lead')")
+    priority_rows = query_db("SELECT COALESCE(priority,'Standard') priority, COUNT(*) count FROM clients GROUP BY COALESCE(priority,'Standard')")
+    revenue = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices", one=True)
+    payments_total = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments", one=True)
+    open_invoices = query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", one=True)
+    recent_timeline = query_db("""SELECT t.*, c.name client_name FROM client_timeline t
+                                  LEFT JOIN clients c ON c.id=t.client_id
+                                  ORDER BY t.id DESC LIMIT 20""")
+    return render_template("elite_dashboard.html",
+        status_rows=status_rows, priority_rows=priority_rows,
+        revenue=revenue, payments_total=payments_total,
+        open_invoices=open_invoices, recent_timeline=recent_timeline)
+
+@app.route('/client-workflow')
+@login_required
+@admin_required
+def client_workflow():
+    ensure_elite_operations_tables()
+    clients = query_db("SELECT * FROM clients ORDER BY COALESCE(workflow_status,'Lead'), name")
+    return render_template("client_workflow.html", clients=clients)
+
+@app.route('/clients/<int:client_id>/status', methods=['POST'])
+@login_required
+@admin_required
+def update_client_status(client_id):
+    ensure_elite_operations_tables()
+    status = request.form.get("workflow_status") or "Lead"
+    priority = request.form.get("priority") or "Standard"
+    assigned_preparer = request.form.get("assigned_preparer") or ""
+    follow_up_date = request.form.get("follow_up_date") or ""
+    execute_db("UPDATE clients SET workflow_status=?, priority=?, assigned_preparer=?, follow_up_date=? WHERE id=?",
+               (status, priority, assigned_preparer, follow_up_date, client_id))
+    elite_log(client_id, "Status Update", f"Client moved to {status}", f"Priority: {priority}")
+    flash("Client workflow updated.", "success")
+    return redirect(url_for("client_workflow"))
+
+@app.route('/clients/<int:client_id>/timeline')
+@login_required
+@admin_required
+def client_timeline_view(client_id):
+    ensure_elite_operations_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client:
+        abort(404)
+    timeline = query_db("SELECT * FROM client_timeline WHERE client_id=? ORDER BY id DESC", (client_id,))
+    notes = query_db("SELECT * FROM internal_notes WHERE client_id=? ORDER BY id DESC", (client_id,))
+    return render_template("client_timeline.html", client=client, timeline=timeline, notes=notes)
+
+@app.route('/clients/<int:client_id>/notes', methods=['POST'])
+@login_required
+@admin_required
+def add_client_note(client_id):
+    ensure_elite_operations_tables()
+    note = request.form.get("note") or ""
+    execute_db("INSERT INTO internal_notes(client_id,note,created_by) VALUES (?,?,?)", (client_id, note, current_user.name))
+    elite_log(client_id, "Internal Note", "Staff note added", note)
+    flash("Internal note saved.", "success")
+    return redirect(url_for("client_timeline_view", client_id=client_id))
+
+@app.route('/template-center', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def template_center():
+    ensure_elite_operations_tables()
+    if request.method == 'POST':
+        execute_db("INSERT INTO intake_templates(name,template_type,content,is_active) VALUES (?,?,?,1)",
+                   (request.form.get("name"), request.form.get("template_type"), request.form.get("content")))
+        flash("Template saved.", "success")
+        return redirect(url_for("template_center"))
+    templates = query_db("SELECT * FROM intake_templates ORDER BY id DESC")
+    return render_template("template_center.html", templates=templates)
+
+@app.route('/template-center/<int:template_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_template(template_id):
+    ensure_elite_operations_tables()
+    row = query_db("SELECT is_active FROM intake_templates WHERE id=?", (template_id,), one=True)
+    if row:
+        execute_db("UPDATE intake_templates SET is_active=? WHERE id=?", (0 if row["is_active"] else 1, template_id))
+    flash("Template updated.", "success")
+    return redirect(url_for("template_center"))
+
+@app.route('/automation-templates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def automation_templates():
+    ensure_elite_operations_tables()
+    if request.method == 'POST':
+        execute_db("INSERT INTO automation_templates(name,subject,body,template_type,is_active) VALUES (?,?,?,?,1)",
+                   (request.form.get("name"), request.form.get("subject"), request.form.get("body"), request.form.get("template_type")))
+        flash("Automation template saved.", "success")
+        return redirect(url_for("automation_templates"))
+    templates = query_db("SELECT * FROM automation_templates ORDER BY id DESC")
+    return render_template("automation_templates.html", templates=templates)
+
+@app.route('/crm-upgrade')
+@login_required
+@admin_required
+def crm_upgrade():
+    ensure_elite_operations_tables()
+    leads = query_db("SELECT * FROM crm_leads ORDER BY id DESC LIMIT 300")
+    return render_template("crm_upgrade.html", leads=leads)
+# === PPT ELITE OPERATIONS SUITE V2.2 ROUTES END ===
 
 @app.route('/logout')
 @login_required

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Client Workflow Board</h1>
+<p class="sub">Move clients through the firm pipeline without breaking existing client records.</p>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Client</th><th>Business</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Follow Up</th><th>Update</th><th>Timeline</th></tr></thead><tbody>
+{% for c in clients %}
+<tr>
+<td>{{ c.name }}</td><td>{{ c.business_name }}</td><td><span class="pill">{{ c.workflow_status or 'Lead' }}</span></td><td>{{ c.priority or 'Standard' }}</td><td>{{ c.assigned_preparer }}</td><td>{{ c.follow_up_date }}</td>
+<td><form method="POST" action="/clients/{{ c.id }}/status" class="grid">
+<select name="workflow_status"><option>{{ c.workflow_status or 'Lead' }}</option><option>Lead</option><option>Active</option><option>Waiting Documents</option><option>In Prep</option><option>Review</option><option>Filed</option><option>Completed</option></select>
+<select name="priority"><option>{{ c.priority or 'Standard' }}</option><option>VIP</option><option>Standard</option><option>Bookkeeping</option><option>Tax Only</option><option>Urgent</option></select>
+<input name="assigned_preparer" placeholder="Assigned preparer" value="{{ c.assigned_preparer or '' }}">
+<input type="date" name="follow_up_date" value="{{ c.follow_up_date or '' }}">
+<button>Save</button></form></td>
+<td><a class="btn btn-dark" href="/clients/{{ c.id }}/timeline">Timeline</a></td>
+</tr>
+{% else %}<tr><td colspan="8">No clients.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

@@ -3,15 +3,15 @@
 {% block content %}
 
 <h1>Client Dashboard</h1>
-<p class="sub">Welcome, {{ current_user.name if current_user.name is defined else "Client" }}. Your Smart Tax OS shows exactly what is needed next.</p>
+<p class="sub">Welcome, {{ current_user.name if current_user.name is defined else "Client" }}. Your automated tax progress center shows what is needed next.</p>
 
 <div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#061a10,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
     <div>
-      <div style="font-size:32px;font-weight:900;">My Smart Tax OS</div>
-      <div style="margin-top:8px;font-size:15px;opacity:.95;">Action items, upload readiness, tax status, and office reminders.</div>
+      <div style="font-size:32px;font-weight:900;">My Tax Automation Center</div>
+      <div style="margin-top:8px;font-size:15px;opacity:.95;">Missing documents, invoices, appointments, messages, and progress in one place.</div>
     </div>
-    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Client v13</div>
+    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Client V14</div>
   </div>
 </div>
 
@@ -24,30 +24,38 @@
 
 <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:20px;margin-bottom:24px;">
   <div class="card">
-    <h2 style="margin-top:0;">AI Action Assistant</h2>
+    <h2 style="margin-top:0;">Action Required</h2>
     <div style="display:grid;gap:12px;">
-      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Upload Needed</strong><br><span style="color:#64748b;">Upload all W-2, 1099, ID, bank, and business expense records.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Answer Tax Questions</strong><br><span style="color:#64748b;">Respond to office messages if PPT needs clarification.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Review Invoice</strong><br><span style="color:#64748b;">Review payment status before completion or filing.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Missing Document Tracker</strong><br><span style="color:#64748b;">Upload any W-2, 1099, ID, bank statement, receipt, or business expense still needed.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Invoice Reminder</strong><br><span style="color:#64748b;">Review outstanding balances before completion.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Appointment Reminder</strong><br><span style="color:#64748b;">Check or request upcoming consultation appointments.</span></div>
     </div>
   </div>
 
   <div class="card">
     <h2 style="margin-top:0;">Readiness Score</h2>
-    <div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:10px;"><span>Client Completion</span><span>81%</span></div>
-    <div style="height:18px;background:#d1fae5;border-radius:999px;overflow:hidden;margin-bottom:18px;"><div style="width:81%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div></div>
-    <p style="color:#64748b;margin:0;">Complete uploads and reply to office questions to increase your score.</p>
+    <div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:10px;"><span>Client Completion</span><span>84%</span></div>
+    <div style="height:18px;background:#d1fae5;border-radius:999px;overflow:hidden;margin-bottom:18px;"><div style="width:84%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div></div>
+    <p style="color:#64748b;margin:0;">Your score improves when documents, messages, invoices, and appointment actions are complete.</p>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">My Filing Progress</h2>
+  <h2 style="margin-top:0;">My Progress Timeline</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;">
-    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;"><div style="font-size:26px;">✓</div><strong>Portal Open</strong><p style="color:#64748b;margin-bottom:0;">Started</p></div>
-    <div style="padding:18px;border-radius:18px;background:#fef2f2;border:1px solid #fecaca;"><div style="font-size:26px;">!</div><strong>Docs Needed</strong><p style="color:#64748b;margin-bottom:0;">Action required</p></div>
-    <div style="padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><div style="font-size:26px;">⏳</div><strong>Office Review</strong><p style="color:#64748b;margin-bottom:0;">Pending</p></div>
-    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Ready To File</strong><p style="color:#64748b;margin-bottom:0;">Pending</p></div>
-    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Completed</strong><p style="color:#64748b;margin-bottom:0;">Pending</p></div>
+    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;"><div style="font-size:26px;">✓</div><strong>Portal Active</strong><p style="color:#64748b;margin-bottom:0;">Open</p></div>
+    <div style="padding:18px;border-radius:18px;background:#fef2f2;border:1px solid #fecaca;"><div style="font-size:26px;">!</div><strong>Docs Needed</strong><p style="color:#64748b;margin-bottom:0;">Action</p></div>
+    <div style="padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><div style="font-size:26px;">⏳</div><strong>Review</strong><p style="color:#64748b;margin-bottom:0;">Office</p></div>
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Invoice</strong><p style="color:#64748b;margin-bottom:0;">Payment</p></div>
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Complete</strong><p style="color:#64748b;margin-bottom:0;">Final</p></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Generate Tax Organizer</h2>
+  <div style="padding:16px;border-radius:18px;background:#f8fafc;border-left:6px solid #11823b;">
+    <strong>PDF Tax Organizer Generator</strong><br>
+    <span style="color:#64748b;">This panel prepares the client organizer area. PDF generation can be connected in the next backend build.</span>
   </div>
 </div>
 
@@ -56,8 +64,8 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
     <a class="btn" href="/documents">Upload Documents</a>
     <a class="btn" href="/my/messages">Message Office</a>
-    <a class="btn" href="/my/appointments">Request Appointment</a>
-    <a class="btn" href="/my/invoices">View Invoices</a>
+    <a class="btn" href="/my/appointments">Appointments</a>
+    <a class="btn" href="/my/invoices">Invoices</a>
     <a class="btn" href="/my/payments">Payments</a>
     <a class="btn" href="/my/tax-returns">Tax Returns</a>
   </div>

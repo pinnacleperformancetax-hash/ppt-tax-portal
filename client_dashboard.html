@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Client Notification Feed</h1>
-<p class="sub">Your active tax alerts, document reminders, invoice notices, appointments, and office updates.</p>
+<h1>Client Operations Center</h1>
+<p class="sub">Your tax alerts, file vault, invoice reminders, progress timeline, and office updates.</p>
 
 <div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
     <div>
-      <div style="font-size:34px;font-weight:900;">My Automated Tax Alerts</div>
-      <div style="margin-top:8px;opacity:.9;">Stay updated on what the office needs and what happens next.</div>
+      <div style="font-size:34px;font-weight:900;">My PPT Client Operations Center</div>
+      <div style="margin-top:8px;opacity:.9;">Notifications, tax progress, secure files, and required actions in one view.</div>
     </div>
-    <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V16 Client</span>
+    <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V17–V20 Client</span>
   </div>
 </div>
 
@@ -25,32 +25,29 @@
   <div class="card">
     <h2 style="margin-top:0;">My Notification Feed</h2>
     <div style="display:grid;gap:12px;">
-      <div style="padding:15px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Document Needed</strong><br><span style="color:#64748b;">Please upload any missing tax documents requested by the office.</span></div>
-      <div style="padding:15px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Invoice Due</strong><br><span style="color:#64748b;">Review outstanding balance before your return is finalized.</span></div>
-      <div style="padding:15px;border-radius:16px;background:#ecfeff;border-left:6px solid #0891b2;"><strong>Appointment Reminder</strong><br><span style="color:#64748b;">Check your scheduled consultation or request a new appointment.</span></div>
-      <div style="padding:15px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Return Status Update</strong><br><span style="color:#64748b;">Your tax return progress is being reviewed by the office.</span></div>
+      <div style="padding:15px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Document Needed</strong><br><span style="color:#64748b;">Upload any missing tax records requested by the office.</span></div>
+      <div style="padding:15px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Invoice Reminder</strong><br><span style="color:#64748b;">Review any unpaid balance before completion.</span></div>
+      <div style="padding:15px;border-radius:16px;background:#ecfeff;border-left:6px solid #0891b2;"><strong>Office Message</strong><br><span style="color:#64748b;">Check messages for questions or return status updates.</span></div>
+      <div style="padding:15px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Return Progress</strong><br><span style="color:#64748b;">Your tax file is moving through the PPT workflow.</span></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">My Priority Status</h2>
-    <div style="display:grid;gap:12px;">
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fef2f2;"><strong>Critical</strong><span class="pill" style="background:#ef4444!important;color:white!important;">1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fff7ed;"><strong>Urgent</strong><span class="pill" style="background:#f59e0b!important;color:white!important;">1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#ecfeff;"><strong>Info</strong><span class="pill" style="background:#0891b2!important;color:white!important;">1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#f0fdf4;"><strong>Complete</strong><span class="pill" style="background:#11823b!important;color:white!important;">2</span></div>
-    </div>
+    <h2 style="margin-top:0;">My Completion Score</h2>
+    <div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:8px;"><span>Client Readiness</span><span>83%</span></div>
+    <div style="height:18px;background:#d1fae5;border-radius:999px;overflow:hidden;"><div style="width:83%;height:100%;background:#11823b;"></div></div>
+    <p style="margin-top:14px;color:#64748b;">Complete uploads, messages, invoices, and appointment tasks to finalize your return.</p>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Client Timeline</h2>
+  <h2 style="margin-top:0;">My Progress Timeline</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;">
     <div style="padding:16px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;"><strong>Portal Open</strong><p style="color:#64748b;margin:6px 0 0;">Started</p></div>
     <div style="padding:16px;border-radius:18px;background:#fef2f2;border:1px solid #fecaca;"><strong>Docs Needed</strong><p style="color:#64748b;margin:6px 0 0;">Action</p></div>
-    <div style="padding:16px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><strong>Review</strong><p style="color:#64748b;margin:6px 0 0;">Office</p></div>
-    <div style="padding:16px;border-radius:18px;background:#ecfeff;border:1px solid #bae6fd;"><strong>Invoice</strong><p style="color:#64748b;margin:6px 0 0;">Due</p></div>
-    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Ready</strong><p style="color:#64748b;margin:6px 0 0;">Next</p></div>
+    <div style="padding:16px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><strong>Office Review</strong><p style="color:#64748b;margin:6px 0 0;">Pending</p></div>
+    <div style="padding:16px;border-radius:18px;background:#ecfeff;border:1px solid #bae6fd;"><strong>Invoice</strong><p style="color:#64748b;margin:6px 0 0;">Review</p></div>
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Complete</strong><p style="color:#64748b;margin:6px 0 0;">Final</p></div>
   </div>
 </div>
 

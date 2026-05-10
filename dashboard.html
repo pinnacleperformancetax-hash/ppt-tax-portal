@@ -15,12 +15,12 @@
 <div style="margin-bottom:24px;padding:30px;border-radius:28px;background:linear-gradient(135deg,#061a10,#0b5f2a,#11823b);color:white;box-shadow:0 18px 48px rgba(17,130,59,.34);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
     <div>
-      <div style="font-size:40px;font-weight:900;line-height:1.05;">PPT Smart Tax OS</div>
-      <div style="margin-top:8px;font-size:15px;opacity:.95;">AI operations dashboard for reminders, deadlines, revenue, onboarding, and client readiness.</div>
+      <div style="font-size:40px;font-weight:900;line-height:1.05;">PPT True Automation Intelligence</div>
+      <div style="margin-top:8px;font-size:15px;opacity:.95;">Missing document tracking, invoice reminders, appointment alerts, KPI intelligence, and client progress automation.</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <span style="background:rgba(255,255,255,.16);padding:12px 16px;border-radius:16px;font-weight:900;">AI Ops v13</span>
-      <span style="background:rgba(255,255,255,.16);padding:12px 16px;border-radius:16px;font-weight:900;">Smart Tax OS</span>
+      <span style="background:rgba(255,255,255,.16);padding:12px 16px;border-radius:16px;font-weight:900;">V14 Active</span>
+      <span style="background:rgba(255,255,255,.16);padding:12px 16px;border-radius:16px;font-weight:900;">Automation Layer</span>
     </div>
   </div>
 </div>
@@ -38,108 +38,102 @@
 
 <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:20px;margin-bottom:24px;">
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-      <div>
-        <h2 style="margin:0;">AI Operations Queue</h2>
-        <p style="margin:6px 0 0;color:#64748b;">Suggested office actions based on client status, documents, messages, and balances.</p>
-      </div>
-      <span class="pill" style="background:#e8f5ec!important;color:#0b5f2a!important;">AI Assistant View</span>
-    </div>
-
+    <h2 style="margin-top:0;">Automation Command Queue</h2>
     <div style="display:grid;gap:12px;">
       <div style="padding:15px;border-radius:18px;background:#fef2f2;border-left:6px solid #ef4444;">
-        <strong>Auto Reminder Suggested: Missing Documents</strong><br>
-        <span style="color:#64748b;">Send missing-document reminders to clients with pending W-2, 1099, ID, or expense support.</span>
+        <strong>AI Missing Document Tracker</strong><br>
+        <span style="color:#64748b;">Flag clients missing W-2, 1099, ID, bank statements, business expenses, or signatures.</span>
       </div>
       <div style="padding:15px;border-radius:18px;background:#fff7ed;border-left:6px solid #f59e0b;">
-        <strong>Deadline Watch: Returns Needing Review</strong><br>
-        <span style="color:#64748b;">Check returns that are still waiting on client action or internal review.</span>
+        <strong>Smart Invoice Reminder Engine</strong><br>
+        <span style="color:#64748b;">Send payment follow-up before final tax release or filing completion.</span>
       </div>
       <div style="padding:15px;border-radius:18px;background:#f0fdf4;border-left:6px solid #11823b;">
-        <strong>Revenue Follow-Up: Unpaid Invoices</strong><br>
-        <span style="color:#64748b;">Prioritize unpaid invoices before filing or final release.</span>
+        <strong>Appointment Calendar Alerts</strong><br>
+        <span style="color:#64748b;">Surface upcoming appointments and clients needing scheduling.</span>
       </div>
       <div style="padding:15px;border-radius:18px;background:#f8fafc;border-left:6px solid #0b5f2a;">
-        <strong>Onboarding Automation</strong><br>
-        <span style="color:#64748b;">New clients should receive portal welcome, checklist, upload instructions, and appointment link.</span>
+        <strong>Auto Status Changes</strong><br>
+        <span style="color:#64748b;">Visual automation stage ready. Backend triggers can be added later.</span>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">AI Readiness Score</h2>
-    <div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:10px;"><span>Firm Automation Readiness</span><span>88%</span></div>
-    <div style="height:18px;background:#d1fae5;border-radius:999px;overflow:hidden;margin-bottom:18px;"><div style="width:88%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div></div>
-    <div style="display:grid;gap:10px;">
-      <div style="padding:12px;border-radius:14px;background:#f0fdf4;"><strong>Client Alerts</strong><br><span style="color:#64748b;">Ready for automation layer.</span></div>
-      <div style="padding:12px;border-radius:14px;background:#fff7ed;"><strong>Route Logic</strong><br><span style="color:#64748b;">Can be upgraded in next backend phase.</span></div>
-      <div style="padding:12px;border-radius:14px;background:#f8fafc;"><strong>Database Triggers</strong><br><span style="color:#64748b;">Future advanced build.</span></div>
+    <h2 style="margin-top:0;">Admin Notification Bell</h2>
+    <div style="display:grid;gap:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:14px;background:#fef2f2;"><strong>Critical</strong><span class="pill" style="background:#ef4444!important;color:white!important;">4</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:14px;background:#fff7ed;"><strong>Follow Ups</strong><span class="pill" style="background:#f59e0b!important;color:white!important;">7</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:14px;background:#f0fdf4;"><strong>Ready</strong><span class="pill" style="background:#11823b!important;color:white!important;">5</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:14px;background:#f8fafc;"><strong>Unread</strong><span class="pill">{{ live_messages }}</span></div>
     </div>
   </div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
   <div class="card" style="border-left:6px solid #ef4444!important;">
-    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Urgent AI Flags</div>
-    <div style="font-size:30px;font-weight:900;color:#ef4444;">4</div>
-    <p style="color:#64748b;margin-bottom:0;">Missing docs, overdue responses, or payment holds.</p>
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Missing Docs</div>
+    <div style="font-size:30px;font-weight:900;color:#ef4444;">6</div>
+    <p style="color:#64748b;margin-bottom:0;">Files needed before review.</p>
   </div>
   <div class="card" style="border-left:6px solid #f59e0b!important;">
-    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Follow-Up Queue</div>
-    <div style="font-size:30px;font-weight:900;color:#f59e0b;">7</div>
-    <p style="color:#64748b;margin-bottom:0;">Suggested reminders and client nudges.</p>
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Invoice Reminders</div>
+    <div style="font-size:30px;font-weight:900;color:#f59e0b;">3</div>
+    <p style="color:#64748b;margin-bottom:0;">Balances to follow up.</p>
   </div>
   <div class="card" style="border-left:6px solid #11823b!important;">
-    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Ready To Process</div>
-    <div style="font-size:30px;font-weight:900;color:#11823b;">5</div>
-    <p style="color:#64748b;margin-bottom:0;">Client files appear preparation-ready.</p>
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Appointments</div>
+    <div style="font-size:30px;font-weight:900;color:#11823b;">2</div>
+    <p style="color:#64748b;margin-bottom:0;">Upcoming or requested.</p>
   </div>
   <div class="card" style="border-left:6px solid #0b5f2a!important;">
-    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Projected Collections</div>
-    <div style="font-size:30px;font-weight:900;color:#0b5f2a;">${{ "%.0f"|format((live_unpaid|float) + 1200) }}</div>
-    <p style="color:#64748b;margin-bottom:0;">Estimated short-term collection opportunity.</p>
+    <div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Progress Avg</div>
+    <div style="font-size:30px;font-weight:900;color:#0b5f2a;">84%</div>
+    <p style="color:#64748b;margin-bottom:0;">Client readiness score.</p>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Smart Tax Season Alerts</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-    <div style="padding:16px;border-radius:18px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Overdue Client Action</strong><br><span style="color:#64748b;">Client has not completed document checklist.</span></div>
-    <div style="padding:16px;border-radius:18px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Extension Review</strong><br><span style="color:#64748b;">Consider extension if documents remain incomplete.</span></div>
-    <div style="padding:16px;border-radius:18px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Ready To File</strong><br><span style="color:#64748b;">Client packet can move toward final review.</span></div>
-    <div style="padding:16px;border-radius:18px;background:#f8fafc;border-left:6px solid #0b5f2a;"><strong>Year-End Planning</strong><br><span style="color:#64748b;">Bookkeeping clients can be moved into planning offers.</span></div>
+  <h2 style="margin-top:0;">Client Progress Timeline</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;">
+    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;"><div style="font-size:26px;">✓</div><strong>Onboarded</strong><p style="color:#64748b;margin-bottom:0;">Portal opened</p></div>
+    <div style="padding:18px;border-radius:18px;background:#fef2f2;border:1px solid #fecaca;"><div style="font-size:26px;">!</div><strong>Docs Needed</strong><p style="color:#64748b;margin-bottom:0;">Auto flag</p></div>
+    <div style="padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><div style="font-size:26px;">⏳</div><strong>Review</strong><p style="color:#64748b;margin-bottom:0;">Office stage</p></div>
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Invoice</strong><p style="color:#64748b;margin-bottom:0;">Payment check</p></div>
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Ready</strong><p style="color:#64748b;margin-bottom:0;">Final review</p></div>
+    <div style="padding:18px;border-radius:18px;background:white;border:1px solid #e5e7eb;"><div style="font-size:26px;">○</div><strong>Complete</strong><p style="color:#64748b;margin-bottom:0;">Closed</p></div>
   </div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
   <div class="card">
-    <h2 style="margin-top:0;">Revenue Analytics Panel</h2>
+    <h2 style="margin-top:0;">Smart KPI Revenue Charts</h2>
     <div style="display:grid;gap:12px;">
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Monthly Revenue</strong><br><span style="color:#64748b;">Current income tracked: ${{ "%.2f"|format(live_income|float) }}</span></div>
-      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Collections Opportunity</strong><br><span style="color:#64748b;">Unpaid balance tracked: ${{ "%.2f"|format(live_unpaid|float) }}</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #0b5f2a;"><strong>Bookkeeping Retention</strong><br><span style="color:#64748b;">Use bookkeeping clients for recurring revenue growth.</span></div>
+      <div><div style="display:flex;justify-content:space-between;font-weight:900;color:#11823b;margin-bottom:8px;"><span>Collections</span><span>72%</span></div><div style="height:16px;background:#d1fae5;border-radius:999px;overflow:hidden;"><div style="width:72%;height:100%;background:linear-gradient(90deg,#11823b,#16a34a);"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-weight:900;color:#f59e0b;margin-bottom:8px;"><span>Open Invoices</span><span>44%</span></div><div style="height:16px;background:#ffedd5;border-radius:999px;overflow:hidden;"><div style="width:44%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font-weight:900;color:#0b5f2a;margin-bottom:8px;"><span>Tax Workflow</span><span>84%</span></div><div style="height:16px;background:#d1fae5;border-radius:999px;overflow:hidden;"><div style="width:84%;height:100%;background:linear-gradient(90deg,#0b5f2a,#11823b);"></div></div></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">Internal Activity Feed</h2>
+    <h2 style="margin-top:0;">Staff Permission Levels</h2>
     <div style="display:grid;gap:12px;">
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Upload Event</strong><br><span style="color:#64748b;">Client file activity should trigger document review.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #f59e0b;"><strong>Message Event</strong><br><span style="color:#64748b;">Client questions should route to staff follow-up.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #0b5f2a;"><strong>Status Event</strong><br><span style="color:#64748b;">Return status changes should update client progress.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #0b5f2a;"><strong>Admin</strong><br><span style="color:#64748b;">Full office control and client management.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Preparer</strong><br><span style="color:#64748b;">Tax return review, documents, client notes.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #64748b;"><strong>Client</strong><br><span style="color:#64748b;">Uploads, messages, invoices, appointments.</span></div>
     </div>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">AI Ops Quick Actions</h2>
+  <h2 style="margin-top:0;">Automation Quick Actions</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-    <a class="btn" href="/messages">Send Reminders</a>
-    <a class="btn" href="/documents">Scan Documents</a>
-    <a class="btn" href="/tax-returns">Review Returns</a>
-    <a class="btn" href="/invoices">Collect Invoices</a>
-    <a class="btn" href="/crm">Open CRM</a>
-    <a class="btn" href="/appointments">Appointments</a>
+    <a class="btn" href="/documents">Missing Docs</a>
+    <a class="btn" href="/invoices">Invoice Reminders</a>
+    <a class="btn" href="/appointments">Calendar Alerts</a>
+    <a class="btn" href="/messages">Send Notices</a>
+    <a class="btn" href="/tax-returns">Return Status</a>
+    <a class="btn" href="/crm">CRM Pipeline</a>
   </div>
 </div>
 

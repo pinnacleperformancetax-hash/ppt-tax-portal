@@ -2,20 +2,20 @@
 
 {% block content %}
 
-<h1>Communication & Notification Center</h1>
-<p class="sub">Client messages, open alerts, reminders, and communication history.</p>
+<h1>Smart Message Automation</h1>
+<p class="sub">Send client reminders, track statuses, and manage communication priority.</p>
 
 <div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#11823b,#0b5f2a);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
-    <div><div style="font-size:34px;font-weight:900;">Live Communication Center</div><div style="margin-top:8px;font-size:15px;opacity:.95;">Track client requests and office reminders.</div></div>
-    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Notify v10</div>
+    <div><div style="font-size:34px;font-weight:900;">PPT Message Automation</div><div style="margin-top:8px;font-size:15px;opacity:.95;">Smart reminders, priority status, and client communication routing.</div></div>
+    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Messages v11</div>
   </div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:24px;">
   <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Messages</div><div style="font-size:32px;font-weight:900;color:#11823b;">{{ items|length if items is defined else 0 }}</div></div>
-  <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Action Needed</div><div style="font-size:32px;font-weight:900;color:#ef4444;">2</div></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Waiting Replies</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
+  <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Urgent</div><div style="font-size:32px;font-weight:900;color:#ef4444;">2</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Follow-Up</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
 </div>
 
 <div class="card">
@@ -26,6 +26,15 @@
     <div style="grid-column:1/-1;"><label>Message</label><textarea name="body" placeholder="Message"></textarea></div>
     <div style="grid-column:1/-1;"><button type="submit">Send Message</button></div>
   </form>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Reminder Automation Templates</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Missing Docs</strong><br><span style="color:#64748b;">Upload missing tax records.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Review Needed</strong><br><span style="color:#64748b;">Return requires review.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Payment Reminder</strong><br><span style="color:#64748b;">Invoice balance pending.</span></div>
+  </div>
 </div>
 
 <div class="card">

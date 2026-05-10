@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Smart Notification Center</h1>
+
+<div class="card">
+<h2>Live Alerts</h2>
+<div style="display:grid;gap:12px;">
+<div style="padding:14px;background:#fef2f2;border-left:6px solid #ef4444;border-radius:16px;">
+Missing documents detected for 4 clients.
+</div>
+<div style="padding:14px;background:#fff7ed;border-left:6px solid #f59e0b;border-radius:16px;">
+2 invoices due this week.
+</div>
+<div style="padding:14px;background:#ecfeff;border-left:6px solid #0891b2;border-radius:16px;">
+3 upcoming appointments tomorrow.
+</div>
+</div>
+</div>
+{% endblock %}

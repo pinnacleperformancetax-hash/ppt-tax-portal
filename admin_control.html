@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Admin Control Center</h1>
+
+<div class="metric-grid">
+<div class="metric"><span>Users</span><strong>12</strong></div>
+<div class="metric"><span>Admins</span><strong>3</strong></div>
+<div class="metric"><span>Clients</span><strong>148</strong></div>
+<div class="metric"><span>Open Tasks</span><strong>22</strong></div>
+</div>
+
+<div class="card">
+<h2>System Permissions</h2>
+<table>
+<thead><tr><th>Department</th><th>Access</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Tax Team</td><td>Full</td><td>Active</td></tr>
+<tr><td>Bookkeeping</td><td>Limited</td><td>Active</td></tr>
+<tr><td>Clients</td><td>Portal Only</td><td>Protected</td></tr>
+</tbody>
+</table>
+</div>
+{% endblock %}

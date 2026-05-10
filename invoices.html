@@ -1,45 +1,25 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<h1>Smart Invoice Reminder Engine</h1>
-<p class="sub">Track unpaid invoices, payment reminders, and collection opportunities.</p>
+<h1>Invoice Alerts + Collections</h1>
+<p class="sub">Overdue invoice detection, reminder readiness, and collection opportunity tracking.</p>
 
-<div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#061a10,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
-    <div>
-      <div style="font-size:34px;font-weight:900;">Invoice Automation Center</div>
-      <div style="margin-top:8px;font-size:15px;opacity:.95;">Unpaid balances, reminder workflow, and collection readiness.</div>
-    </div>
-    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Invoices V14</div>
-  </div>
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+  <div style="font-size:34px;font-weight:900;">PPT Collections Intelligence</div>
+  <div style="margin-top:8px;opacity:.9;">Track balances, follow-ups, and collection readiness.</div>
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:24px;">
   <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Overdue</div><div style="font-size:32px;font-weight:900;color:#ef4444;">2</div></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Reminder Needed</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Follow-Up</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
   <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Invoices</div><div style="font-size:32px;font-weight:900;color:#11823b;">{{ invoices|length if invoices is defined else 0 }}</div></div>
-  <div class="card" style="border-left:6px solid #0b5f2a!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Collections</div><div style="font-size:32px;font-weight:900;color:#0b5f2a;">$375</div></div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Save Invoice</h2>
-  <form method="POST" action="/invoices" class="grid grid-3">
-    <div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% else %}<option>Sample Client</option>{% endfor %}</select></div>
-    <div><label>Invoice #</label><input name="invoice_number" placeholder="PPT-1001"></div>
-    <div><label>Due Date</label><input type="date" name="due_date"></div>
-    <div><label>Amount</label><input name="amount" placeholder="0.00"></div>
-    <div><label>Status</label><select name="status"><option>Draft</option><option>Unpaid</option><option>Paid</option><option>Overdue</option></select></div>
-    <div style="grid-column:1/-1;"><label>Description</label><textarea name="description" placeholder="Service description"></textarea></div>
-    <div style="grid-column:1/-1;"><button type="submit">Save Invoice</button></div>
-  </form>
-</div>
-
-<div class="card">
-  <h2 style="margin-top:0;">Reminder Intelligence</h2>
+  <h2 style="margin-top:0;">Invoice Reminder Queue</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Payment Hold</strong><br><span style="color:#64748b;">Do not release final work until balance is handled.</span></div>
-    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Reminder Draft</strong><br><span style="color:#64748b;">Send professional payment reminder.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Payment Hold</strong><br><span style="color:#64748b;">Review before releasing final return documents.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Reminder Needed</strong><br><span style="color:#64748b;">Send professional payment reminder.</span></div>
     <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Ready to Close</strong><br><span style="color:#64748b;">Payment complete, workflow can move forward.</span></div>
   </div>
 </div>

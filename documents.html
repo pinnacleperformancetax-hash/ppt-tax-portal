@@ -1,25 +1,13 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<h1>AI Missing Document Tracker</h1>
-<p class="sub">Track missing, received, reviewed, and ready client documents with automation-ready status panels.</p>
-
-<div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#061a10,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
-    <div>
-      <div style="font-size:34px;font-weight:900;">Document Automation Intelligence</div>
-      <div style="margin-top:8px;font-size:15px;opacity:.95;">Missing document detection, upload readiness, and review queue intelligence.</div>
-    </div>
-    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Docs V14</div>
-  </div>
-</div>
+<h1>Document Alert Center</h1>
+<p class="sub">Missing document alerts, upload tracking, and automated document reminder readiness.</p>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:24px;">
   <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Missing</div><div style="font-size:32px;font-weight:900;color:#ef4444;">6</div></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">In Review</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
-  <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Received</div><div style="font-size:32px;font-weight:900;color:#11823b;">{{ documents|length if documents is defined else 0 }}</div></div>
-  <div class="card" style="border-left:6px solid #0b5f2a!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Ready</div><div style="font-size:32px;font-weight:900;color:#0b5f2a;">4</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Needs Review</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
+  <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase;">Records</div><div style="font-size:32px;font-weight:900;color:#11823b;">{{ documents|length if documents is defined else 0 }}</div></div>
 </div>
 
 <div class="card">
@@ -39,16 +27,16 @@
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Missing Document Automation Checklist</h2>
+  <h2 style="margin-top:0;">Document Reminder Queue</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Income Forms</strong><br><span style="color:#64748b;">W-2, 1099, K-1, brokerage.</span></div>
-    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Identity</strong><br><span style="color:#64748b;">Driver license, SS card, EIN letter.</span></div>
-    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Business Support</strong><br><span style="color:#64748b;">Receipts, mileage, bank statements.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Critical Missing</strong><br><span style="color:#64748b;">Send missing document alert.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Review Needed</strong><br><span style="color:#64748b;">Office needs to inspect uploads.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Complete</strong><br><span style="color:#64748b;">Client file ready for next step.</span></div>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">All Client Documents</h2>
+  <h2 style="margin-top:0;">All Documents</h2>
   <div class="table-wrap">
     <table>
       <thead><tr>{% if current_user.role == 'admin' %}<th>Client</th>{% endif %}<th>Date</th><th>Document</th><th>Original File</th><th>Category</th><th>Year</th><th>Status</th><th>Uploaded By</th><th>File</th></tr></thead>

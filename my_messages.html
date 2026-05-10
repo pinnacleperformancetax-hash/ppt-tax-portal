@@ -2,13 +2,13 @@
 
 {% block content %}
 
-<h1>My Notification Center</h1>
-<p class="sub">Messages, action items, and office reminders.</p>
+<h1>My Smart Message Center</h1>
+<p class="sub">Messages, reminders, and action requests from Pinnacle Performance Tax.</p>
 
 <div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#11823b,#0b5f2a);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
-    <div><div style="font-size:32px;font-weight:900;">My Notifications</div><div style="margin-top:8px;font-size:15px;opacity:.95;">Review office updates and required actions.</div></div>
-    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Client Alerts</div>
+    <div><div style="font-size:32px;font-weight:900;">My Action Messages</div><div style="margin-top:8px;font-size:15px;opacity:.95;">Reply to the office and track what is needed next.</div></div>
+    <div style="background:rgba(255,255,255,.16);padding:14px 18px;border-radius:16px;font-weight:900;">Client v11</div>
   </div>
 </div>
 
@@ -20,6 +20,15 @@
     <div style="grid-column:1/-1;"><label>Message</label><textarea name="body" placeholder="Type your message here"></textarea></div>
     <div style="grid-column:1/-1;"><button type="submit">Send Message</button></div>
   </form>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Action Reminders</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Documents May Be Needed</strong><br><span style="color:#64748b;">Check upload center.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Office Review</strong><br><span style="color:#64748b;">Respond to open questions.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Portal Active</strong><br><span style="color:#64748b;">Secure messaging is enabled.</span></div>
+  </div>
 </div>
 
 <div class="card">

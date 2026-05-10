@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>Smart Alert Messaging Center</h1>
-<p class="sub">Operational messaging, priority routing, and automated follow-up visibility.</p>
+<h1>Automated Notification Messaging</h1>
+<p class="sub">Priority alerts, reminder templates, client notices, and operational message routing.</p>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:24px;">
-  <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Urgent</div><div style="font-size:32px;font-weight:900;color:#ef4444;">4</div></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Needs Follow Up</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">6</div></div>
+  <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Critical</div><div style="font-size:32px;font-weight:900;color:#ef4444;">4</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Urgent</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">3</div></div>
+  <div class="card" style="border-left:6px solid #0891b2!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Info</div><div style="font-size:32px;font-weight:900;color:#0891b2;">2</div></div>
   <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Resolved</div><div style="font-size:32px;font-weight:900;color:#11823b;">8</div></div>
 </div>
 
@@ -21,11 +22,12 @@
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Operational Reminder Templates</h2>
+  <h2 style="margin-top:0;">Auto Reminder Templates</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
     <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Missing Document Alert</strong><br><span style="color:#64748b;">Your return is waiting for additional documents.</span></div>
-    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Invoice Reminder</strong><br><span style="color:#64748b;">Outstanding balance reminder before completion.</span></div>
-    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Ready To File</strong><br><span style="color:#64748b;">Your return is moving toward submission.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left6px solid #f59e0b;border-left:6px solid #f59e0b;"><strong>Invoice Reminder</strong><br><span style="color:#64748b;">Outstanding balance reminder before completion.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#ecfeff;border-left:6px solid #0891b2;"><strong>Appointment Reminder</strong><br><span style="color:#64748b;">Upcoming appointment or consultation reminder.</span></div>
+    <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Return Ready</strong><br><span style="color:#64748b;">Your return is ready for next stage.</span></div>
   </div>
 </div>
 

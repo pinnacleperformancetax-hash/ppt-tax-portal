@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+% extends "base.html" %}
 {% block content %}
 
 {% set c = counts if counts is defined and counts else {} %}
@@ -14,12 +14,12 @@
 <div style="margin-bottom:24px;padding:30px;border-radius:28px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 18px 48px rgba(17,130,59,.30);">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
     <div>
-      <div style="font-size:42px;font-weight:900;line-height:1.05;">PPT Live Operations Engine</div>
-      <div style="opacity:.9;margin-top:8px;">Real-time operational intelligence, urgency scoring, notifications, and revenue awareness.</div>
+      <div style="font-size:42px;font-weight:900;line-height:1.05;">PPT Automated Notifications Engine</div>
+      <div style="opacity:.9;margin-top:8px;">Client alerts, priority reminders, overdue flags, and live operational notifications.</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V15 LIVE</span>
-      <span style="padding:12px 16px;border-radius:14px;background:#ef4444;font-weight:800;">9 Alerts</span>
+      <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V16 ACTIVE</span>
+      <span style="padding:12px 16px;border-radius:14px;background:#ef4444;font-weight:800;">12 Notifications</span>
     </div>
   </div>
 </div>
@@ -35,93 +35,101 @@
   <div class="metric"><span>Messages</span><strong>{{ live_messages }}</strong></div>
 </div>
 
-<div style="display:grid;grid-template-columns:1.25fr .75fr;gap:20px;margin-bottom:24px;">
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:20px;margin-bottom:24px;">
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-      <h2 style="margin-top:0;">Needs Attention Queue</h2>
-      <span class="pill" style="background:#fef2f2!important;color:#ef4444!important;">Priority</span>
+      <h2 style="margin-top:0;">Automated Notification Center</h2>
+      <span class="pill" style="background:#fef2f2!important;color:#ef4444!important;">Live Alerts</span>
     </div>
 
     <div style="display:grid;gap:12px;">
       <div style="padding:16px;border-radius:18px;background:#fef2f2;border-left:6px solid #ef4444;">
-        <strong>Waiting on Client Documents</strong><br>
-        <span style="color:#64748b;">Clients missing W-2, 1099, ID verification, or business support.</span>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <strong>Critical: Missing Tax Documents</strong>
+          <span style="font-weight:900;color:#ef4444;">4</span>
+        </div>
+        <span style="color:#64748b;">Auto-alert clients still missing W-2, 1099, ID, or business support.</span>
       </div>
+
       <div style="padding:16px;border-radius:18px;background:#fff7ed;border-left:6px solid #f59e0b;">
-        <strong>Invoice Collection Needed</strong><br>
-        <span style="color:#64748b;">Outstanding balances should be addressed before final release.</span>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <strong>Urgent: Unpaid Invoice Follow-up</strong>
+          <span style="font-weight:900;color:#f59e0b;">3</span>
+        </div>
+        <span style="color:#64748b;">Balances should be handled before final release or filing.</span>
       </div>
+
       <div style="padding:16px;border-radius:18px;background:#ecfeff;border-left:6px solid #0891b2;">
-        <strong>Unread Client Messages</strong><br>
-        <span style="color:#64748b;">Client communication pending review.</span>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <strong>Info: Upcoming Appointments</strong>
+          <span style="font-weight:900;color:#0891b2;">2</span>
+        </div>
+        <span style="color:#64748b;">Clients with scheduled or requested appointments.</span>
       </div>
+
       <div style="padding:16px;border-radius:18px;background:#f0fdf4;border-left:6px solid #11823b;">
-        <strong>Ready To File</strong><br>
-        <span style="color:#64748b;">Returns can move toward completion.</span>
+        <div style="display:flex;justify-content:space-between;gap:12px;">
+          <strong>Complete: Ready for Review</strong>
+          <span style="font-weight:900;color:#11823b;">3</span>
+        </div>
+        <span style="color:#64748b;">Records ready for office review or next status update.</span>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">Live Notification Bell</h2>
+    <h2 style="margin-top:0;">Alert Bell Summary</h2>
     <div style="display:grid;gap:12px;">
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fef2f2;"><strong>Critical Alerts</strong><span class="pill" style="background:#ef4444!important;color:white!important;">4</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fff7ed;"><strong>Follow Ups</strong><span class="pill" style="background:#f59e0b!important;color:white!important;">5</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#f0fdf4;"><strong>Completed</strong><span class="pill" style="background:#11823b!important;color:white!important;">7</span></div>
-      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#f8fafc;"><strong>Unread</strong><span class="pill">{{ live_messages }}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fef2f2;"><strong>Critical</strong><span class="pill" style="background:#ef4444!important;color:white!important;">4</span></div>
+      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#fff7ed;"><strong>Urgent</strong><span class="pill" style="background:#f59e0b!important;color:white!important;">3</span></div>
+      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#ecfeff;"><strong>Info</strong><span class="pill" style="background:#0891b2!important;color:white!important;">2</span></div>
+      <div style="display:flex;justify-content:space-between;padding:14px;border-radius:16px;background:#f0fdf4;"><strong>Completed</strong><span class="pill" style="background:#11823b!important;color:white!important;">3</span></div>
     </div>
   </div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
   <div class="card">
-    <h2 style="margin-top:0;">Client Urgency Scoring</h2>
-    <div style="display:grid;gap:14px;">
-      <div>
-        <div style="display:flex;justify-content:space-between;font-weight:800;color:#ef4444;margin-bottom:6px;"><span>High Risk / Waiting</span><span>92%</span></div>
-        <div style="height:16px;background:#fee2e2;border-radius:999px;overflow:hidden;"><div style="width:92%;height:100%;background:#ef4444;"></div></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;font-weight:800;color:#f59e0b;margin-bottom:6px;"><span>Review Queue</span><span>61%</span></div>
-        <div style="height:16px;background:#ffedd5;border-radius:999px;overflow:hidden;"><div style="width:61%;height:100%;background:#f59e0b;"></div></div>
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;font-weight:800;color:#11823b;margin-bottom:6px;"><span>Ready To Complete</span><span>84%</span></div>
-        <div style="height:16px;background:#d1fae5;border-radius:999px;overflow:hidden;"><div style="width:84%;height:100%;background:#11823b;"></div></div>
-      </div>
+    <h2 style="margin-top:0;">Auto Reminder Engine</h2>
+    <div style="display:grid;gap:12px;">
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #ef4444;"><strong>Document Reminder</strong><br><span style="color:#64748b;">Triggers when requested documents are still open.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #f59e0b;"><strong>Invoice Reminder</strong><br><span style="color:#64748b;">Triggers before and after due date.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #0891b2;"><strong>Appointment Reminder</strong><br><span style="color:#64748b;">Triggers before scheduled consultation or review.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Status Change Notice</strong><br><span style="color:#64748b;">Triggers when tax return stage changes.</span></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">Revenue Trend Cards</h2>
+    <h2 style="margin-top:0;">Staff Action Queue</h2>
     <div style="display:grid;gap:12px;">
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Monthly Revenue</strong><br><span style="color:#64748b;">Income tracked: ${{ "%.2f"|format(live_income|float) }}</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #f59e0b;"><strong>Pending Collections</strong><br><span style="color:#64748b;">Unpaid tracked: ${{ "%.2f"|format(live_unpaid|float) }}</span></div>
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #0b5f2a;"><strong>Bookkeeping Retention</strong><br><span style="color:#64748b;">Recurring service opportunities available.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Clients waiting over 7 days</strong><br><span style="color:#64748b;">Priority follow-up list.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Invoices unpaid</strong><br><span style="color:#64748b;">Collections and payment reminder queue.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#ecfeff;border-left:6px solid #0891b2;"><strong>Messages needing reply</strong><br><span style="color:#64748b;">Admin communication queue.</span></div>
+      <div style="padding:14px;border-radius:16px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Returns ready for next stage</strong><br><span style="color:#64748b;">Workflow completion queue.</span></div>
     </div>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Tax Season Workflow Pipeline</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;">
-    <div style="padding:16px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0;"><strong>Intake</strong><p style="color:#64748b;margin:6px 0 0;">Started</p></div>
-    <div style="padding:16px;border-radius:18px;background:#fef2f2;border:1px solid #fecaca;"><strong>Docs Needed</strong><p style="color:#64748b;margin:6px 0 0;">Needs action</p></div>
-    <div style="padding:16px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa;"><strong>Review</strong><p style="color:#64748b;margin:6px 0 0;">In progress</p></div>
-    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Invoice</strong><p style="color:#64748b;margin:6px 0 0;">Balance check</p></div>
-    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>File</strong><p style="color:#64748b;margin:6px 0 0;">Final stage</p></div>
+  <h2 style="margin-top:0;">Operational Timeline Tracking</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;">
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Upload</strong><p style="color:#64748b;margin:6px 0 0;">Document activity</p></div>
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Message</strong><p style="color:#64748b;margin:6px 0 0;">Communication activity</p></div>
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Invoice</strong><p style="color:#64748b;margin:6px 0 0;">Billing activity</p></div>
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Payment</strong><p style="color:#64748b;margin:6px 0 0;">Collection activity</p></div>
+    <div style="padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb;"><strong>Status</strong><p style="color:#64748b;margin:6px 0 0;">Workflow stage</p></div>
   </div>
 </div>
 
 <div class="card">
-  <h2 style="margin-top:0;">Live Operations Quick Actions</h2>
+  <h2 style="margin-top:0;">Notification Quick Actions</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-    <a class="btn" href="/documents">Document Tracker</a>
-    <a class="btn" href="/messages">Client Alerts</a>
-    <a class="btn" href="/invoices">Invoice Engine</a>
-    <a class="btn" href="/tax-returns">Tax Workflow</a>
-    <a class="btn" href="/crm">CRM Pipeline</a>
-    <a class="btn" href="/appointments">Appointments</a>
+    <a class="btn" href="/documents">Document Alerts</a>
+    <a class="btn" href="/invoices">Invoice Alerts</a>
+    <a class="btn" href="/appointments">Appointment Alerts</a>
+    <a class="btn" href="/messages">Messages</a>
+    <a class="btn" href="/tax-returns">Status Alerts</a>
+    <a class="btn" href="/crm">CRM Follow-up</a>
   </div>
 </div>
 

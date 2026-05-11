@@ -831,7 +831,28 @@ def client_upload():
     filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(f.filename)}"; f.save(UPLOAD_DIR/filename); doc=request.form.get('document_name') or f.filename
     execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,'Uploaded by Client',?,?, 'Client')",(current_user.client_id,doc,doc,filename,request.form.get('tax_year'),request.form.get('notes'),request.form.get('category') or 'Tax Documents'))
     flash('Document uploaded.','success'); return redirect(url_for('client_dashboard'))
-@app.route('/documents/download/<int:document_id>')
+@app.route('/documents', methods=['GET', 'POST'])
+@login_required
+def documents():
+    if request.method == 'POST':
+        client_id = request.form.get('client_id') or getattr(current_user, 'client_id', None) or 1
+        document_name = request.form.get('document_name') or request.form.get('name') or 'Document'
+        category = request.form.get('category') or 'Tax Documents'
+        tax_year = request.form.get('tax_year') or ''
+        status = request.form.get('status') or 'Received'
+        notes = request.form.get('notes') or ''
+        f = request.files.get('file')
+
+        filename = ''
+        original_filename = ''
+        if f and f.filename and allowed_file(f.filename):
+            original_filename = secure_filename(f.filename)
+            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{original_filename}"
+            f.save(UPLOAD_DIR / filename)
+
+        execute_db(
+            """
+            INSERT INTO documents(client_id, document_name, name, filename, tax_year, category, status, notes, original@app.route('/documents/download/<int:document_id>')
 @login_required
 def download_document(document_id):
     doc=query_db('SELECT * FROM documents WHERE id=?',(document_id,),one=True)

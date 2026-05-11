@@ -1275,11 +1275,6 @@ def my_tax_returns():
 @client_required
 
 
-@app.route('/tax-planning')
-@login_required
-def tax_planning():
-    return render_template('tax_planning.html')
-
 @app.route('/admin-control')
 @login_required
 def admin_control():

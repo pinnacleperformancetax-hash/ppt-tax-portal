@@ -1291,18 +1291,7 @@ def my_tax_returns():
         """,
         (current_user.client_id,),
     )
-    documents = query_db(
-        """
-        SELECT *, COALESCE(document_name,name,'Document') display_name
-        FROM documents
-        WHERE client_id=? AND category IN ('Tax Documents','Identification','Payroll','Receipts','Bank Statements')
-        ORDER BY id DESC
-        """,
-        (current_user.client_id,),
-    )
-    return render_template("my_tax_returns.html", returns=returns, documents=documents)
-
-
+ 
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
@@ -1310,10 +1299,8 @@ def my_tax_return_question():
     body = request.form.get("body") or ""
 
     execute_db(
-               """
-        INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status)
-        VALUES (?,?,?,?,?,?)
-        """,        
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,?)",
+        (
             current_user.client_id,
             "client",
             current_user.name,
@@ -1325,5 +1312,3 @@ def my_tax_return_question():
 
     flash("Tax return question sent to the office.", "success")
     return redirect(url_for("my_tax_returns"))
-# === PPT CLIENT SIDE FULL MODULE REPAIR END ===
-

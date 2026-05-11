@@ -1273,6 +1273,60 @@ def my_tax_returns():
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
+# ==========================================================
+# PPT CONNECTION PACK V41-V45 ROUTES
+# Paste these near your other @app.route sections in app.py
+# ==========================================================
+
+@app.route('/tax-organizer')
+@login_required
+def tax_organizer():
+    return render_template('tax_organizer.html')
+
+@app.route('/review-queue')
+@login_required
+def review_queue():
+    return render_template('review_queue.html')
+
+@app.route('/engagement-letters')
+@login_required
+def engagement_letters():
+    return render_template('engagement_letters.html')
+
+@app.route('/esign-center')
+@login_required
+def esign_center():
+    return render_template('esign_center.html')
+
+@app.route('/staff-tasks')
+@login_required
+def staff_tasks():
+    return render_template('staff_tasks.html')
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/client-retention')
+@login_required
+def client_retention():
+    return render_template('client_retention.html')
+
+@app.route('/tax-planning')
+@login_required
+def tax_planning():
+    return render_template('tax_planning.html')
+
+@app.route('/admin-control')
+@login_required
+def admin_control():
+    return render_template('admin_control.html')
 def my_tax_return_question():
     body = request.form.get("body") or ""
     execute_db(

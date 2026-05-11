@@ -1,25 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Tax Planning Center</h1>
+<p class="sub">Tax strategy pipeline, estimated payments, entity review, trader tax planning, and advanced client strategy.</p>
 
-<div class="card">
-<h2>Advanced Planning Tools</h2>
-<div class="metric-grid">
-<div class="metric"><span>S-Corp Reviews</span><strong>8</strong></div>
-<div class="metric"><span>TTS Clients</span><strong>5</strong></div>
-<div class="metric"><span>Estimated Payments</span><strong>14</strong></div>
-<div class="metric"><span>Strategy Sessions</span><strong>6</strong></div>
-</div>
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;">
+  <div style="font-size:34px;font-weight:900;">Tax Planning Center</div>
+  <div style="margin-top:8px;opacity:.9;">V31–V35 integrated module loaded.</div>
 </div>
 
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+
+  <div class="card"><span>S-Corp Reviews</span><strong style="font-size:30px;">8</strong></div>
+  <div class="card"><span>TTS Reviews</span><strong style="font-size:30px;">5</strong></div>
+  <div class="card"><span>Est. Payments</span><strong style="font-size:30px;">14</strong></div>
+  <div class="card"><span>Strategy Sessions</span><strong style="font-size:30px;">6</strong></div>
+</div>
+
 <div class="card">
-<h2>Planning Checklist</h2>
-<ul>
-<li>Quarterly estimated payments</li>
-<li>Entity structure review</li>
-<li>Business deduction analysis</li>
-<li>Retirement contribution review</li>
-<li>Bookkeeping cleanup</li>
-</ul>
+  <h2 style="margin-top:0;">Module Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <a class="btn" href="/dashboard">Dashboard</a>
+    <a class="btn" href="/clients">Clients</a>
+    <a class="btn" href="/crm">CRM</a>
+    <a class="btn" href="/messages">Messages</a>
+    <a class="btn" href="/documents">Documents</a>
+  </div>
 </div>
 {% endblock %}

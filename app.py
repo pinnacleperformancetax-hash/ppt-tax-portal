@@ -1264,7 +1264,6 @@ def my_bookkeeping():
         profit=money(income) - money(expenses),
     )
 
-
 @app.route("/my/tax-returns")
 @login_required
 @client_required

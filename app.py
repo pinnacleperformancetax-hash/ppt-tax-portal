@@ -1274,10 +1274,6 @@ def my_tax_returns():
 @login_required
 @client_required
 
-@app.route('/client-retention')
-@login_required
-def client_retention():
-    return render_template('client_retention.html')
 
 @app.route('/tax-planning')
 @login_required

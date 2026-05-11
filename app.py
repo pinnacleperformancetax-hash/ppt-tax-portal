@@ -1277,29 +1277,198 @@ def my_bookkeeping():
         profit=money(income) - money(expenses),
     )
 
-@app.route("/my/tax-returns")
+@app.route('/documents', methods=['GET', 'POST'])
+@login_required
+def documents():
+
+    if request.method == 'POST':
+
+        client_id = (
+            request.form.get('client_id')
+            or getattr(current_user, 'client_id', None)
+            or 1
+        )
+
+        document_name = (
+            request.form.get('document_name')
+            or request.form.get('name')
+            or 'Document'
+        )
+
+        category = request.form.get('category') or 'Tax Documents'
+        tax_year = request.form.get('tax_year') or ''
+        status = request.form.get('status') or 'Received'
+        notes = request.form.get('notes') or ''
+
+        uploaded_file = request.files.get('file')
+
+        filename = ''
+        original_filename = ''
+
+        if uploaded_file and uploaded_file.filename:
+
+            if allowed_file(uploaded_file.filename):
+
+                original_filename = secure_filename(
+                    uploaded_file.filename
+                )
+
+                filename = (
+                    f"{datetime.now().strftime('%Y%m%d%H%M%S')}_"
+                    f"{client_id}_"
+                    f"{original_filename}"
+                )
+
+                uploaded_file.save(
+                    UPLOAD_DIR / filename
+                )
+
+        execute_db(
+            """
+            INSERT INTO documents
+            (
+                client_id,
+                document_name,
+                name,
+                filename,
+                tax_year,
+                category,
+                status,
+                notes,
+                original_filename
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                client_id,
+                document_name,
+                document_name,
+                filename,
+                tax_year,
+                category,
+                status,
+                notes,
+                original_filename,
+            ),
+        )
+
+        flash("Document saved successfully.", "success")
+
+        return redirect(
+            url_for("documents")
+        )
+
+    docs = query_db(
+        """
+        SELECT *
+        FROM documents
+        ORDER BY id DESC
+        """
+    )
+
+    clients = query_db(
+        """
+        SELECT *
+        FROM clients
+        ORDER BY name
+        """
+    )
+
+    return render_template(
+        "documents.html",
+        documents=docs,
+        clients=clients,
+    )
+
+
+@app.route('/documents/download/<int:document_id>')
+@login_required
+def download_document(document_id):
+
+    doc = query_db(
+        """
+        SELECT *
+        FROM documents
+        WHERE id = ?
+        """,
+        (document_id,),
+        one=True,
+    )
+
+    if not doc:
+        abort(404)
+
+    if not doc.get('filename'):
+        abort(404)
+
+    if (
+        current_user.role != 'admin'
+        and doc['client_id'] != current_user.client_id
+    ):
+        abort(403)
+
+    return send_from_directory(
+        UPLOAD_DIR,
+        doc['filename'],
+        as_attachment=True,
+    )
+
+
+@app.route("/my-tax-returns")
 @login_required
 @client_required
 def my_tax_returns():
+
     returns = query_db(
         """
-        SELECT tr.*, i.invoice_number, i.status invoice_status, i.amount invoice_amount
-        FROM tax_returns tr
-        LEFT JOIN invoices i ON i.id=tr.invoice_id
-        WHERE tr.client_id=?
-        ORDER BY tr.tax_year DESC, tr.id DESC
+        SELECT *
+        FROM tax_returns
+        WHERE client_id = ?
+        ORDER BY id DESC
         """,
         (current_user.client_id,),
     )
- 
+
+    documents = query_db(
+        """
+        SELECT *
+        FROM documents
+        WHERE client_id = ?
+        ORDER BY id DESC
+        """,
+        (current_user.client_id,),
+    )
+
+    return render_template(
+        "my_tax_returns.html",
+        returns=returns,
+        documents=documents,
+    )
+
+
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
 def my_tax_return_question():
-    body = request.form.get("body") or ""
+
+    body = (
+        request.form.get("body")
+        or ""
+    )
 
     execute_db(
-        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,?)",
+        """
+        INSERT INTO messages
+        (
+            client_id,
+            sender_role,
+            sender_name,
+            subject,
+            body,
+            status
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
         (
             current_user.client_id,
             "client",
@@ -1310,5 +1479,36 @@ def my_tax_return_question():
         ),
     )
 
-    flash("Tax return question sent to the office.", "success")
-    return redirect(url_for("my_tax_returns"))
+    flash(
+        "Tax return question sent to the office.",
+        "success",
+    )
+
+    return redirect(
+        url_for("my_tax_returns")
+    )
+
+
+@app.route("/my-document-requests")
+@login_required
+@client_required
+def my_document_requests():
+
+    requests_data = query_db(
+        """
+        SELECT *
+        FROM document_requests
+        WHERE client_id = ?
+        ORDER BY id DESC
+        """,
+        (current_user.client_id,),
+    )
+
+    return render_template(
+        "my_document_requests.html",
+        requests=requests_data,
+    )
+
+# =========================================================
+# END CLEAN REPLACEMENT SECTION
+# =========================================================

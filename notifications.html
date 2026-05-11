@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Smart Notification Center</h1>
+<h1>Notification Command Center</h1>
+<p class="sub">Centralized alert system for documents, invoices, appointments, messages, and workflow activity.</p>
+
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;">
+  <div style="font-size:34px;font-weight:900;">Notification Command Center</div>
+  <div style="margin-top:8px;opacity:.9;">V31–V35 integrated module loaded.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+
+  <div class="card" style="border-left:6px solid #ef4444!important;"><span>Critical</span><strong style="font-size:30px;color:#ef4444;">4</strong></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important;"><span>Urgent</span><strong style="font-size:30px;color:#f59e0b;">7</strong></div>
+  <div class="card" style="border-left:6px solid #0891b2!important;"><span>Info</span><strong style="font-size:30px;color:#0891b2;">3</strong></div>
+  <div class="card" style="border-left:6px solid #11823b!important;"><span>Resolved</span><strong style="font-size:30px;color:#11823b;">11</strong></div>
+</div>
 
 <div class="card">
-<h2>Live Alerts</h2>
-<div style="display:grid;gap:12px;">
-<div style="padding:14px;background:#fef2f2;border-left:6px solid #ef4444;border-radius:16px;">
-Missing documents detected for 4 clients.
-</div>
-<div style="padding:14px;background:#fff7ed;border-left:6px solid #f59e0b;border-radius:16px;">
-2 invoices due this week.
-</div>
-<div style="padding:14px;background:#ecfeff;border-left:6px solid #0891b2;border-radius:16px;">
-3 upcoming appointments tomorrow.
-</div>
-</div>
+  <h2 style="margin-top:0;">Module Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <a class="btn" href="/dashboard">Dashboard</a>
+    <a class="btn" href="/clients">Clients</a>
+    <a class="btn" href="/crm">CRM</a>
+    <a class="btn" href="/messages">Messages</a>
+    <a class="btn" href="/documents">Documents</a>
+  </div>
 </div>
 {% endblock %}

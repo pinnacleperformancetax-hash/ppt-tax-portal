@@ -1275,10 +1275,6 @@ def my_tax_returns():
 @client_required
 
 
-@app.route('/admin-control')
-@login_required
-def admin_control():
-    return render_template('admin_control.html')
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required

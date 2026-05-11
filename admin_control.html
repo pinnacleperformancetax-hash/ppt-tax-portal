@@ -1,23 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Admin Control Center</h1>
+<p class="sub">Users, staff permissions, system access, and operational control panels.</p>
 
-<div class="metric-grid">
-<div class="metric"><span>Users</span><strong>12</strong></div>
-<div class="metric"><span>Admins</span><strong>3</strong></div>
-<div class="metric"><span>Clients</span><strong>148</strong></div>
-<div class="metric"><span>Open Tasks</span><strong>22</strong></div>
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;">
+  <div style="font-size:34px;font-weight:900;">Admin Control Center</div>
+  <div style="margin-top:8px;opacity:.9;">V31–V35 integrated module loaded.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+
+  <div class="card"><span>Users</span><strong style="font-size:30px;">12</strong></div>
+  <div class="card"><span>Admins</span><strong style="font-size:30px;">3</strong></div>
+  <div class="card"><span>Client Users</span><strong style="font-size:30px;">148</strong></div>
+  <div class="card"><span>Open Tasks</span><strong style="font-size:30px;">22</strong></div>
 </div>
 
 <div class="card">
-<h2>System Permissions</h2>
-<table>
-<thead><tr><th>Department</th><th>Access</th><th>Status</th></tr></thead>
-<tbody>
-<tr><td>Tax Team</td><td>Full</td><td>Active</td></tr>
-<tr><td>Bookkeeping</td><td>Limited</td><td>Active</td></tr>
-<tr><td>Clients</td><td>Portal Only</td><td>Protected</td></tr>
-</tbody>
-</table>
+  <h2 style="margin-top:0;">Module Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <a class="btn" href="/dashboard">Dashboard</a>
+    <a class="btn" href="/clients">Clients</a>
+    <a class="btn" href="/crm">CRM</a>
+    <a class="btn" href="/messages">Messages</a>
+    <a class="btn" href="/documents">Documents</a>
+  </div>
 </div>
 {% endblock %}

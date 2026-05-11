@@ -1273,11 +1273,6 @@ def my_tax_returns():
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
-
-
-@app.route("/my/tax-return-question", methods=["POST"])
-@login_required
-@client_required
 def my_tax_return_question():
     body = request.form.get("body") or ""
 

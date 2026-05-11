@@ -1327,14 +1327,28 @@ def tax_planning():
 @login_required
 def admin_control():
     return render_template('admin_control.html')
+@app.route("/my/tax-return-question", methods=["POST"])
+@login_required
+@client_required
 def my_tax_return_question():
     body = request.form.get("body") or ""
+
     execute_db(
-        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
-        (current_user.client_id, "client", current_user.name, "Tax Return Question", body),
+        """
+        INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status)
+        VALUES (?,?,?,?,?,?)
+        """,
+        (
+            current_user.client_id,
+            "client",
+            current_user.name,
+            "Tax Return Question",
+            body,
+            "Open",
+        ),
     )
+
     flash("Tax return question sent to the office.", "success")
     return redirect(url_for("my_tax_returns"))
-
 # === PPT CLIENT SIDE FULL MODULE REPAIR END ===
 

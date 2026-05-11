@@ -74,7 +74,22 @@ aside a:hover,
       {% elif current_user.is_authenticated %}
         <a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a>
       {% endif %}
-      {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
+      <!-- ======================================================
+PPT CONNECTION PACK V41-V45 SIDEBAR LINKS
+Paste these inside your admin sidebar <nav> section in base.html.
+Place them after CRM or after Tax Returns.
+====================================================== -->
+
+<a href="/tax-organizer">Tax Organizer</a>
+<a href="/review-queue">Review Queue</a>
+<a href="/engagement-letters">Engagement Letters</a>
+<a href="/esign-center">E-Sign Center</a>
+<a href="/staff-tasks">Staff Tasks</a>
+<a href="/analytics">Analytics</a>
+<a href="/notifications">Notifications</a>
+<a href="/client-retention">Retention</a>
+<a href="/tax-planning">Tax Planning</a>
+<a href="/admin-control">Admin Control</a>      {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
     </nav>
   </aside>
   <main>

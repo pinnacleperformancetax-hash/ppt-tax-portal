@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="margin-bottom:24px;padding:30px;border-radius:28px;background:linear-gradient(135deg,#03140c,#0b5f2a,#11823b);color:white;box-shadow:0 18px 48px rgba(17,130,59,.30);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
+    <div>
+      <div style="font-size:40px;font-weight:900;line-height:1.05;">Tax Organizer Center</div>
+      <div style="opacity:.9;margin-top:8px;">Client questionnaire, income categories, deduction sections, and required upload tracking.</div>
+    </div>
+    <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V36 Organizer</span>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
+  <div class="card" style="border-left:6px solid #11823b!important;">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Personal Info</div>
+    <div style="font-size:32px;font-weight:900;color:#11823b;">90%</div>
+  </div>  <div class="card" style="border-left:6px solid #0891b2!important;">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Income</div>
+    <div style="font-size:32px;font-weight:900;color:#0891b2;">72%</div>
+  </div>  <div class="card" style="border-left:6px solid #f59e0b!important;">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Deductions</div>
+    <div style="font-size:32px;font-weight:900;color:#f59e0b;">58%</div>
+  </div>  <div class="card" style="border-left:6px solid #ef4444!important;">
+    <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Required Uploads</div>
+    <div style="font-size:32px;font-weight:900;color:#ef4444;">6</div>
+  </div>
+</div>
+
+
+<div class="card">
+  <h2 style="margin-top:0;">Client Tax Organizer Sections</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+    <div style="padding:16px;border-radius:18px;background:#f0fdf4;border-left:6px solid #11823b;"><strong>Personal Info</strong><br><span style="color:#64748b;">Name, address, dependents, filing status.</span></div>
+    <div style="padding:16px;border-radius:18px;background:#ecfeff;border-left:6px solid #0891b2;"><strong>Income</strong><br><span style="color:#64748b;">W-2, 1099, business, rental, investment income.</span></div>
+    <div style="padding:16px;border-radius:18px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Deductions</strong><br><span style="color:#64748b;">Mileage, supplies, home office, charitable, medical.</span></div>
+    <div style="padding:16px;border-radius:18px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Required Uploads</strong><br><span style="color:#64748b;">ID, SS cards, income docs, prior-year return.</span></div>
+  </div>
+</div>
+
+
+<div class="card">
+  <h2 style="margin-top:0;">Quick Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+    <a class="btn" href="/dashboard">Dashboard</a>
+    <a class="btn" href="/clients">Clients</a>
+    <a class="btn" href="/tax-returns">Tax Returns</a>
+    <a class="btn" href="/documents">Documents</a>
+    <a class="btn" href="/messages">Messages</a>
+    <a class="btn" href="/crm">CRM</a>
+  </div>
+</div>
+
+{% endblock %}

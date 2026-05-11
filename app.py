@@ -1273,41 +1273,6 @@ def my_tax_returns():
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
-# ==========================================================
-# PPT CONNECTION PACK V41-V45 ROUTES
-# Paste these near your other @app.route sections in app.py
-# ==========================================================
-
-
-@app.route('/review-queue')
-@login_required
-def review_queue():
-    return render_template('review_queue.html')
-
-@app.route('/engagement-letters')
-@login_required
-def engagement_letters():
-    return render_template('engagement_letters.html')
-
-@app.route('/esign-center')
-@login_required
-def esign_center():
-    return render_template('esign_center.html')
-
-@app.route('/staff-tasks')
-@login_required
-def staff_tasks():
-    return render_template('staff_tasks.html')
-
-@app.route('/analytics')
-@login_required
-def analytics():
-    return render_template('analytics.html')
-
-@app.route('/notifications')
-@login_required
-def notifications():
-    return render_template('notifications.html')
 
 @app.route('/client-retention')
 @login_required

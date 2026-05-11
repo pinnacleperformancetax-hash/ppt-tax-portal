@@ -392,8 +392,30 @@ def page(content, **ctx):
 def init_route():
     init_db()
     return "Database initialized. Admin: admin@example.com / admin123 | Client: client@example.com / client123"
+@app.route("/reset-admin-2026")
+def reset_admin_2026():
+    init_db()
 
+    execute_db(
+        "DELETE FROM users WHERE lower(email)=?",
+        ("admin@pinnacleperformancetax.com",)
+    )
 
+    execute_db(
+        """
+        INSERT INTO users(name,email,password_hash,role,is_active)
+        VALUES (?,?,?,?,?)
+        """,
+        (
+            "PPT Admin",
+            "admin@pinnacleperformancetax.com",
+            generate_password_hash("admin123"),
+            "admin",
+            1,
+        ),
+    )
+
+    return "PPT admin reset complete"
 @app.route("/")
 def home():
     init_db()

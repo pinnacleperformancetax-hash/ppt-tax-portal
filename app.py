@@ -1310,11 +1310,10 @@ def my_tax_return_question():
     body = request.form.get("body") or ""
 
     execute_db(
-        """
+               """
         INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status)
         VALUES (?,?,?,?,?,?)
-        """,
-        (
+        """,        (
             current_user.client_id,
             "client",
             current_user.name,

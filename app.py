@@ -1278,10 +1278,6 @@ def my_tax_returns():
 # Paste these near your other @app.route sections in app.py
 # ==========================================================
 
-@app.route('/tax-organizer')
-@login_required
-def tax_organizer():
-    return render_template('tax_organizer.html')
 
 @app.route('/review-queue')
 @login_required

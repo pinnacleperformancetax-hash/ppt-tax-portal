@@ -853,19 +853,32 @@ def documents():
         execute_db(
             """
             INSERT INTO documents(client_id, document_name, name, filename, tax_year, category, status, notes, original@app.route('/documents/download/<int:document_id>')
-@login_required
-def download_document(document_id):
-    doc=query_db('SELECT * FROM documents WHERE id=?',(document_id,),one=True)
-    if not doc or not doc['filename']: abort(404)
-    if current_user.role!='admin' and doc['client_id']!=current_user.client_id: abort(403)
-    return send_from_directory(UPLOAD_DIR,doc['filename'],as_attachment=True)
 
 def admin_table_route(table_name, template_name, select_sql, insert_sql=None, redirect_name=None): pass
 @app.route('/clients',methods=['GET','POST'])
 @login_required
 @admin_required
 def clients():
-    if request.method=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
+    if request.@app.route('/documents/download/<int:document_id>')
+@login_required
+def download_document(document_id):
+    doc = query_db(
+        'SELECT * FROM documents WHERE id=?',
+        (document_id,),
+        one=True
+    )
+
+    if not doc or not doc['filename']:
+        abort(404)
+
+    if current_user.role != 'admin' and doc['client_id'] != current_user.client_id:
+        abort(403)
+
+    return send_from_directory(
+        UPLOAD_DIR,
+        doc['filename'],
+        as_attachment=True
+    )=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
     return render_template('clients.html',clients=query_db('SELECT * FROM clients ORDER BY name'))
 
 @app.route('/clients/<int:client_id>/edit')

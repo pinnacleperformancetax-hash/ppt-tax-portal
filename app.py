@@ -1270,6 +1270,4 @@ def my_tax_returns():
     return render_template("my_tax_returns.html", returns=returns, documents=documents)
 
 
-@app.route("/my/tax-return-question", methods=["POST"])
-@login_required
-@client_required
+

@@ -1271,3 +1271,84 @@ def my_tax_returns():
 
 
 
+# ============================================================
+# PPT SAFE UPGRADE V41 — SYSTEM HEALTH CHECK
+# Safe add-on: no database schema changes, no login changes.
+# Paste near the bottom of app.py, ABOVE:
+# if __name__ == "__main__":
+# ============================================================
+
+@app.route("/system-check")
+@login_required
+@admin_required
+def system_check():
+    checks = []
+
+    try:
+        query_db("SELECT COUNT(*) total FROM users", one=True)
+        checks.append(("Database connection", "PASS", "Database is reachable."))
+    except Exception as e:
+        checks.append(("Database connection", "FAIL", str(e)))
+
+    try:
+        query_db("SELECT COUNT(*) total FROM clients", one=True)
+        checks.append(("Clients table", "PASS", "Clients table is reachable."))
+    except Exception as e:
+        checks.append(("Clients table", "FAIL", str(e)))
+
+    try:
+        query_db("SELECT COUNT(*) total FROM documents", one=True)
+        checks.append(("Documents table", "PASS", "Documents table is reachable."))
+    except Exception as e:
+        checks.append(("Documents table", "FAIL", str(e)))
+
+    try:
+        query_db("SELECT COUNT(*) total FROM messages", one=True)
+        checks.append(("Messages table", "PASS", "Messages table is reachable."))
+    except Exception as e:
+        checks.append(("Messages table", "FAIL", str(e)))
+
+    try:
+        query_db("SELECT COUNT(*) total FROM tax_returns", one=True)
+        checks.append(("Tax returns table", "PASS", "Tax returns table is reachable."))
+    except Exception as e:
+        checks.append(("Tax returns table", "FAIL", str(e)))
+
+    html = """
+    <div class="hero">
+      <h1>PPT System Health Check</h1>
+      <p>Safe diagnostic page for Pinnacle Performance Tax & Accounting.</p>
+    </div>
+
+    <div class="card">
+      <h2>System Status</h2>
+      <table>
+        <tr>
+          <th>Check</th>
+          <th>Status</th>
+          <th>Details</th>
+        </tr>
+        {% for name, status, detail in checks %}
+        <tr>
+          <td>{{ name }}</td>
+          <td>
+            {% if status == "PASS" %}
+              <span class="badge">PASS</span>
+            {% else %}
+              <span style="display:inline-block;border-radius:999px;background:#fee2e2;color:#991b1b;padding:5px 10px;font-weight:900;font-size:12px;">FAIL</span>
+            {% endif %}
+          </td>
+          <td>{{ detail }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Backup Reminder</h2>
+      <p>Before adding new upgrades, keep your current working backup saved as:</p>
+      <p><strong>PPT_FULL_BACKUP_MAY_2026.zip</strong></p>
+      <p>This page does not change client data, passwords, login, routes, or database structure.</p>
+    </div>
+    """
+    return page(html, checks=checks)

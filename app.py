@@ -831,54 +831,20 @@ def client_upload():
     filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(f.filename)}"; f.save(UPLOAD_DIR/filename); doc=request.form.get('document_name') or f.filename
     execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,'Uploaded by Client',?,?, 'Client')",(current_user.client_id,doc,doc,filename,request.form.get('tax_year'),request.form.get('notes'),request.form.get('category') or 'Tax Documents'))
     flash('Document uploaded.','success'); return redirect(url_for('client_dashboard'))
-@app.route('/documents', methods=['GET', 'POST'])
+@app.route('/documents/download/<int:document_id>')
 @login_required
-def documents():
-    if request.method == 'POST':
-        client_id = request.form.get('client_id') or getattr(current_user, 'client_id', None) or 1
-        document_name = request.form.get('document_name') or request.form.get('name') or 'Document'
-        category = request.form.get('category') or 'Tax Documents'
-        tax_year = request.form.get('tax_year') or ''
-        status = request.form.get('status') or 'Received'
-        notes = request.form.get('notes') or ''
-        f = request.files.get('file')
-
-        filename = ''
-        original_filename = ''
-        if f and f.filename and allowed_file(f.filename):
-            original_filename = secure_filename(f.filename)
-            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{original_filename}"
-            f.save(UPLOAD_DIR / filename)
-
-        execute_db(
-            """
-            INSERT INTO documents(client_id, document_name, name, filename, tax_year, category, status, notes, original@app.route('/documents/download/<int:document_id>')
+def download_document(document_id):
+    doc=query_db('SELECT * FROM documents WHERE id=?',(document_id,),one=True)
+    if not doc or not doc['filename']: abort(404)
+    if current_user.role!='admin' and doc['client_id']!=current_user.client_id: abort(403)
+    return send_from_directory(UPLOAD_DIR,doc['filename'],as_attachment=True)
 
 def admin_table_route(table_name, template_name, select_sql, insert_sql=None, redirect_name=None): pass
 @app.route('/clients',methods=['GET','POST'])
 @login_required
 @admin_required
 def clients():
-    if request.@app.route('/documents/download/<int:document_id>')
-@login_required
-def download_document(document_id):
-    doc = query_db(
-        'SELECT * FROM documents WHERE id=?',
-        (document_id,),
-        one=True
-    )
-
-    if not doc or not doc['filename']:
-        abort(404)
-
-    if current_user.role != 'admin' and doc['client_id'] != current_user.client_id:
-        abort(403)
-
-    return send_from_directory(
-        UPLOAD_DIR,
-        doc['filename'],
-        as_attachment=True
-    )=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
+    if request.method=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
     return render_template('clients.html',clients=query_db('SELECT * FROM clients ORDER BY name'))
 
 @app.route('/clients/<int:client_id>/edit')
@@ -1277,6 +1243,7 @@ def my_bookkeeping():
         profit=money(income) - money(expenses),
     )
 
+
 @app.route("/my/tax-returns")
 @login_required
 @client_required
@@ -1291,24 +1258,82 @@ def my_tax_returns():
         """,
         (current_user.client_id,),
     )
- 
+    documents = query_db(
+        """
+        SELECT *, COALESCE(document_name,name,'Document') display_name
+        FROM documents
+        WHERE client_id=? AND category IN ('Tax Documents','Identification','Payroll','Receipts','Bank Statements')
+        ORDER BY id DESC
+        """,
+        (current_user.client_id,),
+    )
+    return render_template("my_tax_returns.html", returns=returns, documents=documents)
+
+
 @app.route("/my/tax-return-question", methods=["POST"])
 @login_required
 @client_required
+# ==========================================================
+# PPT CONNECTION PACK V41-V45 ROUTES
+# Paste these near your other @app.route sections in app.py
+# ==========================================================
+
+@app.route('/tax-organizer')
+@login_required
+def tax_organizer():
+    return render_template('tax_organizer.html')
+
+@app.route('/review-queue')
+@login_required
+def review_queue():
+    return render_template('review_queue.html')
+
+@app.route('/engagement-letters')
+@login_required
+def engagement_letters():
+    return render_template('engagement_letters.html')
+
+@app.route('/esign-center')
+@login_required
+def esign_center():
+    return render_template('esign_center.html')
+
+@app.route('/staff-tasks')
+@login_required
+def staff_tasks():
+    return render_template('staff_tasks.html')
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/client-retention')
+@login_required
+def client_retention():
+    return render_template('client_retention.html')
+
+@app.route('/tax-planning')
+@login_required
+def tax_planning():
+    return render_template('tax_planning.html')
+
+@app.route('/admin-control')
+@login_required
+def admin_control():
+    return render_template('admin_control.html')
 def my_tax_return_question():
     body = request.form.get("body") or ""
-
     execute_db(
-        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,?)",
-        (
-            current_user.client_id,
-            "client",
-            current_user.name,
-            "Tax Return Question",
-            body,
-            "Open",
-        ),
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (current_user.client_id, "client", current_user.name, "Tax Return Question", body),
     )
-
     flash("Tax return question sent to the office.", "success")
     return redirect(url_for("my_tax_returns"))
+
+# === PPT CLIENT SIDE FULL MODULE REPAIR END ===

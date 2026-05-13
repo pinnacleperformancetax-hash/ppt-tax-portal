@@ -1,7 +1,11 @@
-{% extends "base.html" %}{% block content %}
+{% extends "base.html" %}
+{% block content %}
 <h1>Notifications</h1>
-{% set unread = notifications|selectattr('is_read','equalto',0)|list|length %}
-<p class="sub">{% if unread > 0 %}<span class="pill warn">{{ unread }} unread</span>{% else %}<span class="pill">All caught up ✓</span>{% endif %}</p>
+{% set unread = namespace(count=0) %}
+{% for n in notifications %}{% if not n.is_read %}{% set unread.count = unread.count + 1 %}{% endif %}{% endfor %}
+<p class="sub">
+  {% if unread.count > 0 %}<span class="pill warn">{{ unread.count }} unread</span>{% else %}<span class="pill">All caught up ✓</span>{% endif %}
+</p>
 
 <div class="quickbar">
   <form method="POST" action="/notifications/mark-read">
@@ -14,19 +18,21 @@
   {% for n in notifications %}
   <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid #e5e7eb;background:{{ '#f0fdf4' if not n.is_read else '#fff' }}">
     <div style="font-size:22px;padding-top:2px;min-width:28px;text-align:center">
-      {% if n.type=='document' %}📂
-      {% elif n.type=='invoice' %}🧾
-      {% elif n.type=='payment' %}💳
-      {% elif n.type=='message' %}✉️
-      {% elif n.type=='appointment' %}📅
-      {% elif n.type=='bookkeeping' %}💰
-      {% elif n.type=='tax_return' %}📁
+      {% if n.type == 'document' %}📂
+      {% elif n.type == 'invoice' %}🧾
+      {% elif n.type == 'payment' %}💳
+      {% elif n.type == 'message' %}✉️
+      {% elif n.type == 'appointment' %}📅
+      {% elif n.type == 'bookkeeping' %}💰
+      {% elif n.type == 'tax_return' %}📁
       {% else %}🔔{% endif %}
     </div>
     <div style="flex:1;min-width:0">
       <div style="font-size:14px;font-weight:{{ '900' if not n.is_read else '400' }};color:#111827">{{ n.message }}</div>
       <div style="margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        {% if current_user.role=='admin' and n.client_name %}<span class="pill">{{ n.client_name }}</span>{% endif %}
+        {% if current_user.role == 'admin' and n['client_name'] is defined and n['client_name'] %}
+          <span class="pill">{{ n['client_name'] }}</span>
+        {% endif %}
         <span style="font-size:11px;color:#475569">{{ n.created_at[:16].replace('T',' ') if n.created_at else '' }}</span>
         {% if not n.is_read %}<span class="pill">New</span>{% endif %}
       </div>
@@ -45,7 +51,10 @@
 </div>
 {% else %}
 <div class="card">
-  <p style="color:#475569;text-align:center;padding:30px">No notifications yet. They will appear here when invoices, documents, appointments, and messages are created.</p>
+  <p style="color:#475569;text-align:center;padding:30px">
+    No notifications yet.<br>
+    <span style="font-size:13px">They appear here when invoices, documents, appointments, and messages are created.</span>
+  </p>
 </div>
 {% endif %}
 {% endblock %}

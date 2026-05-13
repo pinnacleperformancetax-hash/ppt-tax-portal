@@ -919,7 +919,6 @@ def crm():
 @app.route('/documents', methods=['GET', 'POST'])
 @login_required
 def documents():
-
     if current_user.role != 'admin':
         docs = query_db(
             "SELECT * FROM documents WHERE client_id=? ORDER BY id DESC",
@@ -927,15 +926,15 @@ def documents():
         )
         return render_template('documents.html', documents=docs)
 
-    docs = query_db(
-        "SELECT * FROM documents ORDER BY id DESC"
-    )
+    docs = query_db("SELECT * FROM documents ORDER BY id DESC")
+    return render_template('documents.html', documents=docs)
 
-    return render_template('documents.html', documents=docs)@app.route('/settings',methods=['GET','POST'])
+
+@app.route('/settings', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def settings(): return render_template('settings.html',users=query_db('SELECT u.*,cl.name client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
-if __name__=='__main__':
+def settings():
+    return render_template('settings.html')if __name__=='__main__':
     with app.app_context(): init_db()
     app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
 # === PPT MY MESSAGES + YEAR END FIX START ===

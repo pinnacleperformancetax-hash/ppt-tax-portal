@@ -1,4 +1,4 @@
-from __future__ import annotations
+    from __future__ import annotations
 import os, sqlite3
 from datetime import datetime
 from functools import wraps
@@ -915,7 +915,7 @@ def tax_returns():
 @admin_required
 def crm():
     if request.method=='POST': execute_db('INSERT INTO crm_leads(name,phone,email,status,source,follow_up_date,notes,client_id) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('phone'),request.form.get('email'),request.form.get('status'),request.form.get('source'),request.form.get('follow_up_date'),request.form.get('notes'),request.form.get('client_id') or None)); return redirect(url_for('crm'))
-    return render_template('crm.html',leads=query_db('SELECT l.*,c.name client_name FROM crm_leads l LEFT JOIN clients c ON c.id=l.client_id ORDER BY l.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+    return render_template('crm.html',leads=query_db('SELECT l.*,c.name client_name FROM crm_leads l LEFT JOIN clients c ON c.id=l.client_id ORDER BY l.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'),today=datetime.now().strftime('%Y-%m-%d'))
 @app.route('/documents',methods=['GET','POST'])
 @login_required
 def documents():
@@ -925,9 +925,6 @@ def documents():
 @login_required
 @admin_required
 def settings(): return render_template('settings.html',users=query_db('SELECT u.*,cl.name client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
-if __name__=='__main__':
-    with app.app_context(): init_db()
-    app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
 # === PPT MY MESSAGES + YEAR END FIX START ===
 
 
@@ -1976,3 +1973,9 @@ def init_upgrade_route():
 # ============================================================
 # END PPT FULL AUTOMATION UPGRADE PACK
 # ============================================================
+
+if __name__=='__main__':
+    with app.app_context():
+        init_db()
+        ensure_upgrade_tables()
+    app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))

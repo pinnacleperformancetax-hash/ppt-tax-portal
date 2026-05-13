@@ -4,92 +4,100 @@
   <meta charset="utf-8">
   <title>PPT Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/ppt-ui-v3.css?v=3">
   <style>
+    :root{--g:#123d22;--bg:#f4f6f4;--card:#fff;--line:#dfe7df;--text:#111827}
     *{box-sizing:border-box}
-    body{margin:0;background:#f6f8f6!important;color:#1f2937;font-family:Arial,Helvetica,sans-serif}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
     a{text-decoration:none;color:inherit}
-    .layout{display:flex;min-height:100vh;background:linear-gradient(135deg,#f8faf8 0%,#eef7f1 100%)!important}
-    aside{width:270px;background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:white!important;min-height:100vh;height:100vh;position:sticky;top:0;padding:28px 18px;overflow:auto;box-shadow:10px 0 30px rgba(17,130,59,.18)}
-    .brand{font-size:24px;font-weight:900;line-height:1.04;letter-spacing:-.45px;color:white!important;margin-bottom:14px}
-    .brand:before{content:"PPT";display:flex;width:50px;height:50px;align-items:center;justify-content:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.22);border-radius:16px;margin-bottom:14px;font-weight:900}
-    .contact{font-size:12px;line-height:1.45;color:#e7f5eb!important;margin:12px 0 24px}
-    nav a,aside a{display:block;padding:11px 13px;margin:4px 0;border-radius:12px;color:white!important;font-weight:900}
-    nav a:hover,aside a:hover{background:rgba(255,255,255,.18)!important}
-    main{flex:1;padding:34px;background:transparent!important}
-    h1{font-size:34px;margin:0 0 8px;color:#1f2937!important;letter-spacing:-.55px}
-    h2,h3{color:#1f2937!important}.sub,p{color:#64748b}
-    .card{background:white!important;border:1px solid #d8e2dc!important;border-radius:22px!important;padding:24px!important;margin:18px 0!important;box-shadow:0 12px 30px rgba(15,23,42,.06)!important}
-    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:18px 0}
-    .metric{background:white!important;border:1px solid #d8e2dc!important;border-radius:20px!important;padding:20px!important;box-shadow:0 8px 22px rgba(15,23,42,.05)!important}
-    .metric span{display:block;color:#64748b!important;font-size:12px;font-weight:900;text-transform:uppercase}
-    .metric strong{display:block;color:#11823b!important;font-size:28px;font-weight:900;margin-top:6px}
-    .grid{display:grid;gap:15px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-    label{display:block;font-size:13px;font-weight:900;color:#334155;margin:0 0 6px}
-    input,select,textarea{width:100%;border:1px solid #cbd5d1!important;border-radius:13px!important;background:white!important;color:#111827!important;padding:12px!important;font-size:14px}
-    textarea{min-height:100px}
-    button,.btn{display:inline-block;border:0!important;border-radius:13px!important;background:#11823b!important;color:white!important;padding:12px 16px!important;font-weight:900!important;cursor:pointer}
-    button:hover,.btn:hover{background:#0b5f2a!important}.btn-dark{background:#0b5f2a!important}.btn-light{background:#e8f5ec!important;color:#0b5f2a!important}
+    .layout{display:flex;min-height:100vh}
+    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow:auto}
+    .brand{font-size:24px;font-weight:900;line-height:1.05;margin-bottom:18px}
+    .contact{font-size:12px;line-height:1.4;margin-bottom:24px;opacity:.95}
+    nav a{display:block;padding:11px 12px;border-radius:10px;font-weight:800;margin:3px 0}
+    nav a:hover{background:rgba(255,255,255,.13)}
+    nav .nav-section{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);padding:12px 12px 2px;margin-top:4px}
+    main{flex:1;padding:32px;overflow:auto}
+    h1{font-size:32px;margin:0 0 8px}
+    h2{margin:0 0 14px}
+    .sub{color:#475569;margin-top:0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin:18px 0;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+    .grid{display:grid;gap:14px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    label{display:block;font-size:13px;font-weight:800;margin:0 0 6px}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:white}
+    textarea{min-height:90px}
+    button,.btn{border:0;border-radius:12px;padding:12px 16px;background:var(--g);color:white;font-weight:900;display:inline-block;cursor:pointer}
+    .btn-dark{background:#0f172a}
     .quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
-    .table-wrap{overflow:auto;border:1px solid #d8e2dc!important;border-radius:18px!important;background:white}
-    table{width:100%;border-collapse:collapse;background:white!important}
-    th,td{text-align:left;border-bottom:1px solid #e5e7eb!important;padding:12px!important;font-size:14px;vertical-align:top;color:#111827}
-    th{background:#f7faf8!important;color:#475569!important;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
-    .pill,.badge{display:inline-block;border-radius:999px;background:#e8f5ec!important;color:#0b5f2a!important;padding:5px 10px;font-size:12px;font-weight:900}
-    .flash{padding:12px 14px;border-radius:14px;background:#e8f5ec!important;border:1px solid #b8dec5!important;color:#0b5f2a!important;margin-bottom:12px}
-    .searchbar{display:flex;gap:10px;margin:12px 0 18px}.searchbar input{max-width:420px}
-    .upload-zone{border:2px dashed #11823b!important;background:#f1faf4!important;border-radius:22px!important;padding:26px!important;text-align:center!important;color:#0b5f2a!important;font-weight:900!important}
-    @media(max-width:980px){.layout{display:block}aside{width:100%;height:auto;position:relative}main{padding:20px}.grid-2,.grid-3,.grid-4,.metric-grid{grid-template-columns:1fr}}
-  </style><style>
-aside,
-.sidebar,
-[class*="sidebar"] {
-  background: linear-gradient(180deg, #11823b 0%, #0b5f2a 100%) !important;
-  color: white !important;
-}
-
-aside *,
-.sidebar *,
-[class*="sidebar"] * {
-  color: white !important;
-}
-
-aside a:hover,
-.sidebar a:hover {
-  background: rgba(255,255,255,.18) !important;
-}
-</style>
-
-<link rel="stylesheet" href="/ppt-ui-v3.css">  
-<link rel="stylesheet" href="/ppt-ui-v3.css?v=3"><style id="PPT_UI_V3_FORCE">aside,.sidebar,[class*="sidebar"]{background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;color:#fff!important}aside *, .sidebar *, [class*="sidebar"] *{color:#fff!important}button,.btn{background:#11823b!important;color:#fff!important}.card,.metric{background:#fff!important;border-color:#d8e2dc!important}.metric strong{color:#11823b!important}</style>
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
+    .metric{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}
+    .metric span{display:block;font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b}
+    .metric strong{font-size:27px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:10px;font-size:14px;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;color:#475569}
+    .pill{display:inline-block;border-radius:999px;background:#e8f5ec;color:#123d22;padding:5px 9px;font-size:12px;font-weight:900}
+    .pill.warn{background:#fff7ed;color:#9a3412}
+    .flash{padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;margin-bottom:12px}
+    .danger{background:#fef2f2;border-color:#fecaca}
+    @media(max-width:900px){.layout{display:block}aside{width:100%;height:auto;position:relative}.grid-2,.grid-3,.metric-grid{grid-template-columns:1fr}main{padding:20px}}
+  </style>
 </head>
 <body>
+{% if request.path != '/login' %}
 <div class="layout">
-  <aside>
+  <aside style="background:#11823b !important; background-image:none !important; color:white !important; width:260px; min-height:100vh; padding:24px 18px; box-sizing:border-box;">
     <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
     <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
     <nav>
       {% if current_user.is_authenticated and current_user.role == 'admin' %}
-        <a href="/dashboard">Dashboard</a><a href="/clients">Clients</a><a href="/transactions">Bookkeeping</a><a href="/tax-returns">Tax Returns</a><a href="/documents">Documents</a><a href="/invoices">Invoices</a><a href="/payments">Payments</a><a href="/appointments">Appointments</a><a href="/crm">CRM</a><a href="/messages">Messages</a><a href="/settings">Users</a><a href="/workflow">Workflow</a><a href="/elite-dashboard">Elite Dashboard</a><a href="/client-workflow">Client Workflow</a><a href="/template-center">Template Center</a>
-      {% elif current_user.is_authenticated %}
-        <a href="/client-dashboard">Dashboard</a><a href="/my/invoices">My Invoices</a><a href="/my/payments">My Payments</a><a href="/my/appointments">My Appointments</a><a href="/my/bookkeeping">My Bookkeeping</a><a href="/my/tax-returns">My Tax Returns</a><a href="/documents">My Documents</a><a href="/my/crm">My CRM / Requests</a><a href="/my/messages">My Messages</a><a href="/my/year-end">My Year-End Summary</a><a href="/my/statement">My Statement</a>
-      {% endif %}
-      <!-- ======================================================
-PPT CONNECTION PACK V41-V45 SIDEBAR LINKS
-Paste these inside your admin sidebar <nav> section in base.html.
-Place them after CRM or after Tax Returns.
-====================================================== -->
+        <div class="nav-section">Main</div>
+        <a href="/dashboard">📊 Dashboard</a>
+        <a href="/service-entry">⚡ Quick Entry</a>
 
-<a href="/tax-organizer">Tax Organizer</a>
-<a href="/review-queue">Review Queue</a>
-<a href="/engagement-letters">Engagement Letters</a>
-<a href="/esign-center">E-Sign Center</a>
-<a href="/staff-tasks">Staff Tasks</a>
-<a href="/analytics">Analytics</a>
-<a href="/notifications">Notifications</a>
-<a href="/client-retention">Retention</a>
-<a href="/tax-planning">Tax Planning</a>
-<a href="/admin-control">Admin Control</a>      {% if current_user.is_authenticated %}<a href="/logout">Sign Out</a>{% endif %}
+        <div class="nav-section">Clients</div>
+        <a href="/clients">👥 Clients</a>
+        <a href="/crm">📋 CRM</a>
+        <a href="/client-workflow">🔄 Workflow</a>
+
+        <div class="nav-section">Bookkeeping</div>
+        <a href="/transactions">💰 Transactions</a>
+        <a href="/bookkeeping/csv-import">📥 CSV Import</a>
+        <a href="/bookkeeping/recurring">🔁 Recurring</a>
+        <a href="/bookkeeping/rules">🏷 Auto-Rules</a>
+
+        <div class="nav-section">Tax & Billing</div>
+        <a href="/tax-returns">📁 Tax Returns</a>
+        <a href="/invoices">🧾 Invoices</a>
+        <a href="/payments">💳 Payments</a>
+
+        <div class="nav-section">Files & Comms</div>
+        <a href="/documents">📂 Documents</a>
+        <a href="/admin/documents/upload">⬆️ Upload to Client</a>
+        <a href="/messages">✉️ Messages</a>
+        <a href="/appointments">📅 Appointments</a>
+
+        <div class="nav-section">Tools</div>
+        <a href="/workflow">⚙️ Workflow Hub</a>
+        <a href="/notifications/list">🔔 Notifications</a>
+        <a href="/settings">🔧 Users</a>
+
+      {% elif current_user.is_authenticated %}
+        <div class="nav-section">My Portal</div>
+        <a href="/client-dashboard">🏠 Dashboard</a>
+        <a href="/my/documents">📂 My Documents</a>
+        <a href="/my/invoices">🧾 My Invoices</a>
+        <a href="/my/tax-returns">📁 Tax Returns</a>
+        <a href="/my/bookkeeping">💰 Bookkeeping</a>
+        <a href="/my/appointments">📅 Appointments</a>
+        <a href="/my/messages">✉️ Messages</a>
+        <a href="/my/year-end">📊 Year-End Summary</a>
+        <a href="/my/crm">📋 My Requests</a>
+        <a href="/notifications/list">🔔 Notifications</a>
+      {% endif %}
+      {% if current_user.is_authenticated %}<a href="/logout" style="margin-top:8px;opacity:.7">🚪 Sign Out</a>{% endif %}
     </nav>
   </aside>
   <main>
@@ -99,5 +107,8 @@ Place them after CRM or after Tax Returns.
     {% block content %}{% endblock %}
   </main>
 </div>
+{% else %}
+  {% block login_content %}{% endblock %}
+{% endif %}
 </body>
 </html>

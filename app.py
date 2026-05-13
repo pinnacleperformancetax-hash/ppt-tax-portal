@@ -915,27 +915,19 @@ def tax_returns():
 @admin_required
 def crm():
     if request.method=='POST': execute_db('INSERT INTO crm_leads(name,phone,email,status,source,follow_up_date,notes,client_id) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('phone'),request.form.get('email'),request.form.get('status'),request.form.get('source'),request.form.get('follow_up_date'),request.form.get('notes'),request.form.get('client_id') or None)); return redirect(url_for('crm'))
-    return render_template('crm.html', leads=..., clients=..., today=datetime.now().strftime("%Y-%m-%d"))
-@app.route('/documents', methods=['GET', 'POST'])
+    return render_template('crm.html',leads=query_db('SELECT l.*,c.name client_name FROM crm_leads l LEFT JOIN clients c ON c.id=l.client_id ORDER BY l.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+@app.route('/documents',methods=['GET','POST'])
 @login_required
 def documents():
-    if current_user.role != 'admin':
-        docs = query_db(
-            "SELECT * FROM documents WHERE client_id=? ORDER BY id DESC",
-            (current_user.client_id,)
-        )
-        return render_template('documents.html', documents=docs)
-
-    docs = query_db("SELECT * FROM documents ORDER BY id DESC")
-    return render_template('documents.html', documents=docs)
-
-
-@app.route('/settings', methods=['GET', 'POST'])
+    if current_user.role!='admin': return render_template('documents.html',documents=query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC",(current_user.client_id,)),clients=[])
+    return render_template('documents.html',documents=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC"),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+@app.route('/settings',methods=['GET','POST'])
 @login_required
 @admin_required
-def settings():
-    return render_template('settings.html')
-
+def settings(): return render_template('settings.html',users=query_db('SELECT u.*,cl.name client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+if __name__=='__main__':
+    with app.app_context(): init_db()
+    app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
 # === PPT MY MESSAGES + YEAR END FIX START ===
 
 
@@ -1278,85 +1270,709 @@ def my_tax_returns():
     return render_template("my_tax_returns.html", returns=returns, documents=documents)
 
 
+@app.route("/my/tax-return-question", methods=["POST"])
+@login_required
+@client_required
+def my_tax_return_question():
+    body = request.form.get("body") or ""
+    execute_db(
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (current_user.client_id, "client", current_user.name, "Tax Return Question", body),
+    )
+    flash("Tax return question sent to the office.", "success")
+    return redirect(url_for("my_tax_returns"))
+
+# ==========================================================
+# PPT CONNECTION PACK V41-V45 ROUTES
+# ==========================================================
+
+@app.route('/tax-organizer')
+@login_required
+def tax_organizer():
+    return render_template('tax_organizer.html')
+
+@app.route('/review-queue')
+@login_required
+def review_queue():
+    return render_template('review_queue.html')
+
+@app.route('/engagement-letters')
+@login_required
+def engagement_letters():
+    return render_template('engagement_letters.html')
+
+@app.route('/esign-center')
+@login_required
+def esign_center():
+    return render_template('esign_center.html')
+
+@app.route('/staff-tasks')
+@login_required
+def staff_tasks():
+    return render_template('staff_tasks.html')
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/client-retention')
+@login_required
+def client_retention():
+    return render_template('client_retention.html')
+
+@app.route('/tax-planning')
+@login_required
+def tax_planning():
+    return render_template('tax_planning.html')
+
+@app.route('/admin-control')
+@login_required
+def admin_control():
+    return render_template('admin_control.html')
+
+# === PPT CLIENT SIDE FULL MODULE REPAIR END ===
+
 
 # ============================================================
-# PPT SAFE UPGRADE V41 — SYSTEM HEALTH CHECK
-# Safe add-on: no database schema changes, no login changes.
-# Paste near the bottom of app.py, ABOVE:
-# if __name__ == "__main__":
+# PPT FULL AUTOMATION UPGRADE PACK
+# Modules: Bookkeeping Auto | Documents 2-way | Invoice Auto
+#          Notifications | Standalone Service Entry
 # ============================================================
 
-@app.route("/system-check")
+# ── SCHEMA UPGRADE ──────────────────────────────────────────
+
+def ensure_upgrade_tables():
+    db = get_db()
+    db.executescript('''
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        type TEXT,
+        message TEXT,
+        link TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS recurring_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        category_id INTEGER,
+        amount REAL NOT NULL,
+        frequency TEXT DEFAULT 'monthly',
+        next_due TEXT,
+        notes TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS categorization_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT NOT NULL,
+        category_id INTEGER,
+        type TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS csv_imports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        filename TEXT,
+        rows_imported INTEGER DEFAULT 0,
+        imported_by TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    ''')
+    # Add visible_to_client flag to documents
+    try:
+        add_column_if_missing("documents", "visible_to_client", "INTEGER DEFAULT 1")
+    except Exception:
+        pass
+    try:
+        add_column_if_missing("documents", "uploaded_for_client", "INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    db.commit()
+
+
+def push_notification(client_id, ntype, message, link=""):
+    try:
+        ensure_upgrade_tables()
+        execute_db(
+            "INSERT INTO notifications(client_id,type,message,link) VALUES (?,?,?,?)",
+            (client_id, ntype, message, link),
+        )
+    except Exception:
+        pass
+
+
+def auto_categorize(description):
+    """Return (category_id, type) from rules or None."""
+    rules = query_db("SELECT * FROM categorization_rules ORDER BY id")
+    desc_lower = description.lower()
+    for r in rules:
+        if r["keyword"].lower() in desc_lower:
+            return r["category_id"], r["type"]
+    return None, None
+
+
+def next_due_date(frequency, from_date=None):
+    from datetime import timedelta
+    base = datetime.strptime(from_date, "%Y-%m-%d") if from_date else datetime.now()
+    if frequency == "weekly":
+        return (base + timedelta(weeks=1)).strftime("%Y-%m-%d")
+    if frequency == "biweekly":
+        return (base + timedelta(weeks=2)).strftime("%Y-%m-%d")
+    if frequency == "quarterly":
+        month = base.month + 3
+        year = base.year + month // 13
+        month = month % 12 or 12
+        return base.replace(year=year, month=month).strftime("%Y-%m-%d")
+    if frequency == "annually":
+        return base.replace(year=base.year + 1).strftime("%Y-%m-%d")
+    # default monthly
+    month = base.month % 12 + 1
+    year = base.year + (1 if base.month == 12 else 0)
+    return base.replace(year=year, month=month).strftime("%Y-%m-%d")
+
+
+# ── NOTIFICATION ROUTES ──────────────────────────────────────
+
+@app.route("/notifications/count")
+@login_required
+def notification_count():
+    ensure_upgrade_tables()
+    if current_user.role == "admin":
+        count = query_db("SELECT COUNT(*) c FROM notifications WHERE is_read=0", one=True)["c"]
+    else:
+        count = query_db("SELECT COUNT(*) c FROM notifications WHERE client_id=? AND is_read=0",
+                         (current_user.client_id,), one=True)["c"]
+    from flask import jsonify
+    return jsonify({"count": count})
+
+
+@app.route("/notifications/list")
+@login_required
+def notifications_list():
+    ensure_upgrade_tables()
+    if current_user.role == "admin":
+        items = query_db("""SELECT n.*, c.name client_name FROM notifications n
+                            LEFT JOIN clients c ON c.id=n.client_id
+                            ORDER BY n.id DESC LIMIT 60""")
+    else:
+        items = query_db("SELECT * FROM notifications WHERE client_id=? ORDER BY id DESC LIMIT 40",
+                         (current_user.client_id,))
+    return render_template("notifications_list.html", notifications=items)
+
+
+@app.route("/notifications/mark-read", methods=["POST"])
+@login_required
+def mark_notifications_read():
+    ensure_upgrade_tables()
+    nid = request.form.get("id")
+    if nid:
+        execute_db("UPDATE notifications SET is_read=1 WHERE id=?", (nid,))
+    else:
+        if current_user.role == "admin":
+            execute_db("UPDATE notifications SET is_read=1")
+        else:
+            execute_db("UPDATE notifications SET is_read=1 WHERE client_id=?",
+                       (current_user.client_id,))
+    from flask import jsonify
+    return jsonify({"ok": True})
+
+
+# ── DOCUMENT MANAGEMENT (BOTH SIDES) ─────────────────────────
+
+@app.route("/my/documents", methods=["GET", "POST"])
+@login_required
+@client_required
+def my_documents():
+    ensure_upgrade_tables()
+    if request.method == "POST":
+        f = request.files.get("file")
+        if not f or not f.filename or not allowed_file(f.filename):
+            flash("Choose a valid file (pdf, png, jpg, doc, docx, xls, xlsx, csv, txt).", "danger")
+            return redirect(url_for("my_documents"))
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(f.filename)}"
+        f.save(UPLOAD_DIR / filename)
+        doc_name = request.form.get("document_name") or f.filename
+        execute_db(
+            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Uploaded by Client',?,?,'Tax Documents',?,1)",
+            (current_user.client_id, doc_name, doc_name, filename,
+             request.form.get("tax_year"), request.form.get("notes"),
+             current_user.name),
+        )
+        push_notification(
+            current_user.client_id, "document",
+            f"You uploaded: {doc_name}",
+            "/my/documents",
+        )
+        flash("Document uploaded successfully.", "success")
+        return redirect(url_for("my_documents"))
+
+    docs = query_db(
+        "SELECT *, COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND visible_to_client=1 ORDER BY id DESC",
+        (current_user.client_id,),
+    )
+    categories = ["Tax Documents", "Identification", "Payroll", "Bank Statements", "Receipts", "Other"]
+    return render_template("my_documents.html", documents=docs, categories=categories,
+                           current_year=datetime.now().year)
+
+
+@app.route("/admin/documents/upload", methods=["GET", "POST"])
 @login_required
 @admin_required
-def system_check():
-    checks = []
+def admin_upload_document():
+    ensure_upgrade_tables()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    if request.method == "POST":
+        client_id = request.form.get("client_id")
+        f = request.files.get("file")
+        if not f or not f.filename or not allowed_file(f.filename):
+            flash("Choose a valid file.", "danger")
+            return redirect(url_for("admin_upload_document"))
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{secure_filename(f.filename)}"
+        f.save(UPLOAD_DIR / filename)
+        doc_name = request.form.get("document_name") or f.filename
+        visible = 1 if request.form.get("visible_to_client") else 0
+        execute_db(
+            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client,uploaded_for_client) VALUES (?,?,?,?,?,'Admin Upload',?,?,?,1,?,?)",
+            (client_id, doc_name, doc_name, filename,
+             request.form.get("tax_year"), request.form.get("notes"),
+             request.form.get("category") or "Tax Documents",
+             current_user.name, visible, 1),
+        )
+        if visible:
+            push_notification(
+                client_id, "document",
+                f"New document available: {doc_name}",
+                "/my/documents",
+            )
+        log_activity(client_id, "Document Upload", f"Admin uploaded: {doc_name}", "")
+        flash("Document uploaded to client.", "success")
+        return redirect(url_for("documents"))
+    return render_template("admin_upload_document.html", clients=clients,
+                           categories=["Tax Documents", "Identification", "Payroll",
+                                       "Bank Statements", "Receipts", "Engagement Letters",
+                                       "Signed Returns", "Other"],
+                           current_year=datetime.now().year)
 
-    try:
-        query_db("SELECT COUNT(*) total FROM users", one=True)
-        checks.append(("Database connection", "PASS", "Database is reachable."))
-    except Exception as e:
-        checks.append(("Database connection", "FAIL", str(e)))
 
-    try:
-        query_db("SELECT COUNT(*) total FROM clients", one=True)
-        checks.append(("Clients table", "PASS", "Clients table is reachable."))
-    except Exception as e:
-        checks.append(("Clients table", "FAIL", str(e)))
+@app.route("/documents/<int:doc_id>/toggle-visibility", methods=["POST"])
+@login_required
+@admin_required
+def toggle_document_visibility(doc_id):
+    doc = query_db("SELECT * FROM documents WHERE id=?", (doc_id,), one=True)
+    if not doc:
+        abort(404)
+    new_val = 0 if doc["visible_to_client"] else 1
+    execute_db("UPDATE documents SET visible_to_client=? WHERE id=?", (new_val, doc_id))
+    flash("Document visibility updated.", "success")
+    return redirect(url_for("documents"))
 
-    try:
-        query_db("SELECT COUNT(*) total FROM documents", one=True)
-        checks.append(("Documents table", "PASS", "Documents table is reachable."))
-    except Exception as e:
-        checks.append(("Documents table", "FAIL", str(e)))
 
-    try:
-        query_db("SELECT COUNT(*) total FROM messages", one=True)
-        checks.append(("Messages table", "PASS", "Messages table is reachable."))
-    except Exception as e:
-        checks.append(("Messages table", "FAIL", str(e)))
+@app.route("/documents/<int:doc_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_document(doc_id):
+    doc = query_db("SELECT * FROM documents WHERE id=?", (doc_id,), one=True)
+    if not doc:
+        abort(404)
+    if doc["filename"]:
+        try:
+            (UPLOAD_DIR / doc["filename"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+    execute_db("DELETE FROM documents WHERE id=?", (doc_id,))
+    flash("Document deleted.", "success")
+    return redirect(url_for("documents"))
 
-    try:
-        query_db("SELECT COUNT(*) total FROM tax_returns", one=True)
-        checks.append(("Tax returns table", "PASS", "Tax returns table is reachable."))
-    except Exception as e:
-        checks.append(("Tax returns table", "FAIL", str(e)))
 
-    html = """
-    <div class="hero">
-      <h1>PPT System Health Check</h1>
-      <p>Safe diagnostic page for Pinnacle Performance Tax & Accounting.</p>
-    </div>
+# ── BOOKKEEPING AUTOMATION ───────────────────────────────────
 
-    <div class="card">
-      <h2>System Status</h2>
-      <table>
-        <tr>
-          <th>Check</th>
-          <th>Status</th>
-          <th>Details</th>
-        </tr>
-        {% for name, status, detail in checks %}
-        <tr>
-          <td>{{ name }}</td>
-          <td>
-            {% if status == "PASS" %}
-              <span class="badge">PASS</span>
-            {% else %}
-              <span style="display:inline-block;border-radius:999px;background:#fee2e2;color:#991b1b;padding:5px 10px;font-weight:900;font-size:12px;">FAIL</span>
-            {% endif %}
-          </td>
-          <td>{{ detail }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </div>
+@app.route("/bookkeeping/csv-import", methods=["GET", "POST"])
+@login_required
+@admin_required
+def csv_import():
+    ensure_upgrade_tables()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+    if request.method == "POST":
+        import csv, io
+        client_id = request.form.get("client_id")
+        f = request.files.get("csvfile")
+        if not f or not f.filename:
+            flash("Please choose a CSV file.", "danger")
+            return redirect(url_for("csv_import"))
+        content = f.read().decode("utf-8-sig", errors="replace")
+        reader = csv.DictReader(io.StringIO(content))
+        rows = list(reader)
+        imported = 0
+        skipped = 0
+        for row in rows:
+            # flexible column name matching
+            date_val = (row.get("Date") or row.get("date") or row.get("DATE") or "").strip()
+            desc_val = (row.get("Description") or row.get("description") or row.get("Memo") or row.get("memo") or "").strip()
+            amount_raw = (row.get("Amount") or row.get("amount") or row.get("Debit") or row.get("Credit") or "0").strip()
+            ttype = (row.get("Type") or row.get("type") or "").strip().lower()
+            if not date_val or not desc_val:
+                skipped += 1
+                continue
+            amt = money(amount_raw)
+            if amt == 0:
+                skipped += 1
+                continue
+            if not ttype:
+                ttype = "income" if amt > 0 else "expense"
+            amt = abs(amt)
+            cat_id, auto_type = auto_categorize(desc_val)
+            if auto_type:
+                ttype = auto_type
+            execute_db(
+                "INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)",
+                (date_val, desc_val, ttype, cat_id, client_id, amt, "CSV Import"),
+            )
+            imported += 1
+        execute_db(
+            "INSERT INTO csv_imports(client_id,filename,rows_imported,imported_by) VALUES (?,?,?,?)",
+            (client_id, f.filename, imported, current_user.name),
+        )
+        push_notification(client_id, "bookkeeping", f"{imported} transactions imported from {f.filename}", "/my/bookkeeping")
+        flash(f"Imported {imported} transactions. Skipped {skipped} rows.", "success")
+        return redirect(url_for("transactions"))
+    return render_template("csv_import.html", clients=clients, categories=categories)
 
-    <div class="card">
-      <h2>Backup Reminder</h2>
-      <p>Before adding new upgrades, keep your current working backup saved as:</p>
-      <p><strong>PPT_FULL_BACKUP_MAY_2026.zip</strong></p>
-      <p>This page does not change client data, passwords, login, routes, or database structure.</p>
-    </div>
-    """
-    return page(html, checks=checks)
+
+@app.route("/bookkeeping/recurring", methods=["GET", "POST"])
+@login_required
+@admin_required
+def recurring_transactions():
+    ensure_upgrade_tables()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            client_id = request.form.get("client_id")
+            freq = request.form.get("frequency") or "monthly"
+            execute_db(
+                "INSERT INTO recurring_transactions(client_id,description,type,category_id,amount,frequency,next_due,notes) VALUES (?,?,?,?,?,?,?,?)",
+                (client_id, request.form.get("description"), request.form.get("type"),
+                 request.form.get("category_id") or None,
+                 money(request.form.get("amount")), freq,
+                 next_due_date(freq), request.form.get("notes")),
+            )
+            flash("Recurring transaction added.", "success")
+        elif action == "toggle":
+            rid = request.form.get("id")
+            row = query_db("SELECT is_active FROM recurring_transactions WHERE id=?", (rid,), one=True)
+            if row:
+                execute_db("UPDATE recurring_transactions SET is_active=? WHERE id=?",
+                           (0 if row["is_active"] else 1, rid))
+            flash("Recurring transaction updated.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM recurring_transactions WHERE id=?", (request.form.get("id"),))
+            flash("Recurring transaction deleted.", "success")
+        elif action == "post_now":
+            rid = request.form.get("id")
+            rec = query_db("SELECT * FROM recurring_transactions WHERE id=?", (rid,), one=True)
+            if rec:
+                execute_db(
+                    "INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)",
+                    (datetime.now().strftime("%Y-%m-%d"), rec["description"], rec["type"],
+                     rec["category_id"], rec["client_id"], rec["amount"],
+                     f"Auto-posted from recurring #{rid}"),
+                )
+                execute_db("UPDATE recurring_transactions SET next_due=? WHERE id=?",
+                           (next_due_date(rec["frequency"]), rid))
+                flash("Transaction posted.", "success")
+        return redirect(url_for("recurring_transactions"))
+    rows = query_db("""SELECT r.*,cl.name client_name,c.name category_name
+                       FROM recurring_transactions r
+                       LEFT JOIN clients cl ON cl.id=r.client_id
+                       LEFT JOIN categories c ON c.id=r.category_id
+                       ORDER BY r.id DESC""")
+    return render_template("recurring_transactions.html", rows=rows,
+                           clients=clients, categories=categories,
+                           frequencies=["weekly","biweekly","monthly","quarterly","annually"])
+
+
+@app.route("/bookkeeping/post-due", methods=["POST"])
+@login_required
+@admin_required
+def post_due_recurring():
+    ensure_upgrade_tables()
+    today = datetime.now().strftime("%Y-%m-%d")
+    due = query_db("SELECT * FROM recurring_transactions WHERE is_active=1 AND next_due<=?", (today,))
+    posted = 0
+    for rec in due:
+        execute_db(
+            "INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)",
+            (today, rec["description"], rec["type"], rec["category_id"],
+             rec["client_id"], rec["amount"], f"Auto-posted recurring #{rec['id']}"),
+        )
+        execute_db("UPDATE recurring_transactions SET next_due=? WHERE id=?",
+                   (next_due_date(rec["frequency"], today), rec["id"]))
+        posted += 1
+    flash(f"Posted {posted} recurring transaction(s).", "success")
+    return redirect(url_for("recurring_transactions"))
+
+
+@app.route("/bookkeeping/rules", methods=["GET", "POST"])
+@login_required
+@admin_required
+def categorization_rules():
+    ensure_upgrade_tables()
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db(
+                "INSERT INTO categorization_rules(keyword,category_id,type) VALUES (?,?,?)",
+                (request.form.get("keyword"), request.form.get("category_id"), request.form.get("type")),
+            )
+            flash("Rule added.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM categorization_rules WHERE id=?", (request.form.get("id"),))
+            flash("Rule deleted.", "success")
+        return redirect(url_for("categorization_rules"))
+    rules = query_db("""SELECT r.*,c.name category_name FROM categorization_rules r
+                        LEFT JOIN categories c ON c.id=r.category_id ORDER BY r.id DESC""")
+    return render_template("categorization_rules.html", rules=rules, categories=categories)
+
+
+# ── INVOICE AUTOMATION ───────────────────────────────────────
+
+def mark_overdue_invoices():
+    """Call this on any dashboard load — marks past-due unpaid invoices."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    execute_db(
+        "UPDATE invoices SET status='Overdue' WHERE status NOT IN ('Paid','Overdue') AND due_date IS NOT NULL AND due_date < ?",
+        (today,),
+    )
+
+
+@app.route("/invoices/mark-overdue", methods=["POST"])
+@login_required
+@admin_required
+def run_mark_overdue():
+    mark_overdue_invoices()
+    flash("Overdue invoices updated.", "success")
+    return redirect(url_for("invoices"))
+
+
+@app.route("/invoices/<int:invoice_id>/send-reminder", methods=["POST"])
+@login_required
+@admin_required
+def send_invoice_reminder(invoice_id):
+    inv = query_db("SELECT i.*,c.name client_name FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.id=?", (invoice_id,), one=True)
+    if not inv:
+        abort(404)
+    msg = f"Reminder: Invoice {inv['invoice_number']} for ${inv['amount']:,.2f} is due {inv['due_date'] or 'soon'}. Please log in to your portal to view and pay."
+    execute_db(
+        "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+        (inv["client_id"], "admin", current_user.name, f"Payment Reminder – {inv['invoice_number']}", msg),
+    )
+    push_notification(inv["client_id"], "invoice", f"Payment reminder: {inv['invoice_number']}", "/my/invoices")
+    flash(f"Reminder sent to {inv['client_name']}.", "success")
+    return redirect(url_for("invoices"))
+
+
+@app.route("/invoices/<int:invoice_id>/mark-paid", methods=["POST"])
+@login_required
+@admin_required
+def quick_mark_paid(invoice_id):
+    inv = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
+    if not inv:
+        abort(404)
+    execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?", (invoice_id,))
+    execute_db(
+        "INSERT INTO payments(invoice_id,client_id,amount,method,status,notes) VALUES (?,?,?,'Manual Entry','Paid','Marked paid from invoice list')",
+        (invoice_id, inv["client_id"], inv["amount"]),
+    )
+    push_notification(inv["client_id"], "payment", f"Payment received for invoice {inv['invoice_number']}", "/my/invoices")
+    flash("Invoice marked paid.", "success")
+    return redirect(url_for("invoices"))
+
+
+# ── STANDALONE SERVICE ENTRY (admin — any single service) ────
+# Clients who only want one service (just bookkeeping, just a
+# tax return, just an appointment, etc.) can be entered here
+# without needing to touch every other module.
+
+@app.route("/service-entry", methods=["GET", "POST"])
+@login_required
+@admin_required
+def service_entry():
+    """Universal single-service entry form for admin."""
+    ensure_upgrade_tables()
+    clients = query_db("SELECT id,name,business_name,email FROM clients ORDER BY name")
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+
+    if request.method == "POST":
+        service = request.form.get("service_type")
+        client_id = request.form.get("client_id") or None
+
+        if service == "transaction":
+            execute_db(
+                "INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)",
+                (request.form.get("date") or datetime.now().strftime("%Y-%m-%d"),
+                 request.form.get("description"), request.form.get("ttype"),
+                 request.form.get("category_id") or None, client_id,
+                 money(request.form.get("amount")), request.form.get("notes")),
+            )
+            if client_id:
+                push_notification(client_id, "bookkeeping", "A transaction was recorded on your account.", "/my/bookkeeping")
+            flash("Transaction recorded.", "success")
+
+        elif service == "invoice":
+            inv_num = request.form.get("invoice_number") or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            execute_db(
+                "INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)",
+                (client_id, inv_num,
+                 request.form.get("issue_date") or datetime.now().strftime("%Y-%m-%d"),
+                 request.form.get("due_date"), money(request.form.get("amount")),
+                 request.form.get("status") or "Sent", request.form.get("description")),
+            )
+            if client_id:
+                push_notification(client_id, "invoice", f"New invoice {inv_num} created.", "/my/invoices")
+            flash("Invoice created.", "success")
+
+        elif service == "payment":
+            inv_id = request.form.get("invoice_id") or None
+            inv = query_db("SELECT * FROM invoices WHERE id=?", (inv_id,), one=True) if inv_id else None
+            paid_client = (inv["client_id"] if inv else client_id)
+            execute_db(
+                "INSERT INTO payments(invoice_id,client_id,amount,method,reference,status,notes) VALUES (?,?,?,?,?,'Paid',?)",
+                (inv_id, paid_client, money(request.form.get("amount")),
+                 request.form.get("method") or "Manual Entry",
+                 request.form.get("reference"), request.form.get("notes")),
+            )
+            if inv_id:
+                execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?", (inv_id,))
+            if paid_client:
+                push_notification(paid_client, "payment", "Payment recorded on your account.", "/my/invoices")
+            flash("Payment recorded.", "success")
+
+        elif service == "appointment":
+            execute_db(
+                "INSERT INTO appointments(client_id,title,start_at,end_at,location,meeting_link,status,notes) VALUES (?,?,?,?,?,?,?,?)",
+                (client_id, request.form.get("title") or "Appointment",
+                 request.form.get("start_at"), request.form.get("end_at"),
+                 request.form.get("location"), request.form.get("meeting_link"),
+                 request.form.get("status") or "Scheduled", request.form.get("notes")),
+            )
+            if client_id:
+                push_notification(client_id, "appointment", "An appointment has been scheduled for you.", "/my/appointments")
+            flash("Appointment scheduled.", "success")
+
+        elif service == "tax_return":
+            inv_id = execute_db(
+                "INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,'Sent','Tax return service')",
+                (client_id,
+                 f"TR-{request.form.get('tax_year')}-{datetime.now().strftime('%H%M%S')}",
+                 datetime.now().strftime("%Y-%m-%d"),
+                 request.form.get("due_date"),
+                 money(request.form.get("fee"))),
+            )
+            execute_db(
+                "INSERT INTO tax_returns(client_id,tax_year,service_type,status,due_date,fee,notes,invoice_id) VALUES (?,?,?,?,?,?,?,?)",
+                (client_id, request.form.get("tax_year"),
+                 request.form.get("service_type") or "Individual",
+                 request.form.get("status") or "In Progress",
+                 request.form.get("due_date"), money(request.form.get("fee")),
+                 request.form.get("notes"), inv_id),
+            )
+            if client_id:
+                push_notification(client_id, "tax_return", f"Tax return started for {request.form.get('tax_year')}.", "/my/tax-returns")
+            flash("Tax return created.", "success")
+
+        elif service == "document":
+            f = request.files.get("file")
+            if f and f.filename and allowed_file(f.filename):
+                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{secure_filename(f.filename)}"
+                f.save(UPLOAD_DIR / filename)
+            else:
+                filename = None
+            doc_name = request.form.get("document_name") or (f.filename if f and f.filename else "Document")
+            visible = 1 if request.form.get("visible_to_client") else 0
+            execute_db(
+                "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Admin Entry',?,?,?,?,?)",
+                (client_id, doc_name, doc_name, filename,
+                 request.form.get("tax_year"), request.form.get("notes"),
+                 request.form.get("category") or "Tax Documents",
+                 current_user.name, visible),
+            )
+            if client_id and visible:
+                push_notification(client_id, "document", f"New document available: {doc_name}", "/my/documents")
+            flash("Document saved.", "success")
+
+        elif service == "message":
+            execute_db(
+                "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                (client_id, "admin", current_user.name,
+                 request.form.get("subject") or "Message from Pinnacle Performance Tax",
+                 request.form.get("body")),
+            )
+            if client_id:
+                push_notification(client_id, "message", "You have a new message from the office.", "/my/messages")
+            flash("Message sent.", "success")
+
+        elif service == "crm_lead":
+            execute_db(
+                "INSERT INTO crm_leads(name,phone,email,status,source,follow_up_date,notes,client_id) VALUES (?,?,?,?,?,?,?,?)",
+                (request.form.get("lead_name"), request.form.get("lead_phone"),
+                 request.form.get("lead_email"),
+                 request.form.get("lead_status") or "New",
+                 request.form.get("lead_source"), request.form.get("follow_up_date"),
+                 request.form.get("notes"), client_id or None),
+            )
+            flash("CRM lead added.", "success")
+
+        return redirect(url_for("service_entry"))
+
+    # For payment sub-form: list unpaid invoices
+    open_invoices = query_db("SELECT i.*,c.name client_name FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.status!='Paid' ORDER BY i.id DESC")
+    return render_template("service_entry.html", clients=clients, categories=categories,
+                           open_invoices=open_invoices,
+                           today=datetime.now().strftime("%Y-%m-%d"),
+                           current_year=str(datetime.now().year))
+
+
+# ── WIRING: auto mark overdue on admin dashboard load ────────
+
+@app.before_request
+def auto_maintenance():
+    """Run lightweight auto-tasks on admin requests."""
+    if request.endpoint in ("dashboard", "invoices") and \
+       hasattr(current_user, "role") and current_user.is_authenticated and \
+       current_user.role == "admin":
+        try:
+            mark_overdue_invoices()
+            ensure_upgrade_tables()
+        except Exception:
+            pass
+
+
+# ── INIT ROUTE UPDATE ────────────────────────────────────────
+
+@app.route("/init-upgrade")
+def init_upgrade_route():
+    with app.app_context():
+        init_db()
+        ensure_upgrade_tables()
+        ensure_elite_operations_tables()
+        ensure_workflow_tables()
+        ensure_client_template_columns()
+        ensure_messages_table()
+    return "UPGRADE INIT COMPLETE — all tables ready."
+
+# ============================================================
+# END PPT FULL AUTOMATION UPGRADE PACK
+# ============================================================

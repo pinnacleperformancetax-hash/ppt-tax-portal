@@ -1,29 +1,36 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Admin Control Center</h1>
-<p class="sub">Users, staff permissions, system access, and operational control panels.</p>
-
-<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;">
-  <div style="font-size:34px;font-weight:900;">Admin Control Center</div>
-  <div style="margin-top:8px;opacity:.9;">V31–V35 integrated module loaded.</div>
-</div>
-
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
-
-  <div class="card"><span>Users</span><strong style="font-size:30px;">12</strong></div>
-  <div class="card"><span>Admins</span><strong style="font-size:30px;">3</strong></div>
-  <div class="card"><span>Client Users</span><strong style="font-size:30px;">148</strong></div>
-  <div class="card"><span>Open Tasks</span><strong style="font-size:30px;">22</strong></div>
-</div>
+{% extends "base.html" %}{% block content %}
+<h1>Upload Document to Client</h1>
+<p class="sub">Send a file directly to a client's portal.</p>
 
 <div class="card">
-  <h2 style="margin-top:0;">Module Actions</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-    <a class="btn" href="/dashboard">Dashboard</a>
-    <a class="btn" href="/clients">Clients</a>
-    <a class="btn" href="/crm">CRM</a>
-    <a class="btn" href="/messages">Messages</a>
-    <a class="btn" href="/documents">Documents</a>
-  </div>
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    <div><label>Client *</label>
+      <select name="client_id" required>
+        <option value="">— Select client —</option>
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:span 2"><label>File *</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt" required></div>
+    <div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div>
+    <div><label>Tax Year</label><input type="text" name="tax_year" placeholder="{{ current_year }}"></div>
+    <div><label>Category</label>
+      <select name="category">{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select>
+    </div>
+    <div style="grid-column:span 2"><label>Notes</label><input type="text" name="notes" placeholder="e.g. Please review and sign page 3"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding-top:28px">
+      <input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0">
+      <label style="margin:0;font-size:13px;font-weight:900">Visible to client</label>
+    </div>
+    <div style="grid-column:span 3;display:flex;gap:10px">
+      <button type="submit">⬆️ Upload to Client</button>
+      <a href="/documents" class="btn btn-dark">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="background:#fffbeb;border-color:#fde68a">
+  <p style="margin:0;font-size:13px;color:#78350f">
+    <strong>Tips:</strong> Uncheck "Visible to client" for internal-only files. When visible, the client receives a portal notification. Max file size: 25 MB.
+  </p>
 </div>
 {% endblock %}

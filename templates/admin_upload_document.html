@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block content %}
+<h1>Upload Document to Client</h1>
+<p class="sub">Send a file directly to a client's portal.</p>
+
+<div class="card">
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    <div><label>Client *</label>
+      <select name="client_id" required>
+        <option value="">— Select client —</option>
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:span 2"><label>File *</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt" required></div>
+    <div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div>
+    <div><label>Tax Year</label><input type="text" name="tax_year" placeholder="{{ current_year }}"></div>
+    <div><label>Category</label>
+      <select name="category">{% for cat in categories %}<option>{{ cat }}</option>{% endfor %}</select>
+    </div>
+    <div style="grid-column:span 2"><label>Notes</label><input type="text" name="notes" placeholder="e.g. Please review and sign page 3"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding-top:28px">
+      <input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0">
+      <label style="margin:0;font-size:13px;font-weight:900">Visible to client</label>
+    </div>
+    <div style="grid-column:span 3;display:flex;gap:10px">
+      <button type="submit">⬆️ Upload to Client</button>
+      <a href="/documents" class="btn btn-dark">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="background:#fffbeb;border-color:#fde68a">
+  <p style="margin:0;font-size:13px;color:#78350f">
+    <strong>Tips:</strong> Uncheck "Visible to client" for internal-only files. When visible, the client receives a portal notification. Max file size: 25 MB.
+  </p>
+</div>
+{% endblock %}

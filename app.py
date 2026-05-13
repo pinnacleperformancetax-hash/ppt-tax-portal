@@ -934,7 +934,8 @@ def documents():
 @login_required
 @admin_required
 def settings():
-    return render_template('settings.html')if __name__=='__main__':
+    return render_template('settings.html')
+    if __name__=='__main__':
     with app.app_context(): init_db()
     app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
 # === PPT MY MESSAGES + YEAR END FIX START ===

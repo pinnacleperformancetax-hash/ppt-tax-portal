@@ -1,57 +1,101 @@
 {% extends "base.html" %}
 {% block content %}
+<h1>CRM Pipeline</h1>
+<p class="sub">Track prospects, consultations, active clients, and retention opportunities.</p>
 
-<h1>Internal CRM Timeline</h1>
-<p class="sub">Track client contact history, follow-ups, workflow stage, lead movement, and retention opportunities.</p>
-
-<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+<div style="margin-bottom:24px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#11823b,#0b5f2a);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
     <div>
-      <div style="font-size:34px;font-weight:900;">CRM Timeline + Follow-Up Center</div>
-      <div style="margin-top:8px;opacity:.9;">Lead management, last contact tracking, office notes, and workflow stages.</div>
+      <div style="font-size:34px;font-weight:900;">PPT CRM Pipeline Center</div>
+      <div style="margin-top:8px;font-size:15px;opacity:.95;">Lead → Consultation → Active Client → Retention.</div>
     </div>
-    <span style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:800;">V18 CRM</span>
+    <a href="/service-entry?svc=crm_lead" style="background:rgba(255,255,255,.18);padding:12px 18px;border-radius:14px;font-weight:900;color:white">➕ Add Lead</a>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-bottom:24px;">
-  <div class="card" style="border-left:6px solid #ef4444!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Needs Contact</div><div style="font-size:32px;font-weight:900;color:#ef4444;">3</div></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Consultations</div><div style="font-size:32px;font-weight:900;color:#f59e0b;">5</div></div>
-  <div class="card" style="border-left:6px solid #11823b!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Active Clients</div><div style="font-size:32px;font-weight:900;color:#11823b;">8</div></div>
-  <div class="card" style="border-left:6px solid #0b5f2a!important;"><div style="font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b;">Retention</div><div style="font-size:32px;font-weight:900;color:#0b5f2a;">4</div></div>
+<!-- Live metrics -->
+{% set new_leads = leads|selectattr('status','equalto','New')|list|length if leads else 0 %}
+{% set contacted = leads|selectattr('status','in',['Contacted','Qualified'])|list|length if leads else 0 %}
+{% set converted = leads|selectattr('status','equalto','Converted')|list|length if leads else 0 %}
+{% set followup_needed = leads|selectattr('follow_up_date')|list|length if leads else 0 %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px">
+  <div class="card" style="border-left:6px solid #64748b!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">New Leads</div><div style="font-size:32px;font-weight:900;color:#64748b">{{ new_leads }}</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">In Progress</div><div style="font-size:32px;font-weight:900;color:#f59e0b">{{ contacted }}</div></div>
+  <div class="card" style="border-left:6px solid #11823b!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Converted</div><div style="font-size:32px;font-weight:900;color:#11823b">{{ converted }}</div></div>
+  <div class="card" style="border-left:6px solid #ef4444!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Follow-Ups</div><div style="font-size:32px;font-weight:900;color:#ef4444">{{ followup_needed }}</div></div>
 </div>
 
-<div style="display:grid;grid-template-columns:1.1fr .9fr;gap:20px;margin-bottom:24px;">
-  <div class="card">
-    <h2 style="margin-top:0;">Client Timeline Tracking</h2>
-    <div style="display:grid;gap:12px;">
-      <div style="padding:14px;border-radius:16px;background:#f8fafc;border-left:6px solid #11823b;"><strong>Last Contact</strong><br><span style="color:#64748b;">Track calls, emails, portal messages, and in-office updates.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#fff7ed;border-left:6px solid #f59e0b;"><strong>Follow-Up Needed</strong><br><span style="color:#64748b;">Move clients into follow-up when no response after 7 days.</span></div>
-      <div style="padding:14px;border-radius:16px;background:#fef2f2;border-left:6px solid #ef4444;"><strong>Priority Note</strong><br><span style="color:#64748b;">High-value or urgent clients can be flagged for same-day action.</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2 style="margin-top:0;">Workflow Stages</h2>
-    <div style="display:grid;gap:10px;">
-      <div style="padding:12px;border-radius:14px;background:#f8fafc;">Lead</div>
-      <div style="padding:12px;border-radius:14px;background:#fff7ed;">Consultation</div>
-      <div style="padding:12px;border-radius:14px;background:#f0fdf4;">Active Client</div>
-      <div style="padding:12px;border-radius:14px;background:#ecfeff;">Waiting Documents</div>
-      <div style="padding:12px;border-radius:14px;background:#f8fafc;">Retention / Planning</div>
-    </div>
-  </div>
-</div>
-
+<!-- Add lead form -->
 <div class="card">
-  <h2 style="margin-top:0;">CRM Quick Actions</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-    <a class="btn" href="/clients">Clients</a>
-    <a class="btn" href="/messages">Messages</a>
-    <a class="btn" href="/appointments">Appointments</a>
-    <a class="btn" href="/documents">Documents</a>
-    <a class="btn" href="/invoices">Invoices</a>
+  <h2 style="margin-top:0">Add New Lead</h2>
+  <form method="POST" class="grid grid-3">
+    <div><label>Name</label><input name="name" placeholder="Full name" required></div>
+    <div><label>Phone</label><input name="phone" placeholder="478-000-0000"></div>
+    <div><label>Email</label><input name="email" type="email" placeholder="email@example.com"></div>
+    <div><label>Status</label>
+      <select name="status">
+        <option>New</option><option>Contacted</option><option>Qualified</option>
+        <option>Proposal Sent</option><option>Converted</option><option>Lost</option>
+      </select>
+    </div>
+    <div><label>Source</label><input name="source" placeholder="Referral, Google, Walk-in..."></div>
+    <div><label>Follow-up Date</label><input name="follow_up_date" type="date"></div>
+    <div><label>Link to Client</label>
+      <select name="client_id">
+        <option value="">— Not a client yet —</option>
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:span 2"><label>Notes</label><input name="notes" placeholder="Notes about this lead"></div>
+    <div style="grid-column:span 3"><button>Save Lead</button></div>
+  </form>
+</div>
+
+<!-- Pipeline board -->
+<div class="card">
+  <h2 style="margin-top:0">Pipeline Board</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">
+    <div style="padding:18px;border-radius:18px;background:#f8fafc;border:1px solid #e5e7eb"><strong>Lead</strong><p style="color:#64748b">New inquiry or prospect.</p><span class="pill">Start</span></div>
+    <div style="padding:18px;border-radius:18px;background:#fff7ed;border:1px solid #fed7aa"><strong>Consultation</strong><p style="color:#64748b">Appointment or discovery call.</p><span class="pill warn">Follow-up</span></div>
+    <div style="padding:18px;border-radius:18px;background:#f0fdf4;border:1px solid #bbf7d0"><strong>Active Client</strong><p style="color:#64748b">Portal opened and documents requested.</p><span class="pill">Active</span></div>
+    <div style="padding:18px;border-radius:18px;background:#e8f5ec;border:1px solid #bbf7d0"><strong>Retention</strong><p style="color:#64748b">Bookkeeping, planning, or next season nurture.</p><span class="pill">Growth</span></div>
   </div>
 </div>
 
+<!-- Leads table -->
+<div class="card">
+  <h2 style="margin-top:0">All Leads</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Status</th><th>Source</th><th>Follow-up</th><th>Client</th><th>Notes</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for l in leads %}
+    <tr>
+      <td><strong>{{ l.name }}</strong></td>
+      <td style="font-size:13px">{{ l.phone or '—' }}</td>
+      <td style="font-size:13px">{{ l.email or '—' }}</td>
+      <td>
+        {% if l.status == 'Converted' %}<span class="pill">✓ Converted</span>
+        {% elif l.status == 'Lost' %}<span class="pill warn">Lost</span>
+        {% elif l.status == 'New' %}<span class="pill" style="background:#f1f5f9!important;color:#475569!important">New</span>
+        {% else %}<span class="pill warn">{{ l.status }}</span>{% endif %}
+      </td>
+      <td style="font-size:12px;color:#475569">{{ l.lead_source or l.source or '—' }}</td>
+      <td style="font-size:12px;color:{{ '#b91c1c' if l.follow_up_date and l.follow_up_date <= today else '#475569' }}">
+        {{ l.follow_up_date or '—' }}
+      </td>
+      <td style="font-size:12px">{{ l.client_name or '—' }}</td>
+      <td style="font-size:12px;color:#475569;max-width:160px">{{ l.notes or '—' }}</td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <a href="/service-entry?svc=appointment" style="padding:5px 10px;font-size:12px;border-radius:8px;background:#e8f5ec;color:#123d22;font-weight:800">📅 Appt</a>
+          <a href="/service-entry?svc=message" style="padding:5px 10px;font-size:12px;border-radius:8px;background:#f1f5f9;color:#0f172a;font-weight:800">✉️ Msg</a>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" style="color:#475569;text-align:center;padding:20px">No leads yet. Add one above.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
 {% endblock %}

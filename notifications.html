@@ -1,29 +1,51 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Notification Command Center</h1>
-<p class="sub">Centralized alert system for documents, invoices, appointments, messages, and workflow activity.</p>
+{% extends "base.html" %}{% block content %}
+<h1>Notifications</h1>
+{% set unread = notifications|selectattr('is_read','equalto',0)|list|length %}
+<p class="sub">{% if unread > 0 %}<span class="pill warn">{{ unread }} unread</span>{% else %}<span class="pill">All caught up ✓</span>{% endif %}</p>
 
-<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;">
-  <div style="font-size:34px;font-weight:900;">Notification Command Center</div>
-  <div style="margin-top:8px;opacity:.9;">V31–V35 integrated module loaded.</div>
+<div class="quickbar">
+  <form method="POST" action="/notifications/mark-read">
+    <button type="submit">✅ Mark all read</button>
+  </form>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
-
-  <div class="card" style="border-left:6px solid #ef4444!important;"><span>Critical</span><strong style="font-size:30px;color:#ef4444;">4</strong></div>
-  <div class="card" style="border-left:6px solid #f59e0b!important;"><span>Urgent</span><strong style="font-size:30px;color:#f59e0b;">7</strong></div>
-  <div class="card" style="border-left:6px solid #0891b2!important;"><span>Info</span><strong style="font-size:30px;color:#0891b2;">3</strong></div>
-  <div class="card" style="border-left:6px solid #11823b!important;"><span>Resolved</span><strong style="font-size:30px;color:#11823b;">11</strong></div>
-</div>
-
-<div class="card">
-  <h2 style="margin-top:0;">Module Actions</h2>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-    <a class="btn" href="/dashboard">Dashboard</a>
-    <a class="btn" href="/clients">Clients</a>
-    <a class="btn" href="/crm">CRM</a>
-    <a class="btn" href="/messages">Messages</a>
-    <a class="btn" href="/documents">Documents</a>
+{% if notifications %}
+<div class="card" style="padding:0;overflow:hidden">
+  {% for n in notifications %}
+  <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid #e5e7eb;background:{{ '#f0fdf4' if not n.is_read else '#fff' }}">
+    <div style="font-size:22px;padding-top:2px;min-width:28px;text-align:center">
+      {% if n.type=='document' %}📂
+      {% elif n.type=='invoice' %}🧾
+      {% elif n.type=='payment' %}💳
+      {% elif n.type=='message' %}✉️
+      {% elif n.type=='appointment' %}📅
+      {% elif n.type=='bookkeeping' %}💰
+      {% elif n.type=='tax_return' %}📁
+      {% else %}🔔{% endif %}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:{{ '900' if not n.is_read else '400' }};color:#111827">{{ n.message }}</div>
+      <div style="margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        {% if current_user.role=='admin' and n.client_name %}<span class="pill">{{ n.client_name }}</span>{% endif %}
+        <span style="font-size:11px;color:#475569">{{ n.created_at[:16].replace('T',' ') if n.created_at else '' }}</span>
+        {% if not n.is_read %}<span class="pill">New</span>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+      {% if n.link %}<a href="{{ n.link }}" class="btn" style="padding:6px 12px;font-size:12px">View →</a>{% endif %}
+      {% if not n.is_read %}
+      <form method="POST" action="/notifications/mark-read">
+        <input type="hidden" name="id" value="{{ n.id }}">
+        <button style="padding:5px 10px;font-size:11px;background:#f1f5f9;color:#475569">Mark read</button>
+      </form>
+      {% endif %}
+    </div>
   </div>
+  {% endfor %}
 </div>
+{% else %}
+<div class="card">
+  <p style="color:#475569;text-align:center;padding:30px">No notifications yet. They will appear here when invoices, documents, appointments, and messages are created.</p>
+</div>
+{% endif %}
 {% endblock %}

@@ -1,68 +1,83 @@
-
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#11823b!important;
-  --ppt-green-dark:#0b5f2a!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#11823b!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#11823b!important;
-}
-</style>
-
 {% extends "base.html" %}
 {% block content %}
 <h1>Document Requests</h1>
-<div class="card"><h2>Request Document</h2><form method="POST" class="grid grid-3">
-<div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}{% if c.email %} - {{ c.email }}{% endif %}</option>{% endfor %}</select></div>
-<div><label>Title</label><input name="title" placeholder="Bank statements"></div>
-<div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Identification</option><option>Other</option></select></div>
-<div><label>Tax Year</label><input name="tax_year"></div><div><label>Due Date</label><input type="date" name="due_date"></div>
-<div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div><div style="grid-column:1/-1"><button>Create Request</button></div>
-</form></div>
-<div class="card"><h2>All Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Category</th><th>Year</th><th>Status</th><th>Due</th><th>Action</th></tr></thead><tbody>{% for r in requests %}<tr><td>{{ r.client_name }}</td><td>{{ r.title }}</td><td>{{ r.category }}</td><td>{{ r.tax_year }}</td><td><span class="pill {% if r.status!='Completed' %}warn{% endif %}">{{ r.status }}</span></td><td>{{ r.due_date }}</td><td>{% if r.status!='Completed' %}<form method="POST" action="/document-requests/{{ r.id }}/complete"><button>Complete</button></form>{% else %}Done{% endif %}</td></tr>{% else %}<tr><td colspan="7">No requests yet.</td></tr>{% endfor %}</tbody></table></div></div>
+<p class="sub">Request missing documents from clients.</p>
+
+<div class="card">
+  <h2 style="margin-top:0">New Request</h2>
+  <form method="POST" class="grid grid-3">
+    <div>
+      <label>Client</label>
+      <select name="client_id" required>
+        <option value="">— Select client —</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:span 2">
+      <label>Document Title</label>
+      <input type="text" name="title" placeholder="e.g. 2023 W-2, Bank Statement" required>
+    </div>
+    <div>
+      <label>Category</label>
+      <select name="category">
+        <option>Tax Documents</option>
+        <option>Identification</option>
+        <option>Payroll</option>
+        <option>Bank Statements</option>
+        <option>Receipts</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div>
+      <label>Tax Year</label>
+      <input type="text" name="tax_year" placeholder="2024">
+    </div>
+    <div>
+      <label>Due Date</label>
+      <input type="date" name="due_date">
+    </div>
+    <div style="grid-column:span 3">
+      <label>Notes</label>
+      <textarea name="notes" placeholder="Optional instructions for the client"></textarea>
+    </div>
+    <div><button type="submit">Send Request</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">{{ requests|length }} Request{{ 's' if requests|length != 1 }}</h2>
+  {% if requests %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Client</th><th>Document</th><th>Category</th><th>Year</th><th>Due</th><th>Status</th><th>Requested</th><th></th></tr></thead>
+      <tbody>
+      {% for r in requests %}
+      <tr>
+        <td><strong>{{ r.client_name or '—' }}</strong></td>
+        <td>{{ r.title }}</td>
+        <td style="font-size:12px">{{ r.category or '—' }}</td>
+        <td style="font-size:12px">{{ r.tax_year or '—' }}</td>
+        <td style="font-size:12px;color:#475569">{{ r.due_date or '—' }}</td>
+        <td><span class="pill{% if r.status != 'Completed' %} warn{% endif %}">{{ r.status }}</span></td>
+        <td style="font-size:12px;color:#475569">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+        <td>
+          {% if r.status != 'Completed' %}
+          <form method="POST" action="/document-requests/{{ r.id }}/complete">
+            <button style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">✓ Done</button>
+          </form>
+          {% else %}
+          <span style="font-size:12px;color:#11823b">✓ Complete</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color:#475569;text-align:center;padding:20px">No document requests yet. Create one above.</p>
+  {% endif %}
+</div>
 {% endblock %}

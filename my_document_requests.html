@@ -1,63 +1,35 @@
-
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#11823b!important;
-  --ppt-green-dark:#0b5f2a!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#11823b!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#11823b!important;
-}
-</style>
-
 {% extends "base.html" %}
 {% block content %}
-<h1>My Document Requests</h1>
-<p class="sub">Documents requested by Pinnacle Performance Tax.</p>
-<div class="card"><div class="table-wrap"><table><thead><tr><th>Requested</th><th>Title</th><th>Category</th><th>Year</th><th>Status</th><th>Due</th><th>Notes</th><th>Action</th></tr></thead><tbody>{% for r in requests %}<tr><td>{{ r.created_at }}</td><td>{{ r.title }}</td><td>{{ r.category }}</td><td>{{ r.tax_year }}</td><td><span class="pill {% if r.status!='Completed' %}warn{% endif %}">{{ r.status }}</span></td><td>{{ r.due_date }}</td><td>{{ r.notes }}</td><td>{% if r.status!='Completed' %}<form method="POST" action="/document-requests/{{ r.id }}/complete"><button>Mark Complete</button></form>{% else %}Done{% endif %}</td></tr>{% else %}<tr><td colspan="8">No document requests.</td></tr>{% endfor %}</tbody></table></div></div>
-<div class="quickbar"><a class="btn" href="/client-dashboard">Upload Documents</a></div>
+<h1>Document Requests</h1>
+<p class="sub">Documents requested by the office.</p>
+
+{% if requests %}
+<div class="card" style="padding:0;overflow:hidden">
+  {% for r in requests %}
+  <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid #e5e7eb;background:{{ '#f0fdf4' if r.status != 'Completed' else '#fff' }}">
+    <div style="flex:1">
+      <div style="font-weight:900;font-size:14px">{{ r.title }}</div>
+      <div style="font-size:12px;color:#475569;margin-top:3px">
+        {{ r.category or '' }}
+        {% if r.tax_year %} · {{ r.tax_year }}{% endif %}
+        {% if r.due_date %} · Due {{ r.due_date }}{% endif %}
+      </div>
+      {% if r.notes %}
+      <div style="font-size:12px;color:#374151;margin-top:4px">{{ r.notes }}</div>
+      {% endif %}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <span class="pill{% if r.status != 'Completed' %} warn{% endif %}">{{ r.status }}</span>
+      {% if r.status != 'Completed' %}
+      <a href="/my/documents" class="btn" style="font-size:12px;padding:5px 10px">⬆️ Upload</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <p style="color:#475569;text-align:center;padding:30px">No document requests from the office yet.</p>
+</div>
+{% endif %}
 {% endblock %}

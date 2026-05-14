@@ -10,8 +10,17 @@ from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
-UPLOAD_DIR = BASE_DIR / "static" / "uploads"
-INSTANCE_DIR.mkdir(exist_ok=True); UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Support persistent disk via UPLOAD_DIR env var (Render persistent disk)
+_upload_env = os.environ.get("UPLOAD_DIR", "")
+if _upload_env:
+    UPLOAD_DIR = Path(_upload_env)
+else:
+    UPLOAD_DIR = BASE_DIR / "static" / "uploads"
+
+# Always ensure directories exist
+INSTANCE_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = INSTANCE_DIR / "ppt_portal.db"
 ALLOWED_UPLOADS = {"pdf","png","jpg","jpeg","doc","docx","xls","xlsx","csv","txt"}
 BRAND = {"business_name":"Pinnacle Performance Tax and Accounting","website":"www.pinnacleperformancetax.com","email":"pinnacleperformancetax@gmail.com","phone":"478-338-1632"}

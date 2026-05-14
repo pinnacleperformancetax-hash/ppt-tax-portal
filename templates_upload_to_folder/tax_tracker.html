@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Return Tracker</h1>
+<p class="sub">Update workflow stages and track every return through completion.</p>
+
+<!-- Metrics -->
+{% set total = returns|length if returns else 0 %}
+{% set pending = returns|selectattr('workflow_stage','equalto','Pending')|list|length if returns else 0 %}
+{% set in_prep = returns|selectattr('workflow_stage','in',['In Preparation','Waiting on Docs'])|list|length if returns else 0 %}
+{% set review = returns|selectattr('workflow_stage','equalto','Review')|list|length if returns else 0 %}
+{% set done = returns|selectattr('workflow_stage','in',['Filed','Completed'])|list|length if returns else 0 %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px">
+  <div class="metric"><span>Total</span><strong>{{ total }}</strong></div>
+  <div class="metric"><span>Pending</span><strong style="color:#64748b">{{ pending }}</strong></div>
+  <div class="metric"><span>In Prep</span><strong style="color:#f59e0b">{{ in_prep }}</strong></div>
+  <div class="metric"><span>Review</span><strong style="color:#0891b2">{{ review }}</strong></div>
+  <div class="metric"><span>Complete</span><strong style="color:#11823b">{{ done }}</strong></div>
+</div>
+
+<!-- Stage pipeline visual -->
+<div class="card">
+  <h2 style="margin-top:0">Workflow Stages</h2>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+    {% for stage, color in [('Pending','#64748b'),('Waiting on Docs','#ef4444'),('In Preparation','#f59e0b'),('Review','#0891b2'),('Filed','#11823b'),('Completed','#0b5f2a')] %}
+    <div style="text-align:center;padding:12px 6px;border-radius:14px;background:#f8fafc;border-top:4px solid {{ color }}">
+      <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase">{{ stage }}</div>
+      <div style="font-size:22px;font-weight:900;color:{{ color }};margin-top:4px">
+        {{ returns|selectattr('workflow_stage','equalto',stage)|list|length if returns else 0 }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Returns table -->
+<div class="card">
+  <h2 style="margin-top:0">All Returns</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Stage</th><th>Fee</th><th>Due</th><th>Update Stage</th></tr></thead>
+    <tbody>
+    {% for r in returns %}
+    <tr>
+      <td><strong>{{ r.client_name }}</strong></td>
+      <td>{{ r.tax_year }}</td>
+      <td style="font-size:12px">{{ r.service_type }}</td>
+      <td>
+        {% if r.status in ['Filed','Completed'] %}<span class="pill">✓ {{ r.status }}</span>
+        {% elif r.status == 'Waiting on Client' %}<span class="pill warn">⏳ Waiting</span>
+        {% else %}<span class="pill warn">{{ r.status }}</span>{% endif %}
+      </td>
+      <td>
+        {% set stage = r.workflow_stage or r.status %}
+        {% if stage in ['Filed','Completed'] %}<span class="pill">{{ stage }}</span>
+        {% elif stage == 'Review' %}<span class="pill" style="background:#ecfeff!important;color:#0891b2!important">{{ stage }}</span>
+        {% elif stage == 'In Preparation' %}<span class="pill warn">{{ stage }}</span>
+        {% elif stage == 'Waiting on Docs' %}<span class="pill" style="background:#fef2f2!important;color:#ef4444!important">{{ stage }}</span>
+        {% else %}<span class="pill" style="background:#f1f5f9!important;color:#475569!important">{{ stage }}</span>{% endif %}
+      </td>
+      <td>${{ "%.2f"|format(r.fee|float) if r.fee else '0.00' }}</td>
+      <td style="font-size:12px;color:#475569">{{ r.due_date or '—' }}</td>
+      <td>
+        <form method="POST" action="/tax-tracker/{{ r.id }}/stage" style="display:flex;gap:6px;align-items:center">
+          <select name="workflow_stage" style="padding:6px 8px;font-size:12px;border-radius:8px">
+            <option value="Pending" {{ 'selected' if (r.workflow_stage or '') == 'Pending' }}>Pending</option>
+            <option value="Waiting on Docs" {{ 'selected' if (r.workflow_stage or '') == 'Waiting on Docs' }}>Waiting on Docs</option>
+            <option value="In Preparation" {{ 'selected' if (r.workflow_stage or '') == 'In Preparation' }}>In Preparation</option>
+            <option value="Review" {{ 'selected' if (r.workflow_stage or '') == 'Review' }}>Review</option>
+            <option value="Filed" {{ 'selected' if (r.workflow_stage or '') == 'Filed' }}>Filed</option>
+            <option value="Completed" {{ 'selected' if (r.workflow_stage or '') == 'Completed' }}>Completed</option>
+          </select>
+          <button style="padding:6px 10px;font-size:12px;border-radius:8px">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" style="color:#475569;text-align:center;padding:20px">No tax returns yet. <a href="/tax-returns" style="color:#11823b;font-weight:800">Create one →</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}{% block content %}
+<h1>Recurring Transactions</h1>
+<p class="sub">Auto-post repeating income and expenses on schedule.</p>
+
+<div class="card">
+  <h2>Add Recurring Transaction</h2>
+  <form method="POST" class="grid grid-3">
+    <input type="hidden" name="action" value="add">
+    <div><label>Client</label>
+      <select name="client_id"><option value="">— No specific client —</option>
+      {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    </div>
+    <div style="grid-column:span 2"><label>Description *</label><input type="text" name="description" placeholder="e.g. QuickBooks Monthly" required></div>
+    <div><label>Amount *</label><input type="number" name="amount" step="0.01" placeholder="0.00" required></div>
+    <div><label>Type *</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div>
+    <div><label>Frequency</label>
+      <select name="frequency">{% for f in frequencies %}<option value="{{ f }}">{{ f|title }}</option>{% endfor %}</select>
+    </div>
+    <div style="grid-column:span 2"><label>Category</label>
+      <select name="category_id"><option value="">— Uncategorized —</option>
+      {% for cat in categories %}<option value="{{ cat.id }}">[{{ cat.kind|title }}] {{ cat.name }}</option>{% endfor %}</select>
+    </div>
+    <div><label>Notes</label><input type="text" name="notes" placeholder="Optional"></div>
+    <div style="grid-column:span 3"><button type="submit">➕ Add Recurring</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <h2 style="margin:0">{{ rows|length }} Recurring Transaction{{ 's' if rows|length != 1 }}</h2>
+    <form method="POST" action="/bookkeeping/post-due">
+      <button type="submit" class="btn">⚡ Post All Due Today</button>
+    </form>
+  </div>
+  {% if rows %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Description</th><th>Client</th><th>Amount</th><th>Type</th><th>Category</th><th>Frequency</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr style="{{ 'opacity:.5' if not r.is_active }}">
+      <td><strong>{{ r.description }}</strong>{% if r.notes %}<br><span style="font-size:11px;color:#475569">{{ r.notes }}</span>{% endif %}</td>
+      <td>{{ r.client_name or '—' }}</td>
+      <td style="font-weight:900;color:{{ '#123d22' if r.type=='income' else '#b91c1c' }}">${{ "%.2f"|format(r.amount) }}</td>
+      <td><span class="pill{{ '' if r.type=='income' else ' warn' }}">{{ r.type|title }}</span></td>
+      <td style="font-size:12px">{{ r.category_name or '—' }}</td>
+      <td><span class="pill">{{ r.frequency|title }}</span></td>
+      <td style="font-size:12px{% if r.next_due and r.next_due <= today %};color:#b91c1c;font-weight:900{% endif %}">
+        {{ r.next_due or '—' }}{% if r.next_due and r.next_due <= today %} ⚠️{% endif %}
+      </td>
+      <td><span class="pill{{ '' if r.is_active else ' warn' }}">{{ 'Active' if r.is_active else 'Paused' }}</span></td>
+      <td>
+        <form method="POST" style="display:inline"><input type="hidden" name="action" value="post_now"><input type="hidden" name="id" value="{{ r.id }}"><button style="padding:5px 10px;font-size:12px">▶ Post</button></form>
+        <form method="POST" style="display:inline;margin-left:4px"><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ r.id }}"><button style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">{{ '⏸' if r.is_active else '▶️' }}</button></form>
+        <form method="POST" style="display:inline;margin-left:4px" onsubmit="return confirm('Delete this recurring transaction?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ r.id }}"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c">🗑</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <p style="color:#475569;text-align:center;padding:20px">No recurring transactions yet. Add one above.</p>
+  {% endif %}
+</div>
+{% endblock %}

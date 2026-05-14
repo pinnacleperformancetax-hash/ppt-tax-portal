@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Planning Center</h1>
+<p class="sub">Tax strategy pipeline, estimated payments, entity review, trader tax planning, and advanced client strategy.</p>
+
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+    <div>
+      <div style="font-size:34px;font-weight:900;">Tax Planning Center</div>
+      <div style="margin-top:8px;opacity:.9;">Strategy sessions, estimated payments, entity reviews, and S-Corp analysis.</div>
+    </div>
+    <a href="/service-entry?svc=appointment" style="padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.16);font-weight:900;color:white">📅 Schedule Strategy Session</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+  <div class="metric"><span>S-Corp Reviews</span><strong>8</strong></div>
+  <div class="metric"><span>TTS Reviews</span><strong>5</strong></div>
+  <div class="metric"><span>Est. Payments</span><strong>14</strong></div>
+  <div class="metric"><span>Strategy Sessions</span><strong>6</strong></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+  <div class="card">
+    <h2 style="margin-top:0">Planning Areas</h2>
+    <div style="display:grid;gap:10px">
+      <div style="padding:14px;border-radius:14px;background:#f0fdf4;border-left:4px solid #11823b"><strong>S-Corp Election Review</strong><p style="color:#64748b;margin:4px 0 0;font-size:13px">Evaluate reasonable salary and savings potential.</p></div>
+      <div style="padding:14px;border-radius:14px;background:#ecfeff;border-left:4px solid #0891b2"><strong>Estimated Payments</strong><p style="color:#64748b;margin:4px 0 0;font-size:13px">Q1–Q4 tracking and penalty avoidance.</p></div>
+      <div style="padding:14px;border-radius:14px;background:#fff7ed;border-left:4px solid #f59e0b"><strong>Trader Tax Status</strong><p style="color:#64748b;margin:4px 0 0;font-size:13px">Mark-to-market elections and wash sale review.</p></div>
+      <div style="padding:14px;border-radius:14px;background:#fef2f2;border-left:4px solid #ef4444"><strong>Entity Structure</strong><p style="color:#64748b;margin:4px 0 0;font-size:13px">LLC vs S-Corp vs C-Corp analysis.</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Follow-Up Actions</h2>
+    <div style="display:grid;gap:10px">
+      <div style="padding:14px;border-radius:14px;background:#fef2f2;border-left:4px solid #ef4444"><strong>Urgent — Q Est. Payment Due</strong><br><span style="color:#64748b;font-size:13px">Send quarterly payment reminders to applicable clients.</span></div>
+      <div style="padding:14px;border-radius:14px;background:#fff7ed;border-left:4px solid #f59e0b"><strong>S-Corp Review Pending</strong><br><span style="color:#64748b;font-size:13px">8 clients flagged for entity review this quarter.</span></div>
+      <div style="padding:14px;border-radius:14px;background:#f0fdf4;border-left:4px solid #11823b"><strong>Strategy Session Ready</strong><br><span style="color:#64748b;font-size:13px">Schedule year-end planning appointments.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Quick Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+    <a class="btn" href="/dashboard">📊 Dashboard</a>
+    <a class="btn" href="/clients">👥 Clients</a>
+    <a class="btn" href="/crm">📋 CRM</a>
+    <a class="btn" href="/messages">✉️ Messages</a>
+    <a class="btn" href="/documents">📂 Documents</a>
+    <a class="btn" href="/tax-returns">📁 Tax Returns</a>
+    <a class="btn btn-dark" href="/service-entry">⚡ Quick Entry</a>
+  </div>
+</div>
+{% endblock %}

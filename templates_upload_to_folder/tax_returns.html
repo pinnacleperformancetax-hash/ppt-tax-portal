@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tax Returns</h1>
+<p class="sub">Create and track tax returns for all clients.</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Create Tax Return</h2>
+  <form method="POST" class="grid grid-3">
+    <div><label>Client</label>
+      <select name="client_id">
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label>Tax Year</label><input name="tax_year" placeholder="2024"></div>
+    <div><label>Service Type</label>
+      <select name="service_type">
+        <option value="Individual">Individual (1040)</option>
+        <option value="Business">Business</option>
+        <option value="S-Corp">S-Corp</option>
+        <option value="Partnership">Partnership</option>
+        <option value="Non-Profit">Non-Profit</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div><label>Status</label>
+      <select name="status">
+        <option value="In Progress">In Progress</option>
+        <option value="Waiting on Client">Waiting on Client</option>
+        <option value="Under Review">Under Review</option>
+        <option value="Completed">Completed</option>
+        <option value="Filed">Filed</option>
+      </select>
+    </div>
+    <div><label>Fee</label><input name="fee" type="number" step="0.01" placeholder="0.00"></div>
+    <div><label>Due Date</label><input name="due_date" type="date"></div>
+    <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional notes about this return"></textarea></div>
+    <div><button>Save Tax Return</button></div>
+  </form>
+</div>
+
+<!-- Summary metrics -->
+{% set total = returns|length if returns else 0 %}
+{% set filed = returns|selectattr('status','in',['Filed','Completed'])|list|length if returns else 0 %}
+{% set in_progress = returns|rejectattr('status','in',['Filed','Completed'])|list|length if returns else 0 %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+  <div class="metric"><span>Total Returns</span><strong>{{ total }}</strong></div>
+  <div class="metric"><span>In Progress</span><strong style="color:#f59e0b">{{ in_progress }}</strong></div>
+  <div class="metric"><span>Filed / Complete</span><strong style="color:#11823b">{{ filed }}</strong></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">All Tax Returns</h2>
+  <div class="table-wrap"><table>
+    <thead>
+      <tr><th>Client</th><th>Year</th><th>Service</th><th>Status</th><th>Fee</th><th>Due</th><th>Invoice</th><th>Notes</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for r in returns %}
+    <tr>
+      <td><strong>{{ r.client_name }}</strong></td>
+      <td>{{ r.tax_year }}</td>
+      <td>{{ r.service_type }}</td>
+      <td>
+        {% if r.status in ['Filed','Completed'] %}
+          <span class="pill">✓ {{ r.status }}</span>
+        {% elif r.status == 'Waiting on Client' %}
+          <span class="pill warn">⏳ Waiting</span>
+        {% else %}
+          <span class="pill" style="background:#fff7ed!important;color:#9a3412!important">{{ r.status }}</span>
+        {% endif %}
+      </td>
+      <td>${{ "%.2f"|format(r.fee|float) if r.fee else '0.00' }}</td>
+      <td style="font-size:12px;color:#475569">{{ r.due_date or '—' }}</td>
+      <td style="font-size:12px">{{ r.invoice_number or '—' }}</td>
+      <td style="font-size:12px;color:#475569;max-width:160px">{{ r.notes or '—' }}</td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <a href="/tax-tracker" style="padding:5px 10px;font-size:12px;border-radius:8px;background:#e8f5ec;color:#123d22;font-weight:800">📋 Track</a>
+          <a href="/service-entry?svc=invoice" style="padding:5px 10px;font-size:12px;border-radius:8px;background:#f1f5f9;color:#0f172a;font-weight:800">🧾 Invoice</a>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" style="color:#475569;text-align:center;padding:20px">No tax returns yet. Create one above.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

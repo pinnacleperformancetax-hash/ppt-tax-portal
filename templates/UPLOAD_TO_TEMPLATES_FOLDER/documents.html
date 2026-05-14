@@ -1,0 +1,94 @@
+{% extends "base.html" %}{% block content %}
+<h1>{% if current_user.role == 'admin' %}Document Center{% else %}My Documents{% endif %}</h1>
+{% if current_user.role == 'admin' %}
+<div class="quickbar">
+  <a class="btn" href="/admin/documents/upload">⬆️ Upload to Client</a>
+  <a class="btn btn-dark" href="/documents/sync-missing">Check Missing Files</a>
+  <a class="btn btn-dark" href="/documents/storage-status">Storage Status</a>
+</div>
+{% endif %}
+<div class="card">
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    {% if current_user.role == 'admin' %}
+    <div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div><label>Document Name</label><input name="document_name" placeholder="Document"></div>
+    <div><label>Category</label><select name="category"><option>Tax Documents</option><option>Bookkeeping</option><option>Bank Statements</option><option>Receipts</option><option>Payroll</option><option>Invoices</option><option>Identification</option><option>Engagement Letters</option><option>Signed Returns</option><option>Other</option></select></div>
+    <div><label>Tax Year</label><input name="tax_year" placeholder="Year"></div>
+    <div><label>Status</label><select name="status"><option>Received</option><option>Uploaded by Client</option><option>Requested</option><option>Reviewed</option><option>Missing File</option></select></div>
+    <div><label>File</label><input type="file" name="file"></div>
+    {% if current_user.role == 'admin' %}
+    <div style="display:flex;align-items:center;gap:8px;padding-top:28px">
+      <input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0">
+      <label style="margin:0;font-size:13px">Visible to client</label>
+    </div>
+    {% endif %}
+    <div style="grid-column:1/-1"><label>Notes</label><textarea name="notes"></textarea></div>
+    <div><button>Save Document</button></div>
+  </form>
+</div>
+<div class="card">
+  <h2>{% if current_user.role == 'admin' %}All Client Documents{% else %}Your Documents{% endif %}</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          {% if current_user.role == 'admin' %}<th>Client</th>{% endif %}
+          <th>Date</th><th>Document</th><th>Category</th><th>Year</th><th>Status</th><th>Uploaded By</th>
+          {% if current_user.role == 'admin' %}<th>Visible</th>{% endif %}
+          <th>File</th>
+          {% if current_user.role == 'admin' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in documents %}
+        <tr>
+          {% if current_user.role == 'admin' %}<td>{{ d.client_name }}</td>{% endif %}
+          <td style="font-size:12px;color:#475569">{{ d.created_at[:10] if d.created_at else '—' }}</td>
+          <td><strong>{{ d.display_name }}</strong>{% if d.notes %}<br><span style="font-size:11px;color:#475569">{{ d.notes }}</span>{% endif %}</td>
+          <td>{{ d.category or '—' }}</td>
+          <td>{{ d.tax_year or '—' }}</td>
+          <td>
+            {% if d.file_missing %}
+              <span class="pill warn">File missing</span>
+            {% else %}
+              <span class="pill">{{ d.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ d.uploaded_by or '—' }}</td>
+          {% if current_user.role == 'admin' %}
+          <td>
+            <form method="POST" action="/documents/{{ d.id }}/toggle-visibility" style="display:inline">
+              {% if d.visible_to_client %}
+                <button style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#123d22" title="Click to hide from client">👁 Visible</button>
+              {% else %}
+                <button style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#475569" title="Click to show to client">🚫 Hidden</button>
+              {% endif %}
+            </form>
+          </td>
+          {% endif %}
+          <td>
+            {% if d.filename and not d.file_missing %}
+              <a class="btn btn-dark" href="/documents/download/{{ d.id }}" style="padding:6px 12px;font-size:12px">⬇️ Download</a>
+            {% elif d.filename and d.file_missing %}
+              <span class="pill warn">Re-upload needed</span>
+            {% else %}
+              <span style="color:#475569;font-size:12px">No file</span>
+            {% endif %}
+          </td>
+          {% if current_user.role == 'admin' %}
+          <td>
+            <form method="POST" action="/documents/{{ d.id }}/delete" onsubmit="return confirm('Delete {{ d.display_name }}? This cannot be undone.')">
+              <button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c">🗑 Delete</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr><td colspan="11">No documents.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -10,10 +10,8 @@ from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
-_upload_env = os.environ.get("UPLOAD_DIR", "")
-UPLOAD_DIR = Path(_upload_env) if _upload_env else BASE_DIR / "static" / "uploads"
-INSTANCE_DIR.mkdir(exist_ok=True)
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = BASE_DIR / "static" / "uploads"
+INSTANCE_DIR.mkdir(exist_ok=True); UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = INSTANCE_DIR / "ppt_portal.db"
 ALLOWED_UPLOADS = {"pdf","png","jpg","jpeg","doc","docx","xls","xlsx","csv","txt"}
 BRAND = {"business_name":"Pinnacle Performance Tax and Accounting","website":"www.pinnacleperformancetax.com","email":"pinnacleperformancetax@gmail.com","phone":"478-338-1632"}
@@ -21,20 +19,6 @@ BRAND = {"business_name":"Pinnacle Performance Tax and Accounting","website":"ww
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "ppt-dev-secret-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
-
-try:
-    from jinja2 import DictLoader, ChoiceLoader as _CL
-    _IT = {}
-    _IT["service_entry.html"] = """{%extends"base.html"%}{%block content%}<h1>Quick Service Entry</h1><style>.svc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:4px}.svc-btn{border:2px solid var(--line);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;background:#fff}.svc-btn:hover,.svc-btn.active{border-color:var(--g);background:#e8f5ec}.svc-btn .ico{font-size:26px;margin-bottom:5px}.svc-btn .lbl{font-size:12px;font-weight:900}.panel{display:none}.panel.active{display:block}</style><div class="card"><h2>Select a Service</h2><div class="svc-grid"><div class="svc-btn" onclick="pick('transaction',this)"><div class="ico">💰</div><div class="lbl">Transaction</div></div><div class="svc-btn" onclick="pick('invoice',this)"><div class="ico">🧾</div><div class="lbl">Invoice</div></div><div class="svc-btn" onclick="pick('payment',this)"><div class="ico">💳</div><div class="lbl">Payment</div></div><div class="svc-btn" onclick="pick('appointment',this)"><div class="ico">📅</div><div class="lbl">Appointment</div></div><div class="svc-btn" onclick="pick('tax_return',this)"><div class="ico">📁</div><div class="lbl">Tax Return</div></div><div class="svc-btn" onclick="pick('document',this)"><div class="ico">📂</div><div class="lbl">Document</div></div><div class="svc-btn" onclick="pick('message',this)"><div class="ico">✉️</div><div class="lbl">Message</div></div><div class="svc-btn" onclick="pick('crm_lead',this)"><div class="ico">📋</div><div class="lbl">CRM Lead</div></div></div></div><form method="POST" enctype="multipart/form-data"><input type="hidden" name="service_type" id="svc_field"><div class="card panel" id="block-client"><label>Client</label><select name="client_id"><option value="">— No client —</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div class="card panel" id="panel-transaction"><h2>💰 Transaction</h2><div class="grid grid-3"><div><label>Date</label><input type="date" name="date" value="{{today}}"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Type</label><select name="ttype"><option value="income">Income</option><option value="expense">Expense</option></select></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description"></div><div><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for cat in categories%}<option value="{{cat.id}}">[{{cat.kind|title}}] {{cat.name}}</option>{%endfor%}</select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Transaction</button></div></div></div><div class="card panel" id="panel-invoice"><h2>🧾 Invoice</h2><div class="grid grid-3"><div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option><option value="Paid">Paid</option></select></div><div><label>Issue Date</label><input type="date" name="issue_date" value="{{today}}"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div></div><div style="grid-column:span 3"><label>Description</label><input type="text" name="description"></div><div><button type="submit">Save Invoice</button></div></div></div><div class="card panel" id="panel-payment"><h2>💳 Payment</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>Invoice</label><select name="invoice_id"><option value="">Standalone</option>{%for inv in open_invoices%}<option value="{{inv.id}}">{{inv.invoice_number}} — {{inv.client_name}} — ${{"%.2f"|format(inv.amount|float)}}</option>{%endfor%}</select></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Method</label><select name="method"><option>Manual Entry</option><option>Cash</option><option>Check</option><option>Credit Card</option><option>Zelle</option><option>PayPal</option></select></div><div><label>Reference #</label><input type="text" name="reference"></div><div style="grid-column:span 3"><button type="submit">Save Payment</button></div></div></div><div class="card panel" id="panel-appointment"><h2>📅 Appointment</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>Title</label><input type="text" name="title"></div><div><label>Start</label><input type="datetime-local" name="start_at"></div><div><label>End</label><input type="datetime-local" name="end_at"></div><div><label>Status</label><select name="status"><option>Scheduled</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select></div><div><label>Location</label><input type="text" name="location"></div><div style="grid-column:span 2"><label>Meeting Link</label><input type="text" name="meeting_link"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Appointment</button></div></div></div><div class="card panel" id="panel-tax_return"><h2>📁 Tax Return</h2><div class="grid grid-3"><div><label>Tax Year</label><input type="text" name="tax_year" value="{{current_year}}"></div><div><label>Service</label><select name="service_type_tr"><option value="Individual">Individual</option><option value="Business">Business</option><option value="S-Corp">S-Corp</option><option value="Partnership">Partnership</option></select></div><div><label>Status</label><select name="status"><option value="In Progress">In Progress</option><option value="Waiting on Client">Waiting on Client</option><option value="Completed">Completed</option><option value="Filed">Filed</option></select></div><div><label>Fee</label><input type="number" name="fee" step="0.01" placeholder="0.00"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Tax Return</button></div></div></div><div class="card panel" id="panel-document"><h2>📂 Document</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt"></div><div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div><div><label>Tax Year</label><input type="text" name="tax_year"></div><div><label>Category</label><select name="category"><option>Tax Documents</option><option>Identification</option><option>Payroll</option><option>Bank Statements</option><option>Receipts</option><option>Other</option></select></div><div style="display:flex;align-items:center;gap:8px;padding-top:28px"><input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0"><label style="margin:0;font-size:13px">Visible to client</label></div><div></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Document</button></div></div></div><div class="card panel" id="panel-message"><h2>✉️ Message</h2><div class="grid"><div><label>Subject</label><input type="text" name="subject"></div><div><label>Message</label><textarea name="body" style="min-height:130px"></textarea></div><div><button type="submit">Send Message</button></div></div></div><div class="card panel" id="panel-crm_lead"><h2>📋 CRM Lead</h2><div class="grid grid-3"><div><label>Name</label><input type="text" name="lead_name"></div><div><label>Phone</label><input type="tel" name="lead_phone"></div><div><label>Email</label><input type="email" name="lead_email"></div><div><label>Source</label><input type="text" name="lead_source"></div><div><label>Status</label><select name="lead_status"><option>New</option><option>Contacted</option><option>Qualified</option><option>Converted</option><option>Lost</option></select></div><div><label>Follow-up</label><input type="date" name="follow_up_date"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Lead</button></div></div></div></form><script>function pick(svc,el){document.querySelectorAll('.svc-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+svc).classList.add('active');document.getElementById('block-client').classList.add('active');document.getElementById('svc_field').value=svc;document.getElementById('panel-'+svc).scrollIntoView({behavior:'smooth',block:'start'});}</script>{%endblock%}"""
-    _IT["workflow_dashboard.html"] = """{%extends"base.html"%}{%block content%}<h1>Workflow Hub</h1><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px"><div class="metric"><span>Missing Docs</span><strong style="color:#ef4444">{{missing_docs|length}}</strong></div><div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{open_invoices|length}}</strong></div><div class="metric"><span>Appt Requests</span><strong style="color:#0891b2">{{requested_appointments|length}}</strong></div><div class="metric"><span>Open Returns</span><strong style="color:#11823b">{{open_returns|length}}</strong></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div class="card"><h2 style="margin-top:0">Missing Documents</h2>{%if missing_docs%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Document</th><th>Due</th><th></th></tr></thead><tbody>{%for d in missing_docs%}<tr><td>{{d.client_name or"—"}}</td><td><strong>{{d.title}}</strong></td><td style="font-size:12px">{{d.due_date or"—"}}</td><td><form method="POST" action="/document-requests/{{d.id}}/complete"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">Done</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{%endif%}<div style="margin-top:12px"><a href="/document-requests" class="btn" style="font-size:12px;padding:8px 12px">+ Request Doc</a></div></div><div class="card"><h2 style="margin-top:0">Open Invoices</h2>{%if open_invoices%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody>{%for i in open_invoices%}<tr><td>{{i.client_name or"—"}}</td><td>{{i.invoice_number or"—"}}</td><td>${{"%.2f"|format(i.amount|float)}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%endif%}">{{i.status}}</span></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{%endif%}</div><div class="card"><h2 style="margin-top:0">Appointment Requests</h2>{%if requested_appointments%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>When</th><th></th></tr></thead><tbody>{%for a in requested_appointments%}<tr><td>{{a.client_name or"—"}}</td><td>{{a.title or"Appt"}}</td><td style="font-size:12px">{{a.start_at or"—"}}</td><td><form method="POST" action="/appointments/{{a.id}}/approve" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">✓</button></form><form method="POST" action="/appointments/{{a.id}}/decline" style="display:inline;margin-left:4px"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">✗</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{%endif%}</div><div class="card"><h2 style="margin-top:0">Tax Returns In Progress</h2>{%if open_returns%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>{%for r in open_returns%}<tr><td>{{r.client_name or"—"}}</td><td>{{r.tax_year}}</td><td><span class="pill warn">{{r.status}}</span></td><td style="font-size:12px">{{r.due_date or"—"}}</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{%endif%}</div></div><div class="card"><h2 style="margin-top:0">Quick Actions</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><a class="btn" href="/service-entry">⚡ Quick Entry</a><a class="btn" href="/bookkeeping/csv-import">📥 CSV Import</a><a class="btn" href="/bookkeeping/recurring">🔁 Recurring</a><a class="btn" href="/bookkeeping/rules">🏷 Auto Rules</a><a class="btn btn-dark" href="/notifications/list">🔔 Notifications</a></div></div>{%endblock%}"""
-    _IT["client_workflow.html"] = """{%extends"base.html"%}{%block content%}<h1>Client Workflow</h1><div class="card"><div class="table-wrap"><table><thead><tr><th>Client</th><th>Type</th><th>Workflow</th><th>Priority</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody>{%for c in clients%}<tr><td><strong>{{c.name}}</strong></td><td style="font-size:12px">{{c.client_type or"—"}}</td><td><span class="pill warn">{{c.workflow_status or"Lead"}}</span></td><td style="font-size:12px">{{c.priority or"Standard"}}</td><td style="font-size:12px;color:#475569">{{c.follow_up_date or"—"}}</td><td><form method="POST" action="/clients/{{c.id}}/status" style="display:flex;gap:4px;flex-wrap:wrap"><select name="workflow_status" style="padding:4px 6px;font-size:11px;border-radius:8px">{%for s in["Lead","Consultation","Active","Bookkeeping","Planning","Retention","Inactive"]%}<option value="{{s}}"{%if(c.workflow_status or"Lead")==s%} selected{%endif%}>{{s}}</option>{%endfor%}</select><select name="priority" style="padding:4px 6px;font-size:11px;border-radius:8px">{%for p in["Standard","High","Urgent"]%}<option value="{{p}}"{%if(c.priority or"Standard")==p%} selected{%endif%}>{{p}}</option>{%endfor%}</select><button style="padding:4px 8px;font-size:11px;border-radius:8px">Save</button></form></td></tr>{%else%}<tr><td colspan="6" style="text-align:center;padding:20px;color:#475569">No clients.</td></tr>{%endfor%}</tbody></table></div></div>{%endblock%}"""
-    _IT["categorization_rules.html"] = """{%extends"base.html"%}{%block content%}<h1>Auto-Categorization Rules</h1><div class="card"><h2 style="margin-top:0">Add Rule</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add"><div><label>Keyword</label><input type="text" name="keyword" required></div><div><label>Type</label><select name="type"><option value="expense">Expense</option><option value="income">Income</option></select></div><div><label>Category</label><select name="category_id" required><option value="">Select</option>{%for cat in categories%}<option value="{{cat.id}}">[{{cat.kind|title}}] {{cat.name}}</option>{%endfor%}</select></div><div><button type="submit">Add Rule</button></div></form></div><div class="card"><h2 style="margin-top:0">{{rules|length}} Rules</h2>{%if rules%}<div class="table-wrap"><table><thead><tr><th>Keyword</th><th>Type</th><th>Category</th><th></th></tr></thead><tbody>{%for r in rules%}<tr><td><span class="pill">"{{r.keyword}}"</span></td><td><span class="pill{%if r.type!="income"%} warn{%endif%}">{{r.type|title}}</span></td><td>{{r.category_name or"—"}}</td><td><form method="POST" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">Delete</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No rules yet.</p>{%endif%}</div>{%endblock%}"""
-    _IT["notifications_list.html"] = """{%extends"base.html"%}{%block content%}<h1>Notifications</h1>{%set unread=namespace(count=0)%}{%for n in notifications%}{%if not n.is_read%}{%set unread.count=unread.count+1%}{%endif%}{%endfor%}<p class="sub">{%if unread.count>0%}<span class="pill warn">{{unread.count}} unread</span>{%else%}<span class="pill">All caught up ✓</span>{%endif%}</p><div class="quickbar"><form method="POST" action="/notifications/mark-read"><button type="submit">Mark all read</button></form></div>{%if notifications%}<div class="card" style="padding:0;overflow:hidden">{%for n in notifications%}<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid #e5e7eb;background:{{'#f0fdf4'if not n.is_read else'#fff'}}"><div style="font-size:20px;min-width:28px">{%if n.type=="document"%}📂{%elif n.type=="invoice"%}🧾{%elif n.type=="payment"%}💳{%elif n.type=="message"%}✉️{%elif n.type=="appointment"%}📅{%elif n.type=="bookkeeping"%}💰{%elif n.type=="tax_return"%}📁{%else%}🔔{%endif%}</div><div style="flex:1"><div style="font-size:14px;font-weight:{{'900'if not n.is_read else'400'}}">{{n.message}}</div><div style="font-size:11px;color:#475569;margin-top:3px">{{n.created_at[:16]if n.created_at else""}}{%if not n.is_read%} · <span class="pill" style="font-size:10px">New</span>{%endif%}</div></div><div style="display:flex;gap:5px">{%if n.link%}<a href="{{n.link}}" class="btn" style="padding:5px 10px;font-size:12px">View</a>{%endif%}{%if not n.is_read%}<form method="POST" action="/notifications/mark-read"><input type="hidden" name="id" value="{{n.id}}"><button style="padding:5px 10px;font-size:11px;background:#f1f5f9;color:#475569;border:0;border-radius:8px;cursor:pointer">✓</button></form>{%endif%}</div></div>{%endfor%}</div>{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No notifications yet.</p></div>{%endif%}{%endblock%}"""
-    _IT["csv_import.html"] = """{%extends"base.html"%}{%block content%}<h1>CSV Bank Import</h1><div class="card"><h2 style="margin-top:0">Import File</h2><form method="POST" enctype="multipart/form-data" class="grid grid-3"><div><label>Client</label><select name="client_id" required><option value="">— Select —</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>CSV File</label><input type="file" name="csvfile" accept=".csv" required></div><div style="grid-column:span 3"><button type="submit">Import Transactions</button></div></form></div><div class="card"><h2>Accepted Columns</h2><p style="font-size:13px;color:#475569">Date, Description, Amount, Type (income/expense) — negatives become expenses automatically.</p></div>{%endblock%}"""
-    _IT["recurring_transactions.html"] = """{%extends"base.html"%}{%block content%}<h1>Recurring Transactions</h1><div class="card"><h2 style="margin-top:0">Add Recurring</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add"><div><label>Client</label><select name="client_id"><option value="">— None —</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description" required></div><div><label>Amount</label><input type="number" name="amount" step="0.01" required></div><div><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label>Frequency</label><select name="frequency">{%for f in frequencies%}<option value="{{f}}">{{f|title}}</option>{%endfor%}</select></div><div style="grid-column:span 3"><button type="submit">Add Recurring</button></div></form></div><div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><h2 style="margin:0">{{rows|length}} Recurring</h2><form method="POST" action="/bookkeeping/post-due"><button>Post All Due</button></form></div>{%if rows%}<div class="table-wrap"><table><thead><tr><th>Description</th><th>Client</th><th>Amount</th><th>Frequency</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for r in rows%}<tr><td><strong>{{r.description}}</strong></td><td>{{r.client_name or"—"}}</td><td>${{"%.2f"|format(r.amount)}}</td><td>{{r.frequency|title}}</td><td style="font-size:12px">{{r.next_due or"—"}}</td><td><span class="pill{%if not r.is_active%} warn{%endif%}">{{"Active"if r.is_active else"Paused"}}</span></td><td><form method="POST" style="display:inline"><input type="hidden" name="action" value="post_now"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px">▶</button></form><form method="POST" style="display:inline;margin-left:4px"><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">{{"⏸"if r.is_active else"▶️"}}</button></form><form method="POST" style="display:inline;margin-left:4px" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c">🗑</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No recurring transactions yet.</p>{%endif%}</div>{%endblock%}"""
-    app.jinja_loader = _CL([app.jinja_loader, DictLoader(_IT)])
-except Exception:
-    pass
 login_manager = LoginManager(app); login_manager.login_view = "login"
 
 def get_db():
@@ -935,31 +919,8 @@ def crm():
 @app.route('/documents',methods=['GET','POST'])
 @login_required
 def documents():
-    if request.method=='POST' and current_user.role=='admin':
-        f=request.files.get('file')
-        filename=None
-        if f and f.filename and allowed_file(f.filename):
-            filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secure_filename(f.filename)}"
-            f.save(UPLOAD_DIR/filename)
-        client_id=request.form.get('client_id') or None
-        doc_name=request.form.get('document_name') or (f.filename if f and f.filename else 'Document')
-        execute_db(
-            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (client_id,doc_name,doc_name,filename,
-             request.form.get('tax_year'),
-             request.form.get('status') or 'Received',
-             request.form.get('notes'),
-             request.form.get('category') or 'Tax Documents',
-             current_user.name,
-             1 if request.form.get('visible_to_client') else 0)
-        )
-        flash('Document saved.','success')
-        return redirect(url_for('documents'))
-    if current_user.role!='admin':
-        docs=query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND COALESCE(visible_to_client,1)=1 ORDER BY id DESC",(current_user.client_id,))
-        return render_template('documents.html',documents=docs,clients=[])
-    docs=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name,COALESCE(d.visible_to_client,1) visible_to_client FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC")
-    return render_template('documents.html',documents=docs,clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+    if current_user.role!='admin': return render_template('documents.html',documents=query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC",(current_user.client_id,)),clients=[])
+    return render_template('documents.html',documents=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC"),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/settings',methods=['GET','POST'])
 @login_required
 @admin_required
@@ -1578,11 +1539,11 @@ def admin_upload_document():
         doc_name = request.form.get("document_name") or f.filename
         visible = 1 if request.form.get("visible_to_client") else 0
         execute_db(
-            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Admin Upload',?,?,?,?)",
+            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client,uploaded_for_client) VALUES (?,?,?,?,?,'Admin Upload',?,?,?,1,?,?)",
             (client_id, doc_name, doc_name, filename,
              request.form.get("tax_year"), request.form.get("notes"),
              request.form.get("category") or "Tax Documents",
-             current_user.name, visible),
+             current_user.name, visible, 1),
         )
         if visible:
             push_notification(
@@ -2011,6 +1972,293 @@ def init_upgrade_route():
 
 # ============================================================
 # END PPT FULL AUTOMATION UPGRADE PACK
+# ============================================================
+
+
+# ============================================================
+# PPT STRIPE + SENDGRID INTEGRATION
+# ============================================================
+
+# ── EMAIL HELPER ─────────────────────────────────────────────
+def send_email(to_email, subject, html_body):
+    """Send email via SendGrid. Fails silently if not configured."""
+    try:
+        import urllib.request, json
+        api_key = os.environ.get("SENDGRID_API_KEY", "")
+        if not api_key or not to_email:
+            return False
+        from_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+        payload = json.dumps({
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": from_email, "name": "Pinnacle Performance Tax"},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html_body}]
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=payload,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST"
+        )
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def notify_admin(subject, html_body):
+    """Send email to the admin."""
+    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+    send_email(admin_email, subject, html_body)
+
+
+# ── STRIPE CHECKOUT ──────────────────────────────────────────
+
+@app.route("/invoice/<int:invoice_id>/pay")
+@login_required
+@client_required
+def pay_invoice(invoice_id):
+    """Show Stripe payment page for a client invoice."""
+    invoice = query_db("""SELECT i.*, c.name client_name, c.email client_email
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.id=? AND i.client_id=?""",
+                       (invoice_id, current_user.client_id), one=True)
+    if not invoice:
+        abort(404)
+    if invoice["status"] == "Paid":
+        flash("This invoice has already been paid.", "info")
+        return redirect(url_for("my_invoices"))
+    stripe_pub = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    return render_template_string(PAY_INVOICE_HTML,
+        invoice=invoice,
+        stripe_pub=stripe_pub,
+        amount_cents=int(money(invoice["amount"]) * 100))
+
+
+PAY_INVOICE_HTML = """
+{% extends "base.html" %}
+{% block content %}
+<h1>Pay Invoice {{ invoice.invoice_number }}</h1>
+<div class="card" style="max-width:500px;margin:0 auto">
+  <div style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="color:#475569">Invoice</span>
+      <strong>{{ invoice.invoice_number }}</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="color:#475569">Description</span>
+      <span>{{ invoice.description or 'Tax & Accounting Services' }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="color:#475569">Due Date</span>
+      <span>{{ invoice.due_date or '—' }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:2px solid #e5e7eb;margin-top:12px">
+      <strong style="font-size:18px">Amount Due</strong>
+      <strong style="font-size:22px;color:#11823b">${{ "%.2f"|format(invoice.amount|float) }}</strong>
+    </div>
+  </div>
+  {% if stripe_pub %}
+  <div id="card-element" style="border:1px solid #cbd5d1;border-radius:13px;padding:14px;background:#fff;margin-bottom:16px"></div>
+  <div id="card-errors" style="color:#b91c1c;font-size:13px;margin-bottom:10px"></div>
+  <button id="pay-btn" onclick="submitPayment()" style="width:100%;padding:14px;font-size:16px;font-weight:900">
+    💳 Pay ${{ "%.2f"|format(invoice.amount|float) }}
+  </button>
+  <p style="font-size:12px;color:#475569;text-align:center;margin-top:12px">🔒 Secured by Stripe. Your card info is never stored.</p>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+  const stripe = Stripe('{{ stripe_pub }}');
+  const elements = stripe.elements();
+  const card = elements.create('card', {style:{base:{fontSize:'16px',color:'#1f2937'}}});
+  card.mount('#card-element');
+  card.on('change', e => { document.getElementById('card-errors').textContent = e.error ? e.error.message : ''; });
+  async function submitPayment() {
+    const btn = document.getElementById('pay-btn');
+    btn.disabled = true; btn.textContent = 'Processing...';
+    const {paymentMethod, error} = await stripe.createPaymentMethod({type:'card',card});
+    if (error) {
+      document.getElementById('card-errors').textContent = error.message;
+      btn.disabled = false; btn.textContent = '💳 Pay ${{ "%.2f"|format(invoice.amount|float) }}';
+      return;
+    }
+    const resp = await fetch('/invoice/{{ invoice.id }}/stripe-charge', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({payment_method_id: paymentMethod.id, amount_cents: {{ amount_cents }} })
+    });
+    const data = await resp.json();
+    if (data.success) { window.location = '/invoice/{{ invoice.id }}/pay-success'; }
+    else { document.getElementById('card-errors').textContent = data.error || 'Payment failed.'; btn.disabled=false; btn.textContent='💳 Pay ${{ "%.2f"|format(invoice.amount|float) }}'; }
+  }
+  </script>
+  {% else %}
+  <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:12px;padding:16px;color:#92400e">
+    ⚠️ Online payments are not configured yet. Please contact the office to pay.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+"""
+
+
+@app.route("/invoice/<int:invoice_id>/stripe-charge", methods=["POST"])
+@login_required
+@client_required
+def stripe_charge(invoice_id):
+    from flask import jsonify
+    invoice = query_db("""SELECT i.*, c.name client_name, c.email client_email
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.id=? AND i.client_id=?""",
+                       (invoice_id, current_user.client_id), one=True)
+    if not invoice:
+        return jsonify({"success": False, "error": "Invoice not found"})
+    if invoice["status"] == "Paid":
+        return jsonify({"success": False, "error": "Already paid"})
+
+    try:
+        import urllib.request, json
+        data = request.get_json()
+        payment_method_id = data.get("payment_method_id")
+        amount_cents = data.get("amount_cents")
+        secret_key = os.environ.get("STRIPE_SECRET_KEY", "")
+        if not secret_key:
+            return jsonify({"success": False, "error": "Payments not configured"})
+
+        # Create PaymentIntent
+        import urllib.parse
+        payload = urllib.parse.urlencode({
+            "amount": str(amount_cents),
+            "currency": "usd",
+            "payment_method": payment_method_id,
+            "confirm": "true",
+            "description": f"Invoice {invoice['invoice_number']} - {invoice['client_name']}",
+            "receipt_email": invoice["client_email"] or "",
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            "https://api.stripe.com/v1/payment_intents",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {secret_key}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            method="POST"
+        )
+        resp = urllib.request.urlopen(req, timeout=30)
+        result = json.loads(resp.read())
+
+        if result.get("status") in ("succeeded", "requires_capture"):
+            # Mark invoice paid
+            execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?", (invoice_id,))
+            execute_db(
+                "INSERT INTO payments(invoice_id,client_id,amount,method,reference,status,notes) VALUES (?,?,?,'Stripe',?,?,?)",
+                (invoice_id, invoice["client_id"], money(invoice["amount"]),
+                 result.get("id", ""), "Paid", f"Stripe payment {result.get('id','')}"),
+            )
+            push_notification(invoice["client_id"], "payment",
+                f"Payment of ${money(invoice['amount']):,.2f} received for {invoice['invoice_number']}",
+                "/my/invoices")
+            # Email client
+            send_email(
+                invoice["client_email"],
+                f"Payment Confirmed – {invoice['invoice_number']}",
+                f"""<h2>Payment Confirmed ✅</h2>
+                <p>Thank you {invoice['client_name']}! Your payment of <strong>${money(invoice['amount']):,.2f}</strong>
+                for invoice <strong>{invoice['invoice_number']}</strong> has been received.</p>
+                <p>Log in to your portal to view your receipt.</p>
+                <p>— Pinnacle Performance Tax and Accounting</p>"""
+            )
+            # Email admin
+            notify_admin(
+                f"Payment Received – {invoice['invoice_number']}",
+                f"""<h2>Payment Received 💰</h2>
+                <p><strong>{invoice['client_name']}</strong> paid <strong>${money(invoice['amount']):,.2f}</strong>
+                for invoice <strong>{invoice['invoice_number']}</strong> via Stripe.</p>"""
+            )
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Payment was not completed"})
+
+    except Exception as e:
+        err_msg = str(e)
+        try:
+            import json as _j
+            body = e.read() if hasattr(e, 'read') else b""
+            err_data = _j.loads(body)
+            err_msg = err_data.get("error", {}).get("message", err_msg)
+        except Exception:
+            pass
+        return jsonify({"success": False, "error": err_msg})
+
+
+@app.route("/invoice/<int:invoice_id>/pay-success")
+@login_required
+@client_required
+def pay_invoice_success(invoice_id):
+    invoice = query_db("SELECT * FROM invoices WHERE id=? AND client_id=?",
+                       (invoice_id, current_user.client_id), one=True)
+    if not invoice:
+        abort(404)
+    return render_template_string("""
+{% extends "base.html" %}
+{% block content %}
+<div style="text-align:center;padding:60px 20px">
+  <div style="font-size:64px;margin-bottom:16px">✅</div>
+  <h1 style="color:#11823b">Payment Successful!</h1>
+  <p style="font-size:18px;color:#475569;margin-bottom:8px">
+    Your payment of <strong>${{ "%.2f"|format(invoice.amount|float) }}</strong> has been received.
+  </p>
+  <p style="color:#475569">Invoice {{ invoice.invoice_number }} is now marked as <strong>Paid</strong>.</p>
+  <div style="margin-top:30px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="/my/invoices" class="btn">View My Invoices</a>
+    <a href="/client-dashboard" class="btn btn-light">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+""", invoice=invoice)
+
+
+# ── SENDGRID EMAIL NOTIFICATIONS ─────────────────────────────
+
+# Hook into existing message send to also email
+@app.route("/messages/send-email-notify/<int:message_id>", methods=["POST"])
+@login_required
+@admin_required
+def send_message_email(message_id):
+    msg = query_db("""SELECT m.*, c.email client_email, c.name client_name
+                      FROM messages m LEFT JOIN clients c ON c.id=m.client_id
+                      WHERE m.id=?""", (message_id,), one=True)
+    if not msg:
+        abort(404)
+    sent = send_email(
+        msg["client_email"],
+        f"New Message: {msg['subject']}",
+        f"""<h2>You have a new message from Pinnacle Performance Tax</h2>
+        <p><strong>Subject:</strong> {msg['subject']}</p>
+        <p>{msg['body']}</p>
+        <p><a href="https://ppt-tax-portal.onrender.com/my/messages">View in Portal →</a></p>"""
+    )
+    flash(f"Email {'sent' if sent else 'failed — check SendGrid key'}.", "success" if sent else "danger")
+    return redirect(url_for("messages"))
+
+
+@app.route("/test-email")
+@login_required
+@admin_required
+def test_email():
+    """Test SendGrid connection."""
+    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+    sent = send_email(
+        admin_email,
+        "PPT Portal — Email Test ✅",
+        "<h2>Email is working!</h2><p>Your SendGrid integration is configured correctly.</p>"
+    )
+    flash(f"Test email {'sent to ' + admin_email if sent else 'FAILED — check SENDGRID_API_KEY in Render env vars'}.",
+          "success" if sent else "danger")
+    return redirect(url_for("dashboard"))
+
+# ============================================================
+# END PPT STRIPE + SENDGRID INTEGRATION
 # ============================================================
 
 if __name__=='__main__':

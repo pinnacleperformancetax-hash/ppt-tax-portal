@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block content %}
+<h1>Client Workflow</h1>
+<p class="sub">Track every client through the workflow pipeline.</p>
+<div class="card">
+  <h2 style="margin-top:0">All Clients</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Client</th><th>Type</th><th>Status</th><th>Workflow</th><th>Priority</th><th>Preparer</th><th>Follow-up</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for c in clients %}
+    <tr>
+      <td><strong>{{ c.name }}</strong>{% if c.business_name %}<br><span style="font-size:11px;color:#475569">{{ c.business_name }}</span>{% endif %}</td>
+      <td style="font-size:12px">{{ c.client_type or '—' }}</td>
+      <td><span class="pill">{{ c.status or 'Active' }}</span></td>
+      <td><span class="pill warn">{{ c.workflow_status or 'Lead' }}</span></td>
+      <td style="font-size:12px">{{ c.priority or 'Standard' }}</td>
+      <td style="font-size:12px">{{ c.assigned_preparer or '—' }}</td>
+      <td style="font-size:12px;color:#475569">{{ c.follow_up_date or '—' }}</td>
+      <td>
+        <form method="POST" action="/clients/{{ c.id }}/status" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <select name="workflow_status" style="padding:4px 6px;font-size:11px;border-radius:8px">
+            {% for s in ['Lead','Consultation','Active','Bookkeeping','Planning','Retention','Inactive'] %}
+            <option value="{{ s }}" {{ 'selected' if (c.workflow_status or 'Lead')==s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <select name="priority" style="padding:4px 6px;font-size:11px;border-radius:8px">
+            {% for p in ['Standard','High','Urgent'] %}
+            <option value="{{ p }}" {{ 'selected' if (c.priority or 'Standard')==p }}>{{ p }}</option>
+            {% endfor %}
+          </select>
+          <button style="padding:4px 8px;font-size:11px;border-radius:8px">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" style="color:#475569;text-align:center;padding:20px">No clients yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

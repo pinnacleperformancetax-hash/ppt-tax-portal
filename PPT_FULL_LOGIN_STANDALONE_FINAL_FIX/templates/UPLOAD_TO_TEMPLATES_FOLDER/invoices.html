@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Invoices</h1>
+<p class="sub">Create invoices, track balances, send reminders, and mark payments.</p>
+
+<div style="margin-bottom:24px;padding:24px;border-radius:24px;background:linear-gradient(135deg,#04150d,#0b5f2a,#11823b);color:white;box-shadow:0 12px 35px rgba(17,130,59,.25);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+    <div>
+      <div style="font-size:28px;font-weight:900">PPT Collections & Invoice Center</div>
+      <div style="margin-top:6px;opacity:.9">Track balances, send reminders, and collect payments.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <form method="POST" action="/invoices/mark-overdue" style="display:inline">
+        <button style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.18);color:white;border:0;font-weight:900;cursor:pointer">⚠️ Flag Overdue</button>
+      </form>
+      <a href="/service-entry?svc=invoice" style="padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.18);font-weight:900;color:white">➕ New Invoice</a>
+    </div>
+  </div>
+</div>
+
+<!-- Live summary metrics -->
+{% set total = invoices|sum(attribute='amount') if invoices else 0 %}
+{% set paid_invoices = invoices|selectattr('status','equalto','Paid')|list %}
+{% set overdue_invoices = invoices|selectattr('status','equalto','Overdue')|list %}
+{% set open_invoices = invoices|rejectattr('status','equalto','Paid')|list %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px">
+  <div class="card" style="border-left:6px solid #ef4444!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Overdue</div><div style="font-size:32px;font-weight:900;color:#ef4444">{{ overdue_invoices|length }}</div></div>
+  <div class="card" style="border-left:6px solid #f59e0b!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Open</div><div style="font-size:32px;font-weight:900;color:#f59e0b">{{ open_invoices|length }}</div></div>
+  <div class="card" style="border-left:6px solid #11823b!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Paid</div><div style="font-size:32px;font-weight:900;color:#11823b">{{ paid_invoices|length }}</div></div>
+  <div class="card" style="border-left:6px solid #0891b2!important"><div style="font-size:12px;color:#64748b;font-weight:900;text-transform:uppercase">Total Billed</div><div style="font-size:28px;font-weight:900;color:#0891b2">{{ total|currency }}</div></div>
+</div>
+
+<!-- New invoice form -->
+<div class="card">
+  <h2 style="margin-top:0">Create Invoice</h2>
+  <form method="POST" class="grid grid-3">
+    <div><label>Client</label><select name="client_id">{% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div><label>Invoice #</label><input name="invoice_number" placeholder="Auto-generated if blank"></div>
+    <div><label>Amount</label><input name="amount" type="number" step="0.01" placeholder="0.00"></div>
+    <div><label>Issue Date</label><input name="issue_date" type="date"></div>
+    <div><label>Due Date</label><input name="due_date" type="date"></div>
+    <div><label>Status</label><select name="status"><option value="Draft">Draft</option><option value="Sent" selected>Sent</option><option value="Paid">Paid</option></select></div>
+    <div style="grid-column:span 3"><label>Description</label><input name="description" placeholder="e.g. Tax preparation services 2024"></div>
+    <div><button>Save Invoice</button></div>
+  </form>
+</div>
+
+<!-- Invoice table -->
+<div class="card">
+  <h2 style="margin-top:0">All Invoices</h2>
+  <div class="table-wrap"><table>
+    <thead>
+      <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Due</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for i in invoices %}
+    <tr>
+      <td><strong>{{ i.invoice_number or '—' }}</strong>{% if i.description %}<br><span style="font-size:11px;color:#475569">{{ i.description }}</span>{% endif %}</td>
+      <td>{{ i.client_name or '—' }}</td>
+      <td style="font-weight:900">{{ i.amount|currency }}</td>
+      <td style="font-size:13px;color:{{ '#b91c1c' if i.status == 'Overdue' else '#475569' }}">{{ i.due_date or '—' }}</td>
+      <td>
+        {% if i.status == 'Paid' %}
+          <span class="pill">✓ Paid</span>
+        {% elif i.status == 'Overdue' %}
+          <span class="pill warn">⚠️ Overdue</span>
+        {% elif i.status == 'Draft' %}
+          <span class="pill" style="background:#f1f5f9;color:#475569">Draft</span>
+        {% else %}
+          <span class="pill" style="background:#fff7ed;color:#9a3412">{{ i.status }}</span>
+        {% endif %}
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <a href="/invoice/{{ i.id }}/print" style="padding:5px 10px;font-size:12px;border-radius:8px;background:#f1f5f9;color:#0f172a;font-weight:800">🖨 Print</a>
+          {% if i.status != 'Paid' %}
+            <form method="POST" action="/invoices/{{ i.id }}/mark-paid" style="display:inline" onsubmit="return confirm('Mark this invoice as paid?')">
+              <button style="padding:5px 10px;font-size:12px;border-radius:8px;background:#e8f5ec;color:#123d22;border:0;font-weight:800;cursor:pointer">💳 Mark Paid</button>
+            </form>
+            <form method="POST" action="/invoices/{{ i.id }}/send-reminder" style="display:inline">
+              <button style="padding:5px 10px;font-size:12px;border-radius:8px;background:#fff7ed;color:#9a3412;border:0;font-weight:800;cursor:pointer">📨 Remind</button>
+            </form>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="color:#475569;text-align:center;padding:20px">No invoices yet. Create one above.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block content %}
+<h1>My Documents</h1>
+<p class="sub">Upload documents and view files shared by the office.</p>
+
+<div class="card">
+  <h2>Upload a Document</h2>
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    <div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt" required></div>
+    <div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto-filled from filename"></div>
+    <div><label>Tax Year</label><input type="text" name="tax_year" placeholder="{{ current_year }}"></div>
+    <div><label>Category</label>
+      <select name="category">{% for cat in categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}</select>
+    </div>
+    <div style="grid-column:span 2"><label>Notes</label><input type="text" name="notes" placeholder="Optional description"></div>
+    <div style="grid-column:span 3"><button type="submit">⬆️ Upload Document</button></div>
+  </form>
+</div>
+
+{% if documents %}
+  {% set cats = [] %}
+  {% for d in documents %}{% if (d.category or 'Documents') not in cats %}{% set _ = cats.append(d.category or 'Documents') %}{% endif %}{% endfor %}
+  {% for cat in cats %}
+  <div class="card">
+    <h2>{{ cat }}</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Year</th><th>Notes</th><th>Uploaded</th><th>By</th><th></th></tr></thead>
+      <tbody>
+        {% for d in documents if (d.category or 'Documents') == cat %}
+        <tr>
+          <td><strong>{{ d.display_name }}</strong></td>
+          <td>{{ d.tax_year or '—' }}</td>
+          <td style="color:#475569">{{ d.notes or '—' }}</td>
+          <td style="font-size:12px;color:#475569">{{ d.created_at[:10] if d.created_at else '—' }}</td>
+          <td><span class="pill">{{ d.uploaded_by or 'Client' }}</span></td>
+          <td>{% if d.filename %}<a href="/documents/download/{{ d.id }}" class="btn" style="padding:6px 12px;font-size:12px">⬇️ Download</a>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="card"><p style="color:#475569;text-align:center;padding:20px">No documents yet. Upload your first document above.</p></div>
+{% endif %}
+{% endblock %}

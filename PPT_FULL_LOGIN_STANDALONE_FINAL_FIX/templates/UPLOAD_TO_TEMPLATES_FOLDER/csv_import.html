@@ -1,0 +1,78 @@
+{% extends "base.html" %}{% block content %}
+<h1>CSV Bank Import</h1>
+<p class="sub">Import transactions from a bank export, QuickBooks, or Wave CSV.</p>
+
+<div class="card">
+  <h2>Import File</h2>
+  <form method="POST" enctype="multipart/form-data" class="grid grid-3">
+    <div><label>Client *</label>
+      <select name="client_id" required>
+        <option value="">— Select client —</option>
+        {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="grid-column:span 2"><label>CSV File *</label>
+      <input type="file" name="csvfile" accept=".csv" required onchange="preview(this)">
+    </div>
+    <div style="grid-column:span 3"><button type="submit">📥 Import Transactions</button></div>
+  </form>
+</div>
+
+<div class="card" id="preview-card" style="display:none">
+  <h2>Preview <span id="preview-count" style="font-size:14px;font-weight:400;color:#475569"></span></h2>
+  <div class="table-wrap"><table id="preview-table"></table></div>
+</div>
+
+<div class="card">
+  <h2>Accepted Column Names</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Field</th><th>Column names accepted</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Date</strong></td><td>Date, date, DATE</td></tr>
+      <tr><td><strong>Description</strong></td><td>Description, description, Memo, memo</td></tr>
+      <tr><td><strong>Amount</strong></td><td>Amount, amount, Debit, Credit</td></tr>
+      <tr><td><strong>Type</strong></td><td>Type, type — values: income / expense</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:12px;color:#475569;margin-top:12px">
+    Negative amounts → expense &nbsp;|&nbsp; Positive amounts → income &nbsp;|&nbsp;
+    $ signs and commas stripped automatically &nbsp;|&nbsp;
+    Rows missing date or description are skipped.
+  </p>
+</div>
+
+<div class="card" style="background:#ecfdf5;border-color:#bbf7d0">
+  <h2>Example CSV</h2>
+  <pre style="font-size:12px;background:#fff;padding:12px;border-radius:10px;border:1px solid #bbf7d0;overflow:auto">Date,Description,Amount,Type
+2024-01-15,QuickBooks Online,-80.00,expense
+2024-01-18,Tax Prep Fee,450.00,income
+2024-01-20,Office Supplies,-34.50,expense</pre>
+</div>
+
+<div class="card">
+  <h2>Auto-Categorization Rules</h2>
+  <p style="font-size:13px;color:#475569;margin-bottom:10px">Descriptions matching your keyword rules are auto-categorized on import.</p>
+  <a href="/bookkeeping/rules" class="btn">🏷 Manage Rules</a>
+</div>
+
+<script>
+function preview(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.split('\n').filter(l=>l.trim()).slice(0,6);
+    const tbl=document.getElementById('preview-table');
+    tbl.innerHTML='';
+    lines.forEach((line,i)=>{
+      const cells=line.split(',').map(c=>c.replace(/^"|"$/g,'').trim());
+      const tr=document.createElement('tr');
+      cells.forEach(c=>{const el=document.createElement(i===0?'th':'td');el.textContent=c;tr.appendChild(el);});
+      tbl.appendChild(tr);
+    });
+    document.getElementById('preview-count').textContent='(first '+(lines.length-1)+' rows)';
+    document.getElementById('preview-card').style.display='block';
+  };
+  reader.readAsText(file);
+}
+</script>
+{% endblock %}

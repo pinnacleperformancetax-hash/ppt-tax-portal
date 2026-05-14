@@ -1,0 +1,183 @@
+{% extends "base.html" %}{% block content %}
+<h1>Quick Service Entry</h1>
+<p class="sub">Select one service — fill in only what you need.</p>
+<style>
+.svc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:4px}
+.svc-btn{border:2px solid var(--line);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;background:#fff;transition:all .15s}
+.svc-btn:hover{border-color:var(--g);background:#f1faf4}
+.svc-btn.active{border-color:var(--g);background:#e8f5ec}
+.svc-btn .ico{font-size:26px;margin-bottom:5px}
+.svc-btn .lbl{font-size:12px;font-weight:900;color:#374151}
+.panel{display:none}.panel.active{display:block}
+</style>
+
+<div class="card">
+  <h2 style="margin-bottom:14px">Select a Service</h2>
+  <div class="svc-grid">
+    <div class="svc-btn" onclick="pick('transaction',this)"><div class="ico">💰</div><div class="lbl">Transaction</div></div>
+    <div class="svc-btn" onclick="pick('invoice',this)"><div class="ico">🧾</div><div class="lbl">Invoice</div></div>
+    <div class="svc-btn" onclick="pick('payment',this)"><div class="ico">💳</div><div class="lbl">Payment</div></div>
+    <div class="svc-btn" onclick="pick('appointment',this)"><div class="ico">📅</div><div class="lbl">Appointment</div></div>
+    <div class="svc-btn" onclick="pick('tax_return',this)"><div class="ico">📁</div><div class="lbl">Tax Return</div></div>
+    <div class="svc-btn" onclick="pick('document',this)"><div class="ico">📂</div><div class="lbl">Document</div></div>
+    <div class="svc-btn" onclick="pick('message',this)"><div class="ico">✉️</div><div class="lbl">Message</div></div>
+    <div class="svc-btn" onclick="pick('crm_lead',this)"><div class="ico">📋</div><div class="lbl">CRM Lead</div></div>
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="service_type" id="svc_field">
+
+  <div class="card panel" id="block-client">
+    <label>Client</label>
+    <select name="client_id">
+      <option value="">— No client / Walk-in —</option>
+      {% for c in clients %}<option value="{{ c.id }}">{{ c.name }}{% if c.business_name %} — {{ c.business_name }}{% endif %}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- TRANSACTION -->
+  <div class="card panel" id="panel-transaction">
+    <h2>💰 Transaction</h2>
+    <div class="grid grid-3">
+      <div><label>Date</label><input type="date" name="date" value="{{ today }}"></div>
+      <div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div>
+      <div><label>Type</label><select name="ttype"><option value="income">Income</option><option value="expense">Expense</option></select></div>
+      <div style="grid-column:span 2"><label>Description</label><input type="text" name="description" placeholder="e.g. QuickBooks subscription"></div>
+      <div><label>Category</label>
+        <select name="category_id"><option value="">— Uncategorized —</option>
+        {% for cat in categories %}<option value="{{ cat.id }}">[{{ cat.kind|title }}] {{ cat.name }}</option>{% endfor %}</select>
+      </div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional"></textarea></div>
+      <div><button type="submit">Save Transaction</button></div>
+    </div>
+  </div>
+
+  <!-- INVOICE -->
+  <div class="card panel" id="panel-invoice">
+    <h2>🧾 Invoice</h2>
+    <div class="grid grid-3">
+      <div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto if blank"></div>
+      <div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div>
+      <div><label>Status</label><select name="status"><option value="Draft">Draft</option><option value="Sent" selected>Sent</option><option value="Paid">Paid</option></select></div>
+      <div><label>Issue Date</label><input type="date" name="issue_date" value="{{ today }}"></div>
+      <div><label>Due Date</label><input type="date" name="due_date"></div>
+      <div></div>
+      <div style="grid-column:span 3"><label>Description</label><input type="text" name="description" placeholder="e.g. Tax preparation services 2024"></div>
+      <div><button type="submit">Save Invoice</button></div>
+    </div>
+  </div>
+
+  <!-- PAYMENT -->
+  <div class="card panel" id="panel-payment">
+    <h2>💳 Payment</h2>
+    <div class="grid grid-3">
+      <div style="grid-column:span 3"><label>Apply to Invoice (optional)</label>
+        <select name="invoice_id"><option value="">— Standalone payment —</option>
+        {% for inv in open_invoices %}<option value="{{ inv.id }}">{{ inv.invoice_number }} — {{ inv.client_name }} — ${{ "%.2f"|format(inv.amount) }}</option>{% endfor %}</select>
+      </div>
+      <div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div>
+      <div><label>Method</label>
+        <select name="method"><option>Manual Entry</option><option>Cash</option><option>Check</option><option>Credit Card</option><option>ACH / Bank Transfer</option><option>Zelle</option><option>PayPal</option><option>Other</option></select>
+      </div>
+      <div><label>Reference / Check #</label><input type="text" name="reference" placeholder="Optional"></div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional"></textarea></div>
+      <div><button type="submit">Save Payment</button></div>
+    </div>
+  </div>
+
+  <!-- APPOINTMENT -->
+  <div class="card panel" id="panel-appointment">
+    <h2>📅 Appointment</h2>
+    <div class="grid grid-3">
+      <div style="grid-column:span 3"><label>Title</label><input type="text" name="title" placeholder="e.g. Tax Review, Initial Consultation"></div>
+      <div><label>Start</label><input type="datetime-local" name="start_at"></div>
+      <div><label>End</label><input type="datetime-local" name="end_at"></div>
+      <div><label>Status</label><select name="status"><option value="Scheduled">Scheduled</option><option value="Confirmed">Confirmed</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div>
+      <div><label>Location</label><input type="text" name="location" placeholder="Office, Zoom, Phone"></div>
+      <div style="grid-column:span 2"><label>Meeting Link</label><input type="text" name="meeting_link" placeholder="https://zoom.us/..."></div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional agenda or notes"></textarea></div>
+      <div><button type="submit">Save Appointment</button></div>
+    </div>
+  </div>
+
+  <!-- TAX RETURN -->
+  <div class="card panel" id="panel-tax_return">
+    <h2>📁 Tax Return</h2>
+    <div class="grid grid-3">
+      <div><label>Tax Year</label><input type="text" name="tax_year" value="{{ current_year }}"></div>
+      <div><label>Service Type</label>
+        <select name="service_type_tr"><option value="Individual">Individual (1040)</option><option value="Business">Business</option><option value="S-Corp">S-Corp</option><option value="Partnership">Partnership</option><option value="Non-Profit">Non-Profit</option><option value="Other">Other</option></select>
+      </div>
+      <div><label>Status</label>
+        <select name="status"><option value="In Progress">In Progress</option><option value="Waiting on Client">Waiting on Client</option><option value="Under Review">Under Review</option><option value="Completed">Completed</option><option value="Filed">Filed</option></select>
+      </div>
+      <div><label>Fee</label><input type="number" name="fee" step="0.01" placeholder="0.00"></div>
+      <div><label>Due Date</label><input type="date" name="due_date"></div>
+      <div></div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional notes about this return"></textarea></div>
+      <div><button type="submit">Save Tax Return</button></div>
+    </div>
+  </div>
+
+  <!-- DOCUMENT -->
+  <div class="card panel" id="panel-document">
+    <h2>📂 Document</h2>
+    <div class="grid grid-3">
+      <div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt"></div>
+      <div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename if blank"></div>
+      <div><label>Tax Year</label><input type="text" name="tax_year" placeholder="{{ current_year }}"></div>
+      <div><label>Category</label>
+        <select name="category"><option>Tax Documents</option><option>Identification</option><option>Payroll</option><option>Bank Statements</option><option>Receipts</option><option>Engagement Letters</option><option>Signed Returns</option><option>Other</option></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:28px">
+        <input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0">
+        <label style="margin:0;font-size:13px">Visible to client</label>
+      </div>
+      <div></div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Optional"></textarea></div>
+      <div><button type="submit">Save Document</button></div>
+    </div>
+  </div>
+
+  <!-- MESSAGE -->
+  <div class="card panel" id="panel-message">
+    <h2>✉️ Message</h2>
+    <div class="grid">
+      <div><label>Subject</label><input type="text" name="subject" placeholder="Message from Pinnacle Performance Tax"></div>
+      <div><label>Message</label><textarea name="body" style="min-height:130px" placeholder="Type your message here..."></textarea></div>
+      <div><button type="submit">Send Message</button></div>
+    </div>
+  </div>
+
+  <!-- CRM LEAD -->
+  <div class="card panel" id="panel-crm_lead">
+    <h2>📋 CRM Lead</h2>
+    <div class="grid grid-3">
+      <div><label>Name</label><input type="text" name="lead_name" placeholder="Full name"></div>
+      <div><label>Phone</label><input type="tel" name="lead_phone" placeholder="478-000-0000"></div>
+      <div><label>Email</label><input type="email" name="lead_email" placeholder="email@example.com"></div>
+      <div><label>Source</label><input type="text" name="lead_source" placeholder="Referral, Google, Walk-in..."></div>
+      <div><label>Status</label>
+        <select name="lead_status"><option>New</option><option>Contacted</option><option>Qualified</option><option>Proposal Sent</option><option>Converted</option><option>Lost</option></select>
+      </div>
+      <div><label>Follow-up Date</label><input type="date" name="follow_up_date"></div>
+      <div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Notes about this lead"></textarea></div>
+      <div><button type="submit">Save Lead</button></div>
+    </div>
+  </div>
+
+</form>
+
+<script>
+function pick(svc,el){
+  document.querySelectorAll('.svc-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+svc).classList.add('active');
+  document.getElementById('block-client').classList.add('active');
+  document.getElementById('svc_field').value=svc;
+  document.getElementById('panel-'+svc).scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+{% endblock %}

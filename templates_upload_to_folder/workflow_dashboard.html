@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Workflow Hub</h1>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+  <div class="metric"><span>Missing Docs</span><strong style="color:#ef4444">{{ missing_docs|length }}</strong></div>
+  <div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{ open_invoices|length }}</strong></div>
+  <div class="metric"><span>Appt Requests</span><strong style="color:#0891b2">{{ requested_appointments|length }}</strong></div>
+  <div class="metric"><span>Open Returns</span><strong style="color:#11823b">{{ open_returns|length }}</strong></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="card">
+    <h2 style="margin-top:0">Missing Documents</h2>
+    {% if missing_docs %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Document</th><th>Due</th><th></th></tr></thead><tbody>
+    {% for d in missing_docs %}<tr>
+      <td>{{ d.client_name or '—' }}</td><td><strong>{{ d.title }}</strong></td>
+      <td style="font-size:12px">{{ d.due_date or '—' }}</td>
+      <td><form method="POST" action="/document-requests/{{ d.id }}/complete"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">Done</button></form></td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+    <div style="margin-top:12px"><a href="/document-requests" class="btn" style="font-size:12px;padding:8px 12px">+ Request Doc</a></div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Open Invoices</h2>
+    {% if open_invoices %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+    {% for i in open_invoices %}<tr>
+      <td>{{ i.client_name or '—' }}</td><td style="font-size:12px">{{ i.invoice_number or '—' }}</td>
+      <td style="font-weight:900">${{ "%.2f"|format(i.amount|float) }}</td>
+      <td><span class="pill{% if i.status == 'Overdue' %} warn{% endif %}">{{ i.status }}</span></td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Appointment Requests</h2>
+    {% if requested_appointments %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>When</th><th></th></tr></thead><tbody>
+    {% for a in requested_appointments %}<tr>
+      <td>{{ a.client_name or '—' }}</td><td>{{ a.title or 'Appt' }}</td>
+      <td style="font-size:12px">{{ a.start_at or '—' }}</td>
+      <td>
+        <form method="POST" action="/appointments/{{ a.id }}/approve" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">✓</button></form>
+        <form method="POST" action="/appointments/{{ a.id }}/decline" style="display:inline;margin-left:4px"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">✗</button></form>
+      </td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Tax Returns In Progress</h2>
+    {% if open_returns %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>
+    {% for r in open_returns %}<tr>
+      <td>{{ r.client_name or '—' }}</td><td>{{ r.tax_year }}</td>
+      <td><span class="pill warn">{{ r.status }}</span></td>
+      <td style="font-size:12px">{{ r.due_date or '—' }}</td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
+</div>
+<div class="card">
+  <h2 style="margin-top:0">Quick Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+    <a class="btn" href="/service-entry">⚡ Quick Entry</a>
+    <a class="btn" href="/bookkeeping/csv-import">📥 CSV Import</a>
+    <a class="btn" href="/bookkeeping/recurring">🔁 Recurring</a>
+    <a class="btn" href="/bookkeeping/rules">🏷 Auto Rules</a>
+    <a class="btn btn-dark" href="/notifications/list">🔔 Notifications</a>
+  </div>
+</div>
+{% endblock %}

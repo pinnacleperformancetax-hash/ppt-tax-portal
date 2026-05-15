@@ -1,75 +1,74 @@
-
-<style id="PPT_GREEN_HARD_OVERRIDE">
-:root{
-  --ppt-green:#11823b!important;
-  --ppt-green-dark:#0b5f2a!important;
-  --ppt-green-light:#1f6f3d!important;
-  --ppt-bg:#f4f6f4!important;
-}
-html,body{background:#f4f6f4!important;color:#1f2937!important}
-aside,.sidebar,[class*="sidebar"],nav.sidebar{
-  background:linear-gradient(180deg,#11823b 0%,#0b5f2a 100%)!important;
-  color:white!important;
-  border-right:0!important;
-}
-aside *, .sidebar *, [class*="sidebar"] *{color:white!important}
-aside a,.sidebar a,[class*="sidebar"] a{
-  color:white!important;
-  background:transparent!important;
-  font-weight:900!important;
-}
-aside a:hover,.sidebar a:hover,[class*="sidebar"] a:hover,
-aside a.active,.sidebar a.active,[class*="sidebar"] a.active{
-  background:rgba(255,255,255,.18)!important;
-}
-button,.btn,input[type="submit"]{
-  background:#11823b!important;
-  color:white!important;
-  border:0!important;
-  border-radius:12px!important;
-  font-weight:900!important;
-}
-button:hover,.btn:hover,input[type="submit"]:hover{
-  background:#1f6f3d!important;
-}
-.card,.metric,.box,.panel,section{
-  background:white!important;
-  border-color:#d8e2dc!important;
-}
-.metric strong,.amount,.total{
-  color:#1f6f3d!important;
-}
-h1,h2,h3{color:#1f2937!important}
-input,select,textarea{
-  border-color:#cbd5d1!important;
-  background:white!important;
-}
-input:focus,select:focus,textarea:focus{
-  outline:3px solid rgba(19,79,44,.16)!important;
-  border-color:#1f6f3d!important;
-}
-.pill,.badge{
-  background:#e7f5eb!important;
-  color:#11823b!important;
-}
-</style>
-
 {% extends "base.html" %}
 {% block content %}
-<h1>Workflow Dashboard</h1>
-<p class="sub">Admin alerts for missing documents, open invoices, appointment requests, and tax return progress.</p>
-<div class="metric-grid">
-  <div class="metric"><span>Open Doc Requests</span><strong>{{ missing_docs|length }}</strong></div>
-  <div class="metric"><span>Open Invoices</span><strong>{{ open_invoices|length }}</strong></div>
-  <div class="metric"><span>Appointment Requests</span><strong>{{ requested_appointments|length }}</strong></div>
-  <div class="metric"><span>Open Returns</span><strong>{{ open_returns|length }}</strong></div>
+<h1>Workflow Hub</h1>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px">
+  <div class="metric"><span>Missing Docs</span><strong style="color:#ef4444">{{ missing_docs|length }}</strong></div>
+  <div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{ open_invoices|length }}</strong></div>
+  <div class="metric"><span>Appt Requests</span><strong style="color:#0891b2">{{ requested_appointments|length }}</strong></div>
+  <div class="metric"><span>Open Returns</span><strong style="color:#11823b">{{ open_returns|length }}</strong></div>
 </div>
-<div class="quickbar">
-  <a class="btn" href="/document-requests">Request Documents</a>
-  <a class="btn" href="/tax-tracker">Tax Tracker</a>
-  <a class="btn" href="/appointments/review">Appointments Review</a>
-  <a class="btn btn-dark" href="/activity-log">Activity Log</a>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="card">
+    <h2 style="margin-top:0">Missing Documents</h2>
+    {% if missing_docs %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Document</th><th>Due</th><th></th></tr></thead><tbody>
+    {% for d in missing_docs %}<tr>
+      <td>{{ d.client_name or '—' }}</td><td><strong>{{ d.title }}</strong></td>
+      <td style="font-size:12px">{{ d.due_date or '—' }}</td>
+      <td><form method="POST" action="/document-requests/{{ d.id }}/complete"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">Done</button></form></td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+    <div style="margin-top:12px"><a href="/document-requests" class="btn" style="font-size:12px;padding:8px 12px">+ Request Doc</a></div>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Open Invoices</h2>
+    {% if open_invoices %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+    {% for i in open_invoices %}<tr>
+      <td>{{ i.client_name or '—' }}</td><td style="font-size:12px">{{ i.invoice_number or '—' }}</td>
+      <td style="font-weight:900">${{ "%.2f"|format(i.amount|float) }}</td>
+      <td><span class="pill{% if i.status == 'Overdue' %} warn{% endif %}">{{ i.status }}</span></td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Appointment Requests</h2>
+    {% if requested_appointments %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>When</th><th></th></tr></thead><tbody>
+    {% for a in requested_appointments %}<tr>
+      <td>{{ a.client_name or '—' }}</td><td>{{ a.title or 'Appt' }}</td>
+      <td style="font-size:12px">{{ a.start_at or '—' }}</td>
+      <td>
+        <form method="POST" action="/appointments/{{ a.id }}/approve" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">✓</button></form>
+        <form method="POST" action="/appointments/{{ a.id }}/decline" style="display:inline;margin-left:4px"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">✗</button></form>
+      </td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Tax Returns In Progress</h2>
+    {% if open_returns %}
+    <div class="table-wrap"><table><thead><tr><th>Client</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>
+    {% for r in open_returns %}<tr>
+      <td>{{ r.client_name or '—' }}</td><td>{{ r.tax_year }}</td>
+      <td><span class="pill warn">{{ r.status }}</span></td>
+      <td style="font-size:12px">{{ r.due_date or '—' }}</td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<p style="color:#475569;text-align:center;padding:16px">None ✓</p>{% endif %}
+  </div>
 </div>
-<div class="card"><h2>Document Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>{% for r in missing_docs %}<tr><td>{{ r.client_name }}</td><td>{{ r.title }}</td><td>{{ r.tax_year }}</td><td><span class="pill warn">{{ r.status }}</span></td><td>{{ r.due_date }}</td></tr>{% else %}<tr><td colspan="5">No open document requests.</td></tr>{% endfor %}</tbody></table></div></div>
-<div class="card"><h2>Appointment Requests</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Start</th><th>Status</th></tr></thead><tbody>{% for a in requested_appointments %}<tr><td>{{ a.client_name }}</td><td>{{ a.title }}</td><td>{{ a.start_at }}</td><td>{{ a.status }}</td></tr>{% else %}<tr><td colspan="4">No appointment requests.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="card">
+  <h2 style="margin-top:0">Quick Actions</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+    <a class="btn" href="/service-entry">⚡ Quick Entry</a>
+    <a class="btn" href="/bookkeeping/csv-import">📥 CSV Import</a>
+    <a class="btn" href="/bookkeeping/recurring">🔁 Recurring</a>
+    <a class="btn" href="/bookkeeping/rules">🏷 Auto Rules</a>
+    <a class="btn btn-dark" href="/notifications/list">🔔 Notifications</a>
+  </div>
+</div>
 {% endblock %}

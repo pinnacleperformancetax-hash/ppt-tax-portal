@@ -1508,7 +1508,7 @@ def my_documents():
         f.save(UPLOAD_DIR / filename)
         doc_name = request.form.get("document_name") or f.filename
         execute_db(
-            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Uploaded by Client',?,?,'Tax Documents',?,1)",
+            "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Uploaded by Client',?,'Tax Documents',?,1)",
             (current_user.client_id, doc_name, doc_name, filename,
              request.form.get("tax_year"), request.form.get("notes"),
              current_user.name),
@@ -2280,6 +2280,174 @@ def preload_rules():
     db.commit()
     flash(f"Preloaded {added} categorization rules. {skipped} already existed or skipped.", "success")
     return redirect(url_for("categorization_rules"))
+
+
+# ============================================================
+# PPT CLIENT ONBOARDING FORM — Public intake at /intake
+# ============================================================
+
+@app.route("/intake", methods=["GET", "POST"])
+def client_intake():
+    """Public onboarding form — no login required."""
+    success = False
+    if request.method == "POST":
+        name = request.form.get("name") or ""
+        email = request.form.get("email") or ""
+        phone = request.form.get("phone") or ""
+        business_name = request.form.get("business_name") or ""
+        service_type = request.form.get("service_type") or ""
+        entity_type = request.form.get("entity_type") or ""
+        filing_status = request.form.get("filing_status") or ""
+        notes = request.form.get("notes") or ""
+        source = request.form.get("source") or "Intake Form"
+
+        if name and email:
+            with app.app_context():
+                # Add to CRM leads
+                execute_db(
+                    "INSERT INTO crm_leads(name,phone,email,status,source,notes,client_id) VALUES (?,?,?,?,?,?,?)",
+                    (name, phone, email, "New", source,
+                     f"Service: {service_type} | Entity: {entity_type} | Filing: {filing_status} | Notes: {notes}", None)
+                )
+                # Also add as client record
+                existing = query_db("SELECT id FROM clients WHERE LOWER(TRIM(email))=LOWER(TRIM(?))", (email,), one=True)
+                if not existing:
+                    execute_db(
+                        "INSERT INTO clients(name,business_name,email,phone,client_type,status,notes) VALUES (?,?,?,?,?,?,?)",
+                        (name, business_name, email, phone,
+                         service_type or "Individual", "New",
+                         f"Entity: {entity_type} | Filing: {filing_status} | Source: {source} | {notes}")
+                    )
+            success = True
+
+    return render_template_string(INTAKE_HTML, success=success, brand=BRAND)
+
+
+INTAKE_HTML = """<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>New Client Intake — Pinnacle Performance Tax</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#f0fdf4 0%,#e8f5ec 100%);font-family:Arial,Helvetica,sans-serif;color:#1f2937;min-height:100vh;padding:40px 20px}
+.container{max-width:640px;margin:0 auto}
+.brand{text-align:center;margin-bottom:32px}
+.brand-name{font-size:26px;font-weight:900;color:#11823b;line-height:1.2}
+.brand-sub{font-size:14px;color:#475569;margin-top:4px}
+.card{background:white;border-radius:24px;padding:36px;box-shadow:0 20px 60px rgba(17,130,59,.12);border:1px solid #d8e2dc}
+h2{font-size:22px;font-weight:900;color:#11823b;margin:0 0 6px}
+.sub{color:#475569;font-size:14px;margin:0 0 28px}
+.section{margin-bottom:24px}
+.section-title{font-size:12px;font-weight:900;text-transform:uppercase;color:#11823b;letter-spacing:.05em;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #e8f5ec}
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:1fr 1fr}
+label{display:block;font-size:13px;font-weight:800;margin-bottom:5px;color:#374151}
+input,select,textarea{width:100%;border:1px solid #cbd5d1;border-radius:12px;padding:12px 14px;font-size:15px;background:#fff;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:#11823b;box-shadow:0 0 0 3px rgba(17,130,59,.1)}
+textarea{min-height:90px;resize:vertical}
+button{width:100%;background:#11823b;color:white;border:0;border-radius:14px;padding:16px;font-size:16px;font-weight:900;cursor:pointer;margin-top:8px;transition:background .2s}
+button:hover{background:#0b5f2a}
+.success{text-align:center;padding:40px 20px}
+.success-icon{font-size:64px;margin-bottom:16px}
+.success h2{color:#11823b;font-size:28px}
+.success p{color:#475569;font-size:15px;margin:8px 0}
+.required{color:#ef4444}
+@media(max-width:600px){.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="brand">
+    <div class="brand-name">Pinnacle Performance Tax<br>and Accounting</div>
+    <div class="brand-sub">{{brand.website}} &nbsp;|&nbsp; {{brand.phone}}</div>
+  </div>
+  <div class="card">
+    {%if success%}
+    <div class="success">
+      <div class="success-icon">✅</div>
+      <h2>Thank You!</h2>
+      <p>We received your information and will be in touch soon.</p>
+      <p style="font-size:13px;color:#9ca3af;margin-top:16px">{{brand.email}}</p>
+    </div>
+    {%else%}
+    <h2>New Client Intake Form</h2>
+    <p class="sub">Fill out this form and we'll reach out to get started. All fields marked <span class="required">*</span> are required.</p>
+    <form method="POST">
+      <div class="section">
+        <div class="section-title">Personal Information</div>
+        <div class="grid grid-2">
+          <div><label>Full Name <span class="required">*</span></label><input type="text" name="name" required placeholder="John Smith"></div>
+          <div><label>Email <span class="required">*</span></label><input type="email" name="email" required placeholder="john@example.com"></div>
+          <div><label>Phone Number</label><input type="tel" name="phone" placeholder="(478) 555-0100"></div>
+          <div><label>Business Name</label><input type="text" name="business_name" placeholder="Smith LLC"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Service Information</div>
+        <div class="grid grid-2">
+          <div><label>Service Needed</label>
+            <select name="service_type">
+              <option value="">-- Select --</option>
+              <option>Individual Tax Return</option>
+              <option>Business Tax Return</option>
+              <option>Bookkeeping</option>
+              <option>Tax Planning</option>
+              <option>Payroll</option>
+              <option>S-Corp Setup</option>
+              <option>LLC Formation</option>
+              <option>Multiple Services</option>
+            </select>
+          </div>
+          <div><label>Business Entity Type</label>
+            <select name="entity_type">
+              <option value="">-- Select --</option>
+              <option>Sole Proprietor</option>
+              <option>LLC</option>
+              <option>S-Corp</option>
+              <option>C-Corp</option>
+              <option>Partnership</option>
+              <option>Non-Profit</option>
+              <option>Not Applicable</option>
+            </select>
+          </div>
+          <div><label>Filing Status</label>
+            <select name="filing_status">
+              <option value="">-- Select --</option>
+              <option>Single</option>
+              <option>Married Filing Jointly</option>
+              <option>Married Filing Separately</option>
+              <option>Head of Household</option>
+              <option>Qualifying Widow(er)</option>
+            </select>
+          </div>
+          <div><label>How did you hear about us?</label>
+            <select name="source">
+              <option value="Referral">Referral</option>
+              <option value="Google">Google Search</option>
+              <option value="Social Media">Social Media</option>
+              <option value="Website">Website</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Additional Notes</div>
+        <textarea name="notes" placeholder="Tell us anything else we should know — prior tax issues, specific questions, deadlines, etc."></textarea>
+      </div>
+      <button type="submit">Submit My Information</button>
+    </form>
+    {%endif%}
+  </div>
+</div>
+</body>
+</html>"""
+
+# ============================================================
+# END PPT CLIENT ONBOARDING FORM
+# ============================================================
 
 if __name__=='__main__':
     with app.app_context():

@@ -916,6 +916,17 @@ def crm():
 @app.route('/documents',methods=['GET','POST'])
 @login_required
 def documents():
+    if request.method=='POST' and current_user.role=='admin':
+        f=request.files.get('file')
+        filename=None
+        if f and f.filename and allowed_file(f.filename):
+            filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{secure_filename(f.filename)}"
+            f.save(UPLOAD_DIR/filename)
+        client_id=request.form.get('client_id') or None
+        doc_name=request.form.get('document_name') or (f.filename if f and f.filename else 'Document')
+        execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,?,?,?,?,?)",(client_id,doc_name,doc_name,filename,request.form.get('tax_year'),request.form.get('status') or 'Received',request.form.get('notes'),request.form.get('category') or 'Tax Documents',current_user.name,1 if request.form.get('visible_to_client') else 0))
+        flash('Document saved.','success')
+        return redirect(url_for('documents'))
     if current_user.role!='admin': return render_template('documents.html',documents=query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC",(current_user.client_id,)),clients=[])
     return render_template('documents.html',documents=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC"),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/settings',methods=['GET','POST'])
@@ -1894,7 +1905,7 @@ def service_entry():
             doc_name = request.form.get("document_name") or (f.filename if f and f.filename else "Document")
             visible = 1 if request.form.get("visible_to_client") else 0
             execute_db(
-                "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Admin Entry',?,?,?,?,?)",
+                "INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Admin Entry',?,?,?,?)",
                 (client_id, doc_name, doc_name, filename,
                  request.form.get("tax_year"), request.form.get("notes"),
                  request.form.get("category") or "Tax Documents",
@@ -2165,6 +2176,110 @@ def my_pl_report():
 # ============================================================
 # END PPT PDF EXPORT
 # ============================================================
+
+
+@app.route("/preload-rules")
+@login_required
+@admin_required
+def preload_rules():
+    """Pre-load common tax firm categorization rules."""
+    ensure_upgrade_tables()
+    db = get_db()
+
+    # Get category IDs
+    def cat_id(name, kind):
+        row = db.execute("SELECT id FROM categories WHERE LOWER(TRIM(name))=LOWER(TRIM(?)) AND kind=?", (name, kind)).fetchone()
+        return row["id"] if row else None
+
+    rules = [
+        # INCOME
+        ("stripe", cat_id("Tax Preparation Income","income"), "income"),
+        ("invoice", cat_id("Tax Preparation Income","income"), "income"),
+        ("payment received", cat_id("Tax Preparation Income","income"), "income"),
+        ("tax prep", cat_id("Tax Preparation Income","income"), "income"),
+        ("bookkeeping", cat_id("Bookkeeping Income","income"), "income"),
+        ("consulting", cat_id("Consulting Income","income"), "income"),
+        ("paypal", cat_id("Tax Preparation Income","income"), "income"),
+        ("zelle", cat_id("Tax Preparation Income","income"), "income"),
+        ("venmo", cat_id("Tax Preparation Income","income"), "income"),
+        ("cash app", cat_id("Tax Preparation Income","income"), "income"),
+        # EXPENSES - Software
+        ("quickbooks", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("intuit", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("microsoft", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("adobe", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("dropbox", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("zoom", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("slack", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("netflix", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("spotify", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("google", cat_id("Software & Subscriptions","expense"), "expense"),
+        ("apple", cat_id("Software & Subscriptions","expense"), "expense"),
+        # EXPENSES - Advertising
+        ("facebook", cat_id("Advertising & Marketing","expense"), "expense"),
+        ("instagram", cat_id("Advertising & Marketing","expense"), "expense"),
+        ("mailchimp", cat_id("Advertising & Marketing","expense"), "expense"),
+        # EXPENSES - Office
+        ("staples", cat_id("Office Supplies","expense"), "expense"),
+        ("office depot", cat_id("Office Supplies","expense"), "expense"),
+        ("amazon", cat_id("Office Supplies","expense"), "expense"),
+        ("walmart", cat_id("Office Supplies","expense"), "expense"),
+        # EXPENSES - Meals
+        ("restaurant", cat_id("Meals","expense"), "expense"),
+        ("doordash", cat_id("Meals","expense"), "expense"),
+        ("ubereats", cat_id("Meals","expense"), "expense"),
+        ("chick-fil-a", cat_id("Meals","expense"), "expense"),
+        ("mcdonald", cat_id("Meals","expense"), "expense"),
+        ("starbucks", cat_id("Meals","expense"), "expense"),
+        # EXPENSES - Travel
+        ("uber", cat_id("Travel","expense"), "expense"),
+        ("lyft", cat_id("Travel","expense"), "expense"),
+        ("delta", cat_id("Travel","expense"), "expense"),
+        ("united", cat_id("Travel","expense"), "expense"),
+        ("marriott", cat_id("Travel","expense"), "expense"),
+        ("hilton", cat_id("Travel","expense"), "expense"),
+        ("gas", cat_id("Vehicle & Mileage","expense"), "expense"),
+        ("shell", cat_id("Vehicle & Mileage","expense"), "expense"),
+        ("bp ", cat_id("Vehicle & Mileage","expense"), "expense"),
+        # EXPENSES - Bank
+        ("bank fee", cat_id("Bank Fees","expense"), "expense"),
+        ("service charge", cat_id("Bank Fees","expense"), "expense"),
+        ("monthly fee", cat_id("Bank Fees","expense"), "expense"),
+        # EXPENSES - Utilities
+        ("at&t", cat_id("Utilities","expense"), "expense"),
+        ("verizon", cat_id("Utilities","expense"), "expense"),
+        ("comcast", cat_id("Utilities","expense"), "expense"),
+        ("electric", cat_id("Utilities","expense"), "expense"),
+        ("georgia power", cat_id("Utilities","expense"), "expense"),
+        # EXPENSES - Insurance
+        ("insurance", cat_id("Insurance","expense"), "expense"),
+        ("geico", cat_id("Insurance","expense"), "expense"),
+        ("state farm", cat_id("Insurance","expense"), "expense"),
+        # EXPENSES - Payroll
+        ("gusto", cat_id("Payroll","expense"), "expense"),
+        ("adp", cat_id("Payroll","expense"), "expense"),
+        ("paychex", cat_id("Payroll","expense"), "expense"),
+        # EXPENSES - Professional
+        ("legal", cat_id("Professional Fees","expense"), "expense"),
+        ("attorney", cat_id("Professional Fees","expense"), "expense"),
+        ("accountant", cat_id("Professional Fees","expense"), "expense"),
+    ]
+
+    added = 0
+    skipped = 0
+    for keyword, category_id, rtype in rules:
+        if not keyword or not category_id:
+            skipped += 1
+            continue
+        existing = db.execute("SELECT id FROM categorization_rules WHERE LOWER(keyword)=LOWER(?)", (keyword,)).fetchone()
+        if not existing:
+            db.execute("INSERT INTO categorization_rules(keyword,category_id,type) VALUES (?,?,?)", (keyword, category_id, rtype))
+            added += 1
+        else:
+            skipped += 1
+    db.commit()
+    flash(f"Preloaded {added} categorization rules. {skipped} already existed or skipped.", "success")
+    return redirect(url_for("categorization_rules"))
 
 if __name__=='__main__':
     with app.app_context():

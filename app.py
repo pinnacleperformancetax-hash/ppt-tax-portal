@@ -877,7 +877,10 @@ def transactions():
 @login_required
 @admin_required
 def invoices():
-    if request.method=='POST': execute_db('INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)',(request.form.get('client_id'),request.form.get('invoice_number') or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",request.form.get('issue_date'),request.form.get('due_date'),money(request.form.get('amount')),request.form.get('status'),request.form.get('description'))); return redirect(url_for('invoices'))
+    if request.method=='POST':
+        import time
+        inv_num = request.form.get('invoice_number') or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}-{int(time.time()*1000)%10000}"
+        execute_db('INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)',(request.form.get('client_id'),inv_num,request.form.get('issue_date'),request.form.get('due_date'),money(request.form.get('amount')),request.form.get('status'),request.form.get('description'))); return redirect(url_for('invoices'))
     return render_template('invoices.html',invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/payments',methods=['GET','POST'])
 @login_required

@@ -10,8 +10,7 @@ from werkzeug.utils import secure_filename
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
-_upload_env = os.environ.get("UPLOAD_DIR", "")
-UPLOAD_DIR = Path(_upload_env) if _upload_env else BASE_DIR / "static" / "uploads"
+UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 INSTANCE_DIR.mkdir(exist_ok=True); UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = INSTANCE_DIR / "ppt_portal.db"
 ALLOWED_UPLOADS = {"pdf","png","jpg","jpeg","doc","docx","xls","xlsx","csv","txt"}
@@ -486,13 +485,7 @@ def workflow_dashboard():
                                LEFT JOIN clients c ON c.id=tr.client_id
                                WHERE tr.status NOT IN ('Completed','Filed')
                                ORDER BY tr.id DESC LIMIT 25""")
-    return render_template(
-        "workflow_dashboard.html",
-        missing_docs=missing_docs,
-        open_invoices=open_invoices,
-        requested_appointments=requested_appointments,
-        open_returns=open_returns,
-    )
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Workflow Hub</h1><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px"><div class="metric"><span>Missing Docs</span><strong style="color:#ef4444">{{missing_docs|length}}</strong></div><div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{open_invoices|length}}</strong></div><div class="metric"><span>Appt Requests</span><strong style="color:#0891b2">{{requested_appointments|length}}</strong></div><div class="metric"><span>Open Returns</span><strong style="color:#11823b">{{open_returns|length}}</strong></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div class="card"><h2 style="margin-top:0">Missing Documents</h2>{%if missing_docs%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Document</th><th>Due</th><th></th></tr></thead><tbody>{%for d in missing_docs%}<tr><td>{{d.client_name or"--"}}</td><td><strong>{{d.title}}</strong></td><td style="font-size:12px">{{d.due_date or"--"}}</td><td><form method="POST" action="/document-requests/{{d.id}}/complete"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">Done</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None</p>{%endif%}<div style="margin-top:12px"><a href="/document-requests" class="btn" style="font-size:12px;padding:8px 12px">+ Request Doc</a></div></div><div class="card"><h2 style="margin-top:0">Open Invoices</h2>{%if open_invoices%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead><tbody>{%for i in open_invoices%}<tr><td>{{i.client_name or"--"}}</td><td style="font-size:12px">{{i.invoice_number or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%endif%}">{{i.status}}</span></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None</p>{%endif%}</div><div class="card"><h2 style="margin-top:0">Appointment Requests</h2>{%if requested_appointments%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>When</th><th></th></tr></thead><tbody>{%for a in requested_appointments%}<tr><td>{{a.client_name or"--"}}</td><td>{{a.title or"Appt"}}</td><td style="font-size:12px">{{a.start_at or"--"}}</td><td><form method="POST" action="/appointments/{{a.id}}/approve" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#123d22;border:0;border-radius:8px;cursor:pointer">OK</button></form><form method="POST" action="/appointments/{{a.id}}/decline" style="display:inline;margin-left:4px"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">No</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None</p>{%endif%}</div><div class="card"><h2 style="margin-top:0">Tax Returns In Progress</h2>{%if open_returns%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Year</th><th>Status</th><th>Due</th></tr></thead><tbody>{%for r in open_returns%}<tr><td>{{r.client_name or"--"}}</td><td>{{r.tax_year}}</td><td><span class="pill warn">{{r.status}}</span></td><td style="font-size:12px">{{r.due_date or"--"}}</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:16px">None</p>{%endif%}</div></div><div class="card"><h2 style="margin-top:0">Quick Actions</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><a class="btn" href="/service-entry">Quick Entry</a><a class="btn" href="/bookkeeping/csv-import">CSV Import</a><a class="btn" href="/bookkeeping/recurring">Recurring</a><a class="btn" href="/bookkeeping/rules">Auto Rules</a><a class="btn btn-dark" href="/notifications/list">Notifications</a></div></div>{%endblock%}""", missing_docs=missing_docs, open_invoices=open_invoices, requested_appointments=requested_appointments, open_returns=open_returns)
 
 @app.route('/document-requests', methods=['GET', 'POST'])
 @login_required
@@ -1116,7 +1109,7 @@ def my_invoices():
         """,
         (current_user.client_id,),
     )
-    return render_template("my_invoices.html", invoices=invoices, payments=payments)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Invoices</h1><p class="sub">View and pay your invoices.</p>{%if invoices%}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Description</th><th>Amount</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>{%for i in invoices%}<tr><td><strong>{{i.invoice_number or"--"}}</strong></td><td style="font-size:12px">{{i.description or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td style="font-size:12px">{{i.due_date or"--"}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%endif%}">{{i.status}}</span></td><td>{%if i.status!="Paid"%}<a href="/invoice/{{i.id}}/pay" class="btn" style="padding:6px 12px;font-size:13px">Pay Now</a>{%else%}<span style="color:#11823b;font-size:13px;font-weight:900">Paid</span>{%endif%}</td></tr>{%endfor%}</tbody></table></div>{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:20px">No invoices yet.</p></div>{%endif%}{%if payments%}<div class="card" style="margin-top:20px"><h2 style="margin-top:0">Payment History</h2><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead><tbody>{%for p in payments%}<tr><td>{{p.invoice_number or"--"}}</td><td style="font-weight:900;color:#11823b">${{"%.2f"|format(p.amount|float)}}</td><td style="font-size:12px">{{p.method or"--"}}</td><td style="font-size:12px;color:#475569">{{p.created_at[:10]if p.created_at else"--"}}</td></tr>{%endfor%}</tbody></table></div></div>{%endif%}{%endblock%}""", invoices=invoices, payments=payments)
 
 
 @app.route("/my/payments")
@@ -1465,7 +1458,7 @@ def notifications_list():
     else:
         items = query_db("SELECT * FROM notifications WHERE client_id=? ORDER BY id DESC LIMIT 40",
                          (current_user.client_id,))
-    return render_template("notifications_list.html", notifications=items)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Notifications</h1>{%set unread=namespace(count=0)%}{%for n in notifications%}{%if not n.is_read%}{%set unread.count=unread.count+1%}{%endif%}{%endfor%}<p class="sub">{%if unread.count>0%}<span class="pill warn">{{unread.count}} unread</span>{%else%}<span class="pill">All caught up</span>{%endif%}</p><div class="quickbar"><form method="POST" action="/notifications/mark-read"><button type="submit">Mark all read</button></form></div>{%if notifications%}<div class="card" style="padding:0;overflow:hidden">{%for n in notifications%}<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid #e5e7eb;background:{{"#f0fdf4"if not n.is_read else"#fff"}}"><div style="font-size:20px;min-width:28px;font-weight:900">{%if n.type=="document"%}D{%elif n.type=="invoice"%}I{%elif n.type=="payment"%}P{%elif n.type=="message"%}M{%elif n.type=="appointment"%}A{%else%}N{%endif%}</div><div style="flex:1"><div style="font-size:14px;font-weight:{{"900"if not n.is_read else"400"}}">{{n.message}}</div><div style="font-size:11px;color:#475569;margin-top:3px">{{n.created_at[:16]if n.created_at else""}}{%if not n.is_read%} - New{%endif%}</div></div><div style="display:flex;gap:5px">{%if n.link%}<a href="{{n.link}}" class="btn" style="padding:5px 10px;font-size:12px">View</a>{%endif%}{%if not n.is_read%}<form method="POST" action="/notifications/mark-read"><input type="hidden" name="id" value="{{n.id}}"><button style="padding:5px 10px;font-size:11px;background:#f1f5f9;color:#475569;border:0;border-radius:8px;cursor:pointer">Done</button></form>{%endif%}</div></div>{%endfor%}</div>{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No notifications yet.</p></div>{%endif%}{%endblock%}""", notifications=items)
 
 
 @app.route("/notifications/mark-read", methods=["POST"])
@@ -1519,8 +1512,7 @@ def my_documents():
         (current_user.client_id,),
     )
     categories = ["Tax Documents", "Identification", "Payroll", "Bank Statements", "Receipts", "Other"]
-    return render_template("my_documents.html", documents=docs, categories=categories,
-                           current_year=datetime.now().year)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Documents</h1><p class="sub">Upload and view your documents.</p><div class="card"><h2 style="margin-top:0">Upload Document</h2><form method="POST" enctype="multipart/form-data" class="grid grid-3"><div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt" required></div><div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div><div><label>Tax Year</label><input type="text" name="tax_year" placeholder="{{current_year}}"></div><div><label>Category</label><select name="category">{%for cat in categories%}<option>{{cat}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>Notes</label><input type="text" name="notes" placeholder="Optional"></div><div style="grid-column:span 3"><button type="submit">Upload Document</button></div></form></div><div class="card"><h2 style="margin-top:0">{{documents|length}} Document{{"s"if documents|length!=1}}</h2>{%if documents%}<div class="table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Year</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>{%for d in documents%}<tr><td><strong>{{d.display_name}}</strong></td><td style="font-size:12px">{{d.category or"--"}}</td><td style="font-size:12px">{{d.tax_year or"--"}}</td><td><span class="pill">{{d.status or"Received"}}</span></td><td style="font-size:12px;color:#475569">{{d.created_at[:10]if d.created_at else"--"}}</td><td>{%if d.filename%}<a href="/documents/download/{{d.id}}" class="btn" style="padding:5px 10px;font-size:12px">Download</a>{%endif%}</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No documents yet.</p>{%endif%}</div>{%endblock%}""", documents=docs, categories=categories, current_year=datetime.now().year)
 
 
 @app.route("/admin/documents/upload", methods=["GET", "POST"])
@@ -1644,7 +1636,7 @@ def csv_import():
         push_notification(client_id, "bookkeeping", f"{imported} transactions imported from {f.filename}", "/my/bookkeeping")
         flash(f"Imported {imported} transactions. Skipped {skipped} rows.", "success")
         return redirect(url_for("transactions"))
-    return render_template("csv_import.html", clients=clients, categories=categories)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>CSV Bank Import</h1><p class="sub">Import transactions from a bank export or QuickBooks CSV.</p><div class="card"><h2 style="margin-top:0">Import File</h2><form method="POST" enctype="multipart/form-data" class="grid grid-3"><div><label>Client</label><select name="client_id" required><option value="">-- Select client --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>CSV File</label><input type="file" name="csvfile" accept=".csv" required></div><div style="grid-column:span 3"><button type="submit">Import Transactions</button></div></form></div><div class="card"><h2>Accepted Columns</h2><p style="font-size:13px;color:#475569">Date, Description, Amount, Type (income/expense) -- negatives become expenses automatically.</p></div>{%endblock%}""", clients=clients, categories=categories)
 
 
 @app.route("/bookkeeping/recurring", methods=["GET", "POST"])
@@ -1696,9 +1688,7 @@ def recurring_transactions():
                        LEFT JOIN clients cl ON cl.id=r.client_id
                        LEFT JOIN categories c ON c.id=r.category_id
                        ORDER BY r.id DESC""")
-    return render_template("recurring_transactions.html", rows=rows,
-                           clients=clients, categories=categories,
-                           frequencies=["weekly","biweekly","monthly","quarterly","annually"])
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Recurring Transactions</h1><p class="sub">Auto-post repeating income and expenses on schedule.</p><div class="card"><h2 style="margin-top:0">Add Recurring</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add"><div><label>Client</label><select name="client_id"><option value="">-- None --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description" required></div><div><label>Amount</label><input type="number" name="amount" step="0.01" required></div><div><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label>Frequency</label><select name="frequency">{%for f in frequencies%}<option value="{{f}}">{{f|title}}</option>{%endfor%}</select></div><div style="grid-column:span 2"><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for cat in categories%}<option value="{{cat.id}}">[{{cat.kind|title}}] {{cat.name}}</option>{%endfor%}</select></div><div><label>Notes</label><input type="text" name="notes"></div><div style="grid-column:span 3"><button type="submit">Add Recurring</button></div></form></div><div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><h2 style="margin:0">{{rows|length}} Recurring</h2><form method="POST" action="/bookkeeping/post-due"><button>Post All Due</button></form></div>{%if rows%}<div class="table-wrap"><table><thead><tr><th>Description</th><th>Client</th><th>Amount</th><th>Frequency</th><th>Next Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for r in rows%}<tr><td><strong>{{r.description}}</strong></td><td>{{r.client_name or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(r.amount)}}</td><td>{{r.frequency|title}}</td><td style="font-size:12px">{{r.next_due or"--"}}</td><td><span class="pill{%if not r.is_active%} warn{%endif%}">{{"Active"if r.is_active else"Paused"}}</span></td><td><form method="POST" style="display:inline"><input type="hidden" name="action" value="post_now"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px">Post</button></form><form method="POST" style="display:inline;margin-left:4px"><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">{{"Pause"if r.is_active else"Resume"}}</button></form><form method="POST" style="display:inline;margin-left:4px" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No recurring transactions yet.</p>{%endif%}</div>{%endblock%}""", rows=rows, clients=clients, categories=categories, frequencies=["weekly","biweekly","monthly","quarterly","annually"])
 
 
 @app.route("/bookkeeping/post-due", methods=["POST"])
@@ -1742,7 +1732,7 @@ def categorization_rules():
         return redirect(url_for("categorization_rules"))
     rules = query_db("""SELECT r.*,c.name category_name FROM categorization_rules r
                         LEFT JOIN categories c ON c.id=r.category_id ORDER BY r.id DESC""")
-    return render_template("categorization_rules.html", rules=rules, categories=categories)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Auto-Categorization Rules</h1><p class="sub">Keyword rules auto-categorize CSV imports and transactions.</p><div class="card"><h2 style="margin-top:0">Add Rule</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add"><div><label>Keyword</label><input type="text" name="keyword" placeholder="e.g. QuickBooks" required></div><div><label>Type</label><select name="type"><option value="expense">Expense</option><option value="income">Income</option></select></div><div><label>Category</label><select name="category_id" required><option value="">Select</option>{%for cat in categories%}<option value="{{cat.id}}">[{{cat.kind|title}}] {{cat.name}}</option>{%endfor%}</select></div><div><button type="submit">Add Rule</button></div></form></div><div class="card"><h2 style="margin-top:0">{{rules|length}} Rules</h2>{%if rules%}<div class="table-wrap"><table><thead><tr><th>Keyword</th><th>Type</th><th>Category</th><th>Added</th><th></th></tr></thead><tbody>{%for r in rules%}<tr><td><span class="pill">"{{r.keyword}}"</span></td><td><span class="pill{%if r.type!="income"%} warn{%endif%}">{{r.type|title}}</span></td><td>{{r.category_name or"--"}}</td><td style="font-size:12px;color:#475569">{{r.created_at[:10]if r.created_at else"--"}}</td><td><form method="POST" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{r.id}}"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px;cursor:pointer">Delete</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No rules yet.</p>{%endif%}</div>{%endblock%}""", rules=rules, categories=categories)
 
 
 # ── INVOICE AUTOMATION ───────────────────────────────────────
@@ -1973,159 +1963,6 @@ def init_upgrade_route():
 
 # ============================================================
 # END PPT FULL AUTOMATION UPGRADE PACK
-# ============================================================
-
-
-# ============================================================
-# PPT STRIPE + SENDGRID INTEGRATION
-# ============================================================
-
-def send_email(to_email, subject, html_body):
-    try:
-        import urllib.request, json
-        api_key = os.environ.get("SENDGRID_API_KEY", "")
-        if not api_key or not to_email:
-            return False
-        from_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
-        payload = json.dumps({
-            "personalizations": [{"to": [{"email": to_email}]}],
-            "from": {"email": from_email, "name": "Pinnacle Performance Tax"},
-            "subject": subject,
-            "content": [{"type": "text/html", "value": html_body}]
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.sendgrid.com/v3/mail/send",
-            data=payload,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            method="POST"
-        )
-        urllib.request.urlopen(req, timeout=10)
-        return True
-    except Exception:
-        return False
-
-def notify_admin(subject, html_body):
-    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
-    send_email(admin_email, subject, html_body)
-
-PAY_INVOICE_HTML = """
-{%extends"base.html"%}{%block content%}<h1>Pay Invoice {{invoice.invoice_number}}</h1><div class="card" style="max-width:500px;margin:0 auto"><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#475569">Invoice</span><strong>{{invoice.invoice_number}}</strong></div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#475569">Description</span><span>{{invoice.description or"Tax and Accounting Services"}}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#475569">Due Date</span><span>{{invoice.due_date or"--"}}</span></div><div style="display:flex;justify-content:space-between;padding-top:12px;border-top:2px solid #e5e7eb;margin-top:12px"><strong style="font-size:18px">Amount Due</strong><strong style="font-size:22px;color:#11823b">${{"%.2f"|format(invoice.amount|float)}}</strong></div></div>{%if stripe_pub%}<div id="card-element" style="border:1px solid #cbd5d1;border-radius:13px;padding:14px;background:#fff;margin-bottom:16px"></div><div id="card-errors" style="color:#b91c1c;font-size:13px;margin-bottom:10px"></div><button id="pay-btn" onclick="submitPayment()" style="width:100%;padding:14px;font-size:16px;font-weight:900">Pay ${{"%.2f"|format(invoice.amount|float)}}</button><p style="font-size:12px;color:#475569;text-align:center;margin-top:12px">Secured by Stripe. Your card info is never stored.</p><script src="https://js.stripe.com/v3/"></script><script>const stripe=Stripe("{{stripe_pub}}");const elements=stripe.elements();const card=elements.create("card",{style:{base:{fontSize:"16px",color:"#1f2937"}}});card.mount("#card-element");card.on("change",e=>{document.getElementById("card-errors").textContent=e.error?e.error.message:"";});async function submitPayment(){const btn=document.getElementById("pay-btn");btn.disabled=true;btn.textContent="Processing...";const{paymentMethod,error}=await stripe.createPaymentMethod({type:"card",card});if(error){document.getElementById("card-errors").textContent=error.message;btn.disabled=false;btn.textContent="Pay ${{"%.2f"|format(invoice.amount|float)}}";return;}const resp=await fetch("/invoice/{{invoice.id}}/stripe-charge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method_id:paymentMethod.id,amount_cents:{{amount_cents}}})});const data=await resp.json();if(data.success){window.location="/invoice/{{invoice.id}}/pay-success";}else{document.getElementById("card-errors").textContent=data.error||"Payment failed.";btn.disabled=false;btn.textContent="Pay ${{"%.2f"|format(invoice.amount|float)}}";} }</script>{%else%}<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:12px;padding:16px;color:#92400e">Online payments are not configured yet. Please contact the office to pay.</div>{%endif%}</div>{%endblock%}
-"""
-
-@app.route("/invoice/<int:invoice_id>/pay")
-@login_required
-@client_required
-def pay_invoice(invoice_id):
-    invoice = query_db("""SELECT i.*, c.name client_name, c.email client_email
-                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
-                          WHERE i.id=? AND i.client_id=?""",
-                       (invoice_id, current_user.client_id), one=True)
-    if not invoice:
-        abort(404)
-    if invoice["status"] == "Paid":
-        flash("This invoice has already been paid.", "info")
-        return redirect(url_for("my_invoices"))
-    stripe_pub = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
-    return render_template_string(PAY_INVOICE_HTML,
-        invoice=invoice, stripe_pub=stripe_pub,
-        amount_cents=int(money(invoice["amount"]) * 100))
-
-@app.route("/invoice/<int:invoice_id>/stripe-charge", methods=["POST"])
-@login_required
-@client_required
-def stripe_charge(invoice_id):
-    from flask import jsonify
-    invoice = query_db("""SELECT i.*, c.name client_name, c.email client_email
-                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
-                          WHERE i.id=? AND i.client_id=?""",
-                       (invoice_id, current_user.client_id), one=True)
-    if not invoice:
-        return jsonify({"success": False, "error": "Invoice not found"})
-    if invoice["status"] == "Paid":
-        return jsonify({"success": False, "error": "Already paid"})
-    try:
-        import urllib.request, json, urllib.parse
-        data = request.get_json()
-        payment_method_id = data.get("payment_method_id")
-        amount_cents = data.get("amount_cents")
-        secret_key = os.environ.get("STRIPE_SECRET_KEY", "")
-        if not secret_key:
-            return jsonify({"success": False, "error": "Payments not configured"})
-        payload = urllib.parse.urlencode({
-            "amount": str(amount_cents), "currency": "usd",
-            "payment_method": payment_method_id, "confirm": "true",
-            "description": f"Invoice {invoice['invoice_number']} - {invoice['client_name']}",
-            "receipt_email": invoice["client_email"] or "",
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.stripe.com/v1/payment_intents", data=payload,
-            headers={"Authorization": f"Bearer {secret_key}",
-                     "Content-Type": "application/x-www-form-urlencoded"}, method="POST")
-        resp = urllib.request.urlopen(req, timeout=30)
-        result = json.loads(resp.read())
-        if result.get("status") in ("succeeded", "requires_capture"):
-            execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?", (invoice_id,))
-            execute_db("INSERT INTO payments(invoice_id,client_id,amount,method,reference,status,notes) VALUES (?,?,?,'Stripe',?,?,?)",
-                (invoice_id, invoice["client_id"], money(invoice["amount"]),
-                 result.get("id", ""), "Paid", f"Stripe payment {result.get('id','')}"))
-            push_notification(invoice["client_id"], "payment",
-                f"Payment of ${money(invoice['amount']):,.2f} received for {invoice['invoice_number']}", "/my/invoices")
-            send_email(invoice["client_email"],
-                f"Payment Confirmed - {invoice['invoice_number']}",
-                f"<h2>Payment Confirmed</h2><p>Thank you {invoice['client_name']}! Your payment of ${money(invoice['amount']):,.2f} for invoice {invoice['invoice_number']} has been received.</p>")
-            notify_admin(f"Payment Received - {invoice['invoice_number']}",
-                f"<h2>Payment Received</h2><p>{invoice['client_name']} paid ${money(invoice['amount']):,.2f} for invoice {invoice['invoice_number']} via Stripe.</p>")
-            return jsonify({"success": True})
-        else:
-            return jsonify({"success": False, "error": "Payment was not completed"})
-    except Exception as e:
-        err_msg = str(e)
-        try:
-            import json as _j
-            body = e.read() if hasattr(e, "read") else b""
-            err_data = _j.loads(body)
-            err_msg = err_data.get("error", {}).get("message", err_msg)
-        except Exception:
-            pass
-        return jsonify({"success": False, "error": err_msg})
-
-@app.route("/invoice/<int:invoice_id>/pay-success")
-@login_required
-@client_required
-def pay_invoice_success(invoice_id):
-    invoice = query_db("SELECT * FROM invoices WHERE id=? AND client_id=?",
-                       (invoice_id, current_user.client_id), one=True)
-    if not invoice:
-        abort(404)
-    return render_template_string("""{%extends"base.html"%}{%block content%}<div style="text-align:center;padding:60px 20px"><div style="font-size:64px;margin-bottom:16px">✅</div><h1 style="color:#11823b">Payment Successful!</h1><p style="font-size:18px;color:#475569;margin-bottom:8px">Your payment of <strong>${{"%.2f"|format(invoice.amount|float)}}</strong> has been received.</p><p style="color:#475569">Invoice {{invoice.invoice_number}} is now marked as <strong>Paid</strong>.</p><div style="margin-top:30px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap"><a href="/my/invoices" class="btn">View My Invoices</a><a href="/client-dashboard" class="btn btn-light">Back to Dashboard</a></div></div>{%endblock%}""", invoice=invoice)
-
-@app.route("/messages/send-email-notify/<int:message_id>", methods=["POST"])
-@login_required
-@admin_required
-def send_message_email(message_id):
-    msg = query_db("""SELECT m.*, c.email client_email, c.name client_name
-                      FROM messages m LEFT JOIN clients c ON c.id=m.client_id
-                      WHERE m.id=?""", (message_id,), one=True)
-    if not msg:
-        abort(404)
-    sent = send_email(msg["client_email"], f"New Message: {msg['subject']}",
-        f"<h2>New message from Pinnacle Performance Tax</h2><p><strong>Subject:</strong> {msg['subject']}</p><p>{msg['body']}</p>")
-    flash(f"Email {'sent' if sent else 'failed - check SendGrid key'}.", "success" if sent else "danger")
-    return redirect(url_for("messages"))
-
-@app.route("/test-email")
-@login_required
-@admin_required
-def test_email():
-    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
-    sent = send_email(admin_email, "PPT Portal - Email Test",
-        "<h2>Email is working!</h2><p>Your SendGrid integration is configured correctly.</p>")
-    flash(f"Test email {'sent to ' + admin_email if sent else 'FAILED - check SENDGRID_API_KEY in Render env vars'}.",
-          "success" if sent else "danger")
-    return redirect(url_for("dashboard"))
-
-# ============================================================
-# END PPT STRIPE + SENDGRID INTEGRATION
 # ============================================================
 
 if __name__=='__main__':

@@ -1927,10 +1927,7 @@ def service_entry():
 
     # For payment sub-form: list unpaid invoices
     open_invoices = query_db("SELECT i.*,c.name client_name FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.status!='Paid' ORDER BY i.id DESC")
-    return render_template("service_entry.html", clients=clients, categories=categories,
-                           open_invoices=open_invoices,
-                           today=datetime.now().strftime("%Y-%m-%d"),
-                           current_year=str(datetime.now().year))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Quick Service Entry</h1><p class="sub">Select one service and fill in only what you need.</p><style>.svc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:4px}.svc-btn{border:2px solid #dfe7df;border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;background:#fff}.svc-btn:hover,.svc-btn.active{border-color:#11823b;background:#e8f5ec}.svc-btn .ico{font-size:26px;margin-bottom:5px}.svc-btn .lbl{font-size:12px;font-weight:900}.panel{display:none}.panel.active{display:block}</style><div class="card"><h2>Select a Service</h2><div class="svc-grid"><div class="svc-btn" onclick="pick('transaction',this)"><div class="ico">$</div><div class="lbl">Transaction</div></div><div class="svc-btn" onclick="pick('invoice',this)"><div class="ico">#</div><div class="lbl">Invoice</div></div><div class="svc-btn" onclick="pick('payment',this)"><div class="ico">$</div><div class="lbl">Payment</div></div><div class="svc-btn" onclick="pick('appointment',this)"><div class="ico">@</div><div class="lbl">Appointment</div></div><div class="svc-btn" onclick="pick('tax_return',this)"><div class="ico">T</div><div class="lbl">Tax Return</div></div><div class="svc-btn" onclick="pick('document',this)"><div class="ico">D</div><div class="lbl">Document</div></div><div class="svc-btn" onclick="pick('message',this)"><div class="ico">M</div><div class="lbl">Message</div></div><div class="svc-btn" onclick="pick('crm_lead',this)"><div class="ico">L</div><div class="lbl">CRM Lead</div></div></div></div><form method="POST" enctype="multipart/form-data"><input type="hidden" name="service_type" id="svc_field"><div class="card panel" id="block-client"><label>Client</label><select name="client_id"><option value="">-- No client --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div class="card panel" id="panel-transaction"><h2>Transaction</h2><div class="grid grid-3"><div><label>Date</label><input type="date" name="date" value="{{today}}"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Type</label><select name="ttype"><option value="income">Income</option><option value="expense">Expense</option></select></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description"></div><div><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for cat in categories%}<option value="{{cat.id}}">[{{cat.kind|title}}] {{cat.name}}</option>{%endfor%}</select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Transaction</button></div></div></div><div class="card panel" id="panel-invoice"><h2>Invoice</h2><div class="grid grid-3"><div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option><option value="Paid">Paid</option></select></div><div><label>Issue Date</label><input type="date" name="issue_date" value="{{today}}"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div></div><div style="grid-column:span 3"><label>Description</label><input type="text" name="description"></div><div><button type="submit">Save Invoice</button></div></div></div><div class="card panel" id="panel-payment"><h2>Payment</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>Apply to Invoice</label><select name="invoice_id"><option value="">Standalone</option>{%for inv in open_invoices%}<option value="{{inv.id}}">{{inv.invoice_number}} -- {{inv.client_name}} -- ${{inv.amount}}</option>{%endfor%}</select></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Method</label><select name="method"><option>Manual Entry</option><option>Cash</option><option>Check</option><option>Credit Card</option><option>Zelle</option><option>PayPal</option></select></div><div><label>Reference #</label><input type="text" name="reference"></div><div style="grid-column:span 3"><button type="submit">Save Payment</button></div></div></div><div class="card panel" id="panel-appointment"><h2>Appointment</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>Title</label><input type="text" name="title"></div><div><label>Start</label><input type="datetime-local" name="start_at"></div><div><label>End</label><input type="datetime-local" name="end_at"></div><div><label>Status</label><select name="status"><option>Scheduled</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select></div><div><label>Location</label><input type="text" name="location"></div><div style="grid-column:span 2"><label>Meeting Link</label><input type="text" name="meeting_link"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Appointment</button></div></div></div><div class="card panel" id="panel-tax_return"><h2>Tax Return</h2><div class="grid grid-3"><div><label>Tax Year</label><input type="text" name="tax_year" value="{{current_year}}"></div><div><label>Service</label><select name="service_type_tr"><option value="Individual">Individual</option><option value="Business">Business</option><option value="S-Corp">S-Corp</option><option value="Partnership">Partnership</option></select></div><div><label>Status</label><select name="status"><option value="In Progress">In Progress</option><option value="Waiting on Client">Waiting on Client</option><option value="Completed">Completed</option><option value="Filed">Filed</option></select></div><div><label>Fee</label><input type="number" name="fee" step="0.01" placeholder="0.00"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Tax Return</button></div></div></div><div class="card panel" id="panel-document"><h2>Document</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt"></div><div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div><div><label>Tax Year</label><input type="text" name="tax_year"></div><div><label>Category</label><select name="category"><option>Tax Documents</option><option>Identification</option><option>Payroll</option><option>Bank Statements</option><option>Receipts</option><option>Other</option></select></div><div style="display:flex;align-items:center;gap:8px;padding-top:28px"><input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0"><label style="margin:0;font-size:13px">Visible to client</label></div><div></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Document</button></div></div></div><div class="card panel" id="panel-message"><h2>Message</h2><div class="grid"><div><label>Subject</label><input type="text" name="subject"></div><div><label>Message</label><textarea name="body" style="min-height:130px"></textarea></div><div><button type="submit">Send Message</button></div></div></div><div class="card panel" id="panel-crm_lead"><h2>CRM Lead</h2><div class="grid grid-3"><div><label>Name</label><input type="text" name="lead_name"></div><div><label>Phone</label><input type="tel" name="lead_phone"></div><div><label>Email</label><input type="email" name="lead_email"></div><div><label>Source</label><input type="text" name="lead_source"></div><div><label>Status</label><select name="lead_status"><option>New</option><option>Contacted</option><option>Qualified</option><option>Converted</option><option>Lost</option></select></div><div><label>Follow-up</label><input type="date" name="follow_up_date"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Save Lead</button></div></div></div></form><script>function pick(svc,el){document.querySelectorAll('.svc-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+svc).classList.add('active');document.getElementById('block-client').classList.add('active');document.getElementById('svc_field').value=svc;document.getElementById('panel-'+svc).scrollIntoView({behavior:'smooth',block:'start'});}</script>{%endblock%}""", clients=clients, categories=categories, open_invoices=open_invoices, today=datetime.now().strftime("%Y-%m-%d"), current_year=str(datetime.now().year))
 
 
 # ── WIRING: auto mark overdue on admin dashboard load ────────
@@ -1963,6 +1960,100 @@ def init_upgrade_route():
 
 # ============================================================
 # END PPT FULL AUTOMATION UPGRADE PACK
+# ============================================================
+
+
+# ============================================================
+# PPT STRIPE + SENDGRID INTEGRATION
+# ============================================================
+
+def send_email(to_email, subject, html_body):
+    try:
+        import urllib.request, json
+        api_key = os.environ.get("SENDGRID_API_KEY", "")
+        if not api_key or not to_email:
+            return False
+        from_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+        payload = json.dumps({"personalizations":[{"to":[{"email":to_email}]}],"from":{"email":from_email,"name":"Pinnacle Performance Tax"},"subject":subject,"content":[{"type":"text/html","value":html_body}]}).encode("utf-8")
+        req = urllib.request.Request("https://api.sendgrid.com/v3/mail/send",data=payload,headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},method="POST")
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception:
+        return False
+
+def notify_admin(subject, html_body):
+    send_email(os.environ.get("ADMIN_EMAIL","pinnacleperformancetax@gmail.com"), subject, html_body)
+
+PAY_INVOICE_HTML = """{%extends"base.html"%}{%block content%}<h1>Pay Invoice {{invoice.invoice_number}}</h1><div class="card" style="max-width:500px;margin:0 auto"><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#475569">Invoice</span><strong>{{invoice.invoice_number}}</strong></div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#475569">Description</span><span>{{invoice.description or"Tax and Accounting Services"}}</span></div><div style="display:flex;justify-content:space-between;padding-top:12px;border-top:2px solid #e5e7eb;margin-top:12px"><strong style="font-size:18px">Amount Due</strong><strong style="font-size:22px;color:#11823b">${{"%.2f"|format(invoice.amount|float)}}</strong></div></div>{%if stripe_pub%}<div id="card-element" style="border:1px solid #cbd5d1;border-radius:13px;padding:14px;background:#fff;margin-bottom:16px"></div><div id="card-errors" style="color:#b91c1c;font-size:13px;margin-bottom:10px"></div><button id="pay-btn" onclick="submitPayment()" style="width:100%;padding:14px;font-size:16px;font-weight:900">Pay ${{"%.2f"|format(invoice.amount|float)}}</button><p style="font-size:12px;color:#475569;text-align:center;margin-top:12px">Secured by Stripe. Card info never stored.</p><script src="https://js.stripe.com/v3/"></script><script>const stripe=Stripe("{{stripe_pub}}");const elements=stripe.elements();const card=elements.create("card",{style:{base:{fontSize:"16px",color:"#1f2937"}}});card.mount("#card-element");card.on("change",e=>{document.getElementById("card-errors").textContent=e.error?e.error.message:"";});async function submitPayment(){const btn=document.getElementById("pay-btn");btn.disabled=true;btn.textContent="Processing...";const{paymentMethod,error}=await stripe.createPaymentMethod({type:"card",card});if(error){document.getElementById("card-errors").textContent=error.message;btn.disabled=false;btn.textContent="Pay ${{"%.2f"|format(invoice.amount|float)}}";return;}const resp=await fetch("/invoice/{{invoice.id}}/stripe-charge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method_id:paymentMethod.id,amount_cents:{{amount_cents}}})});const data=await resp.json();if(data.success){window.location="/invoice/{{invoice.id}}/pay-success";}else{document.getElementById("card-errors").textContent=data.error||"Payment failed.";btn.disabled=false;btn.textContent="Pay ${{"%.2f"|format(invoice.amount|float)}}";} }</script>{%else%}<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:12px;padding:16px;color:#92400e">Online payments not configured. Please contact the office.</div>{%endif%}</div>{%endblock%}"""
+
+@app.route("/invoice/<int:invoice_id>/pay")
+@login_required
+@client_required
+def pay_invoice(invoice_id):
+    invoice = query_db("SELECT i.*, c.name client_name, c.email client_email FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.id=? AND i.client_id=?",(invoice_id, current_user.client_id), one=True)
+    if not invoice: abort(404)
+    if invoice["status"] == "Paid":
+        flash("This invoice has already been paid.", "info")
+        return redirect(url_for("my_invoices"))
+    stripe_pub = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    return render_template_string(PAY_INVOICE_HTML, invoice=invoice, stripe_pub=stripe_pub, amount_cents=int(money(invoice["amount"]) * 100))
+
+@app.route("/invoice/<int:invoice_id>/stripe-charge", methods=["POST"])
+@login_required
+@client_required
+def stripe_charge(invoice_id):
+    from flask import jsonify
+    invoice = query_db("SELECT i.*, c.name client_name, c.email client_email FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.id=? AND i.client_id=?",(invoice_id, current_user.client_id), one=True)
+    if not invoice: return jsonify({"success":False,"error":"Invoice not found"})
+    if invoice["status"] == "Paid": return jsonify({"success":False,"error":"Already paid"})
+    try:
+        import urllib.request, json, urllib.parse
+        data = request.get_json()
+        secret_key = os.environ.get("STRIPE_SECRET_KEY","")
+        if not secret_key: return jsonify({"success":False,"error":"Payments not configured"})
+        payload = urllib.parse.urlencode({"amount":str(data.get("amount_cents")),"currency":"usd","payment_method":data.get("payment_method_id"),"confirm":"true","description":f"Invoice {invoice['invoice_number']} - {invoice['client_name']}","receipt_email":invoice["client_email"] or ""}).encode("utf-8")
+        req = urllib.request.Request("https://api.stripe.com/v1/payment_intents",data=payload,headers={"Authorization":f"Bearer {secret_key}","Content-Type":"application/x-www-form-urlencoded"},method="POST")
+        result = json.loads(urllib.request.urlopen(req,timeout=30).read())
+        if result.get("status") in ("succeeded","requires_capture"):
+            execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?",(invoice_id,))
+            execute_db("INSERT INTO payments(invoice_id,client_id,amount,method,reference,status,notes) VALUES (?,?,?,'Stripe',?,?,?)",(invoice_id,invoice["client_id"],money(invoice["amount"]),result.get("id",""),"Paid",f"Stripe {result.get('id','')}"))
+            push_notification(invoice["client_id"],"payment",f"Payment of ${money(invoice['amount']):,.2f} received for {invoice['invoice_number']}","/my/invoices")
+            send_email(invoice["client_email"],f"Payment Confirmed - {invoice['invoice_number']}",f"<h2>Payment Confirmed</h2><p>Thank you {invoice['client_name']}! Payment of ${money(invoice['amount']):,.2f} received.</p>")
+            notify_admin(f"Payment Received - {invoice['invoice_number']}",f"<p>{invoice['client_name']} paid ${money(invoice['amount']):,.2f} via Stripe.</p>")
+            return jsonify({"success":True})
+        return jsonify({"success":False,"error":"Payment not completed"})
+    except Exception as e:
+        return jsonify({"success":False,"error":str(e)})
+
+@app.route("/invoice/<int:invoice_id>/pay-success")
+@login_required
+@client_required
+def pay_invoice_success(invoice_id):
+    invoice = query_db("SELECT * FROM invoices WHERE id=? AND client_id=?",(invoice_id, current_user.client_id), one=True)
+    if not invoice: abort(404)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<div style="text-align:center;padding:60px 20px"><div style="font-size:64px;margin-bottom:16px">✅</div><h1 style="color:#11823b">Payment Successful!</h1><p style="font-size:18px;color:#475569">Your payment of <strong>${{"%.2f"|format(invoice.amount|float)}}</strong> has been received.</p><p>Invoice {{invoice.invoice_number}} is now marked <strong>Paid</strong>.</p><div style="margin-top:30px;display:flex;gap:12px;justify-content:center"><a href="/my/invoices" class="btn">View Invoices</a><a href="/client-dashboard" class="btn btn-light">Dashboard</a></div></div>{%endblock%}""", invoice=invoice)
+
+@app.route("/messages/send-email-notify/<int:message_id>", methods=["POST"])
+@login_required
+@admin_required
+def send_message_email(message_id):
+    msg = query_db("SELECT m.*, c.email client_email FROM messages m LEFT JOIN clients c ON c.id=m.client_id WHERE m.id=?",(message_id,), one=True)
+    if not msg: abort(404)
+    sent = send_email(msg["client_email"],f"New Message: {msg['subject']}",f"<h2>New message from PPT</h2><p>{msg['body']}</p>")
+    flash("Email sent." if sent else "Email failed.", "success" if sent else "danger")
+    return redirect(url_for("messages"))
+
+@app.route("/test-email")
+@login_required
+@admin_required
+def test_email():
+    admin_email = os.environ.get("ADMIN_EMAIL","pinnacleperformancetax@gmail.com")
+    sent = send_email(admin_email,"PPT Portal - Email Test","<h2>Email is working!</h2>")
+    flash(f"Test email {'sent to '+admin_email if sent else 'FAILED - check SENDGRID_API_KEY'}.", "success" if sent else "danger")
+    return redirect(url_for("dashboard"))
+
+# ============================================================
+# END PPT STRIPE + SENDGRID INTEGRATION
 # ============================================================
 
 if __name__=='__main__':

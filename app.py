@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import os, sqlite3
 from datetime import datetime
@@ -2146,6 +2145,7 @@ def invoice_pdf(invoice_id):
     payments = query_db("SELECT * FROM payments WHERE invoice_id=? ORDER BY id DESC", (invoice_id,))
     paid = sum(money(p["amount"]) for p in payments)
     balance = money(invoice["amount"]) - paid
+    invoice = dict(invoice)
     html = _invoice_html(invoice, payments, paid, balance)
     return Response(html, mimetype="text/html")
 
@@ -2158,6 +2158,7 @@ def pl_report(client_id):
     year = request.args.get("year") or str(datetime.now().year)
     client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
     if not client: abort(404)
+    client = dict(client)
     income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
     expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
     by_category = query_db("SELECT COALESCE(c.name,'Uncategorized') category,t.type,COALESCE(SUM(t.amount),0) total FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? GROUP BY COALESCE(c.name,'Uncategorized'),t.type ORDER BY t.type,total DESC", (client_id, year))
@@ -2174,6 +2175,7 @@ def my_pl_report():
     year = request.args.get("year") or str(datetime.now().year)
     client = query_db("SELECT * FROM clients WHERE id=?", (current_user.client_id,), one=True)
     if not client: abort(404)
+    client = dict(client)
     income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (current_user.client_id, year), one=True)["total"])
     expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (current_user.client_id, year), one=True)["total"])
     by_category = query_db("SELECT COALESCE(c.name,'Uncategorized') category,t.type,COALESCE(SUM(t.amount),0) total FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? GROUP BY COALESCE(c.name,'Uncategorized'),t.type ORDER BY t.type,total DESC", (current_user.client_id, year))

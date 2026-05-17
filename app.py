@@ -2143,7 +2143,8 @@ def pl_report(client_id):
     income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
     expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
     by_category = query_db("SELECT COALESCE(c.name,'Uncategorized') category,t.type,COALESCE(SUM(t.amount),0) total FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? GROUP BY COALESCE(c.name,'Uncategorized'),t.type ORDER BY t.type,total DESC", (client_id, year))
-    transactions = query_db("SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? ORDER BY t.date DESC", (client_id, year))
+    transactions = [dict(t) for t in query_db("SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? ORDER BY t.date DESC", (client_id, year))]
+    by_category = [dict(r) for r in by_category]
     html = _pl_html(client, year, income, expenses, income - expenses, by_category, transactions)
     return Response(html, mimetype="text/html")
 
@@ -2160,7 +2161,8 @@ def my_pl_report():
     income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (current_user.client_id, year), one=True)["total"])
     expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (current_user.client_id, year), one=True)["total"])
     by_category = query_db("SELECT COALESCE(c.name,'Uncategorized') category,t.type,COALESCE(SUM(t.amount),0) total FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? GROUP BY COALESCE(c.name,'Uncategorized'),t.type ORDER BY t.type,total DESC", (current_user.client_id, year))
-    transactions = query_db("SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? ORDER BY t.date DESC", (current_user.client_id, year))
+    transactions = [dict(t) for t in query_db("SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? ORDER BY t.date DESC", (current_user.client_id, year))]
+    by_category = [dict(r) for r in by_category]
     html = _pl_html(client, year, income, expenses, income - expenses, by_category, transactions)
     return Response(html, mimetype="text/html")
 

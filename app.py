@@ -938,7 +938,40 @@ def documents():
 @app.route('/settings',methods=['GET','POST'])
 @login_required
 @admin_required
-def settings(): return render_template('settings.html',users=query_db('SELECT u.*,cl.name client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+def settings():
+    clients = query_db('SELECT id,name FROM clients ORDER BY name')
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add_user':
+            name = request.form.get('name')
+            email = request.form.get('email')
+            password = request.form.get('password') or 'Welcome123!'
+            role = request.form.get('role') or 'client'
+            client_id = request.form.get('client_id') or None
+            if name and email:
+                existing = query_db('SELECT id FROM users WHERE lower(email)=?', (email.lower(),), one=True)
+                if existing:
+                    flash('A user with that email already exists.', 'danger')
+                else:
+                    execute_db('INSERT INTO users(name,email,password_hash,role,client_id,is_active) VALUES (?,?,?,?,?,1)',
+                               (name, email, generate_password_hash(password), role, client_id))
+                    flash(f'User {name} created! They can log in with password: {password}', 'success')
+            return redirect(url_for('settings'))
+        elif action == 'reset_password':
+            uid = request.form.get('user_id')
+            new_pw = request.form.get('new_password') or 'Welcome123!'
+            execute_db('UPDATE users SET password_hash=? WHERE id=?', (generate_password_hash(new_pw), uid))
+            flash(f'Password reset to: {new_pw}', 'success')
+            return redirect(url_for('settings'))
+        elif action == 'toggle_user':
+            uid = request.form.get('user_id')
+            row = query_db('SELECT is_active FROM users WHERE id=?', (uid,), one=True)
+            if row:
+                execute_db('UPDATE users SET is_active=? WHERE id=?', (0 if row['is_active'] else 1, uid))
+            flash('User updated.', 'success')
+            return redirect(url_for('settings'))
+    users = query_db('SELECT u.*,cl.name client_name FROM users u LEFT JOIN clients cl ON cl.id=u.client_id ORDER BY u.id DESC')
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Settings</h1><div class="card"><h2 style="margin-top:0">Add New User</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add_user"><div><label>Full Name</label><input type="text" name="name" required placeholder="John Smith"></div><div><label>Email</label><input type="email" name="email" required placeholder="john@example.com"></div><div><label>Temporary Password</label><input type="text" name="password" placeholder="Welcome123!"></div><div><label>Role</label><select name="role"><option value="client">Client</option><option value="admin">Admin</option></select></div><div><label>Link to Client</label><select name="client_id"><option value="">-- Select client --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="display:flex;align-items:flex-end"><button type="submit">Create User</button></div></form></div><div class="card"><h2 style="margin-top:0">{{users|length}} User{{"s"if users|length!=1}}</h2><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Client</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for u in users%}<tr><td><strong>{{u.name}}</strong></td><td style="font-size:12px">{{u.email}}</td><td><span class="pill">{{u.role|title}}</span></td><td style="font-size:12px">{{u.client_name or"--"}}</td><td><span class="pill{%if not u.is_active%} warn{%endif%}">{{"Active"if u.is_active else"Inactive"}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><form method="POST" style="display:flex;gap:4px"><input type="hidden" name="action" value="reset_password"><input type="hidden" name="user_id" value="{{u.id}}"><input type="text" name="new_password" placeholder="New password" style="width:120px;padding:4px 8px;font-size:11px"><button style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Reset</button></form><form method="POST" style="display:inline;margin-left:4px"><input type="hidden" name="action" value="toggle_user"><input type="hidden" name="user_id" value="{{u.id}}"><button style="padding:4px 8px;font-size:11px;background:{{"#fef2f2"if u.is_active else"#e8f5ec"}};color:{{"#b91c1c"if u.is_active else"#0b5f2a"}};border:0;border-radius:8px">{{"Deactivate"if u.is_active else"Activate"}}</button></form></td></tr>{%endfor%}</tbody></table></div></div>{%endblock%}""", users=users, clients=clients)
 # === PPT MY MESSAGES + YEAR END FIX START ===
 
 

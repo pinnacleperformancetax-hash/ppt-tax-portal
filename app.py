@@ -382,6 +382,8 @@ def messages():
         body = request.form.get('body') or ''
         execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
                    (client_id, 'admin', current_user.name, subject, body))
+        if client_id:
+            email_new_message(client_id, subject, body)
         flash('Message sent.', 'success')
         return redirect(url_for('messages'))
     items = query_db("""SELECT m.*, c.name client_name
@@ -589,6 +591,7 @@ def approve_appointment(appointment_id):
         abort(404)
     execute_db("UPDATE appointments SET status='Approved', admin_decision='Approved' WHERE id=?", (appointment_id,))
     log_activity(appt["client_id"], "Appointment Approved", appt["title"] or "Appointment", appt["start_at"] or "")
+    email_appointment_confirmed(appointment_id)
     flash("Appointment approved.", "success")
     return redirect(url_for("appointments_review"))
 
@@ -880,7 +883,10 @@ def invoices():
     if request.method=='POST':
         import time
         inv_num = request.form.get('invoice_number') or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}-{int(time.time()*1000)%10000}"
-        execute_db('INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)',(request.form.get('client_id'),inv_num,request.form.get('issue_date'),request.form.get('due_date'),money(request.form.get('amount')),request.form.get('status'),request.form.get('description'))); return redirect(url_for('invoices'))
+        inv_id = execute_db('INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)',(request.form.get('client_id'),inv_num,request.form.get('issue_date'),request.form.get('due_date'),money(request.form.get('amount')),request.form.get('status'),request.form.get('description')))
+        if request.form.get('client_id') and request.form.get('status') != 'Draft':
+            email_new_invoice(inv_id)
+        return redirect(url_for('invoices'))
     return render_template('invoices.html',invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/payments',methods=['GET','POST'])
 @login_required
@@ -1558,6 +1564,7 @@ def admin_upload_document():
                 f"New document available: {doc_name}",
                 "/my/documents",
             )
+            email_document_uploaded(client_id, doc_name, "Admin")
         log_activity(client_id, "Document Upload", f"Admin uploaded: {doc_name}", "")
         flash("Document uploaded to client.", "success")
         return redirect(url_for("documents"))
@@ -2447,6 +2454,190 @@ button:hover{background:#0b5f2a}
 
 # ============================================================
 # END PPT CLIENT ONBOARDING FORM
+# ============================================================
+
+
+# ============================================================
+# PPT AUTO EMAIL NOTIFICATIONS — SendGrid
+# ============================================================
+
+def send_email(to_email, subject, html_body):
+    """Send email via SendGrid. Returns True on success."""
+    try:
+        import urllib.request, json
+        api_key = os.environ.get("SENDGRID_API_KEY", "")
+        if not api_key or not to_email:
+            return False
+        from_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+        payload = json.dumps({
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": from_email, "name": "Pinnacle Performance Tax"},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html_body}]
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=payload,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST"
+        )
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def notify_admin(subject, html_body):
+    """Send email to admin."""
+    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+    send_email(admin_email, subject, html_body)
+
+
+def email_new_invoice(invoice_id):
+    """Email client when a new invoice is created."""
+    try:
+        inv = query_db("""SELECT i.*, c.name client_name, c.email client_email
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.id=?""", (invoice_id,), one=True)
+        if not inv or not inv["client_email"]: return
+        send_email(
+            inv["client_email"],
+            f"New Invoice {inv['invoice_number']} — Pinnacle Performance Tax",
+            f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#11823b;padding:20px;border-radius:12px 12px 0 0">
+              <h2 style="color:white;margin:0">New Invoice from Pinnacle Performance Tax</h2>
+            </div>
+            <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+              <p>Hi {inv['client_name']},</p>
+              <p>A new invoice has been created for your account.</p>
+              <div style="background:white;border-radius:10px;padding:16px;margin:16px 0;border:1px solid #e5e7eb">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                  <span style="color:#6b7280">Invoice #</span><strong>{inv['invoice_number']}</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                  <span style="color:#6b7280">Amount Due</span><strong style="color:#11823b">${money(inv['amount']):,.2f}</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span style="color:#6b7280">Due Date</span><strong>{inv['due_date'] or 'Upon receipt'}</strong>
+                </div>
+              </div>
+              <p>Please log in to your client portal to view and pay your invoice.</p>
+              <p style="font-size:12px;color:#9ca3af">Pinnacle Performance Tax and Accounting<br>478-338-1632 | pinnacleperformancetax@gmail.com</p>
+            </div></div>"""
+        )
+        notify_admin(
+            f"Invoice {inv['invoice_number']} sent to {inv['client_name']}",
+            f"<p>Invoice {inv['invoice_number']} for ${money(inv['amount']):,.2f} was created for {inv['client_name']} ({inv['client_email']}).</p>"
+        )
+    except Exception:
+        pass
+
+
+def email_document_uploaded(client_id, doc_name, uploaded_by="Admin"):
+    """Email client when a document is uploaded for them."""
+    try:
+        client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+        if not client or not client["email"]: return
+        if uploaded_by != "Admin":
+            # Client uploaded — notify admin instead
+            notify_admin(
+                f"Document Uploaded by {client['name']}",
+                f"<p>{client['name']} uploaded a document: <strong>{doc_name}</strong></p>"
+            )
+            return
+        send_email(
+            client["email"],
+            f"New Document Available — Pinnacle Performance Tax",
+            f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#11823b;padding:20px;border-radius:12px 12px 0 0">
+              <h2 style="color:white;margin:0">New Document Available</h2>
+            </div>
+            <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+              <p>Hi {client['name']},</p>
+              <p>A new document has been uploaded to your client portal:</p>
+              <div style="background:white;border-radius:10px;padding:16px;margin:16px 0;border:1px solid #e5e7eb">
+                <strong style="color:#11823b">{doc_name}</strong>
+              </div>
+              <p>Please log in to your client portal to view and download your document.</p>
+              <p style="font-size:12px;color:#9ca3af">Pinnacle Performance Tax and Accounting<br>478-338-1632 | pinnacleperformancetax@gmail.com</p>
+            </div></div>"""
+        )
+    except Exception:
+        pass
+
+
+def email_appointment_confirmed(appointment_id):
+    """Email client when appointment is approved."""
+    try:
+        appt = query_db("""SELECT a.*, c.name client_name, c.email client_email
+                           FROM appointments a LEFT JOIN clients c ON c.id=a.client_id
+                           WHERE a.id=?""", (appointment_id,), one=True)
+        if not appt or not appt["client_email"]: return
+        send_email(
+            appt["client_email"],
+            f"Appointment Confirmed — Pinnacle Performance Tax",
+            f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#11823b;padding:20px;border-radius:12px 12px 0 0">
+              <h2 style="color:white;margin:0">Appointment Confirmed ✅</h2>
+            </div>
+            <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+              <p>Hi {appt['client_name']},</p>
+              <p>Your appointment has been confirmed!</p>
+              <div style="background:white;border-radius:10px;padding:16px;margin:16px 0;border:1px solid #e5e7eb">
+                <div style="margin-bottom:8px"><span style="color:#6b7280">Title: </span><strong>{appt['title'] or 'Appointment'}</strong></div>
+                <div style="margin-bottom:8px"><span style="color:#6b7280">When: </span><strong>{appt['start_at'] or 'TBD'}</strong></div>
+                <div><span style="color:#6b7280">Location: </span><strong>{appt['location'] or 'To be confirmed'}</strong></div>
+                {f"<div style='margin-top:8px'><span style='color:#6b7280'>Meeting Link: </span><a href='{appt['meeting_link']}'>{appt['meeting_link']}</a></div>" if appt.get('meeting_link') else ""}
+              </div>
+              <p style="font-size:12px;color:#9ca3af">Pinnacle Performance Tax and Accounting<br>478-338-1632 | pinnacleperformancetax@gmail.com</p>
+            </div></div>"""
+        )
+    except Exception:
+        pass
+
+
+def email_new_message(client_id, subject, body):
+    """Email client when admin sends them a message."""
+    try:
+        client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+        if not client or not client["email"]: return
+        send_email(
+            client["email"],
+            f"New Message: {subject} — Pinnacle Performance Tax",
+            f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+            <div style="background:#11823b;padding:20px;border-radius:12px 12px 0 0">
+              <h2 style="color:white;margin:0">New Message from Pinnacle Performance Tax</h2>
+            </div>
+            <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+              <p>Hi {client['name']},</p>
+              <p>You have a new message from the office:</p>
+              <div style="background:white;border-radius:10px;padding:16px;margin:16px 0;border:1px solid #e5e7eb">
+                <strong>{subject}</strong>
+                <p style="margin-top:10px;color:#374151">{body}</p>
+              </div>
+              <p>Please log in to your client portal to reply.</p>
+              <p style="font-size:12px;color:#9ca3af">Pinnacle Performance Tax and Accounting<br>478-338-1632 | pinnacleperformancetax@gmail.com</p>
+            </div></div>"""
+        )
+    except Exception:
+        pass
+
+
+@app.route("/test-email")
+@login_required
+@admin_required
+def test_email():
+    admin_email = os.environ.get("ADMIN_EMAIL", "pinnacleperformancetax@gmail.com")
+    sent = send_email(
+        admin_email,
+        "PPT Portal — Email Test",
+        "<h2 style='color:#11823b'>Email is working!</h2><p>Your SendGrid integration is set up correctly.</p>"
+    )
+    flash(f"Test email {'sent to ' + admin_email if sent else 'FAILED — check SENDGRID_API_KEY in Render'}.", "success" if sent else "danger")
+    return redirect(url_for("dashboard"))
+
+# ============================================================
+# END PPT AUTO EMAIL NOTIFICATIONS
 # ============================================================
 
 if __name__=='__main__':

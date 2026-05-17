@@ -2640,6 +2640,318 @@ def test_email():
 # END PPT AUTO EMAIL NOTIFICATIONS
 # ============================================================
 
+
+# ============================================================
+# PPT APPOINTMENT BOOKING — Clients pick available time slots
+# ============================================================
+
+def ensure_booking_tables():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS availability_slots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            day_of_week INTEGER NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS blocked_dates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            blocked_date TEXT NOT NULL,
+            reason TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    db.commit()
+
+DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+
+BOOKING_HTML = """{%extends"base.html"%}{%block content%}
+<h1>Book an Appointment</h1>
+<p class="sub">Select a date and available time slot below.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div class="card">
+<h2 style="margin-top:0">Select Date & Time</h2>
+<form method="POST" action="/my/book-appointment">
+<div style="margin-bottom:16px">
+<label>Preferred Date</label>
+<input type="date" name="preferred_date" id="datepick" min="{{today}}" required onchange="loadSlots(this.value)">
+</div>
+<div id="slots-container" style="margin-bottom:16px">
+<label>Available Times</label>
+<p style="color:#475569;font-size:13px">Select a date first.</p>
+</div>
+<div style="margin-bottom:16px">
+<label>Appointment Type</label>
+<select name="title">
+<option value="Tax Consultation">Tax Consultation</option>
+<option value="Bookkeeping Review">Bookkeeping Review</option>
+<option value="Tax Planning">Tax Planning</option>
+<option value="Business Setup">Business Setup</option>
+<option value="General Meeting">General Meeting</option>
+<option value="Document Review">Document Review</option>
+</select>
+</div>
+<div style="margin-bottom:16px">
+<label>Meeting Format</label>
+<select name="location">
+<option value="Virtual (Zoom/Google Meet)">Virtual (Zoom/Google Meet)</option>
+<option value="In-Person - Macon, GA">In-Person - Macon, GA</option>
+<option value="Phone Call">Phone Call</option>
+</select>
+</div>
+<div style="margin-bottom:16px">
+<label>Notes</label>
+<textarea name="notes" placeholder="What would you like to discuss?" style="min-height:80px"></textarea>
+</div>
+<button type="submit">Request Appointment</button>
+</form>
+</div>
+<div class="card">
+<h2 style="margin-top:0">Your Appointments</h2>
+{%if appointments%}
+<div class="table-wrap">
+<table><thead><tr><th>Type</th><th>Date & Time</th><th>Status</th></tr></thead>
+<tbody>{%for a in appointments%}
+<tr>
+<td><strong>{{a.title or"Appointment"}}</strong><br><span style="font-size:11px;color:#475569">{{a.location or"--"}}</span></td>
+<td style="font-size:12px">{{a.start_at or"--"}}</td>
+<td><span class="pill{%if a.status=="Approved"%} {%elif a.status=="Declined"%} warn{%endif%}">{{a.status}}</span></td>
+</tr>
+{%endfor%}</tbody></table>
+</div>
+{%else%}
+<p style="color:#475569;text-align:center;padding:20px">No appointments yet.</p>
+{%endif%}
+<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+<p style="font-size:13px;color:#475569;margin:0">Questions? Call us at <strong>478-338-1632</strong> or send a message.</p>
+</div>
+</div>
+</div>
+<script>
+const slots = {{slots_json|safe}};
+const blocked = {{blocked_json|safe}};
+function loadSlots(dateStr) {
+  if (!dateStr) return;
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7; // 0=Mon
+  const container = document.getElementById("slots-container");
+  if (blocked.includes(dateStr)) {
+    container.innerHTML = "<label>Available Times</label><p style='color:#b91c1c;font-size:13px'>This date is unavailable. Please select another.</p>";
+    return;
+  }
+  const daySlots = slots.filter(s => s.day === dow);
+  if (!daySlots.length) {
+    container.innerHTML = "<label>Available Times</label><p style='color:#475569;font-size:13px'>No availability on this day. Please try another.</p>";
+    return;
+  }
+  let html = "<label>Available Times</label><div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px'>";
+  daySlots.forEach(s => {
+    html += `<label style='display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #cbd5d1;border-radius:10px;cursor:pointer'>
+      <input type='radio' name='preferred_time' value='${s.start}' required style='width:auto;margin:0'>
+      <span style='font-size:14px;font-weight:900'>${s.start}</span>
+      <span style='font-size:11px;color:#475569'>– ${s.end}</span>
+    </label>`;
+  });
+  html += "</div>";
+  container.innerHTML = html;
+}
+</script>
+{%endblock%}"""
+
+AVAILABILITY_HTML = """{%extends"base.html"%}{%block content%}
+<h1>Manage Availability</h1>
+<p class="sub">Set your weekly available hours and block specific dates.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div class="card">
+<h2 style="margin-top:0">Weekly Hours</h2>
+<form method="POST" action="/admin/availability/add">
+<div class="grid grid-3">
+<div><label>Day</label>
+<select name="day_of_week">
+{%for i,d in days%}<option value="{{i}}">{{d}}</option>{%endfor%}
+</select></div>
+<div><label>Start Time</label>
+<input type="time" name="start_time" value="09:00"></div>
+<div><label>End Time</label>
+<input type="time" name="end_time" value="10:00"></div>
+<div style="grid-column:span 3"><button type="submit">Add Slot</button></div>
+</div>
+</form>
+{%if slots%}
+<div class="table-wrap" style="margin-top:16px">
+<table><thead><tr><th>Day</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead>
+<tbody>{%for s in slots%}
+<tr>
+<td><strong>{{days_map[s.day_of_week]}}</strong></td>
+<td>{{s.start_time}}</td>
+<td>{{s.end_time}}</td>
+<td><span class="pill{%if not s.is_active%} warn{%endif%}">{{"Active"if s.is_active else"Off"}}</span></td>
+<td>
+<form method="POST" action="/admin/availability/{{s.id}}/toggle" style="display:inline">
+<button style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a;border:0;border-radius:8px">{{"Pause"if s.is_active else"On"}}</button>
+</form>
+<form method="POST" action="/admin/availability/{{s.id}}/delete" style="display:inline;margin-left:4px" onsubmit="return confirm('Delete?')">
+<button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button>
+</form>
+</td>
+</tr>
+{%endfor%}</tbody></table>
+</div>
+{%else%}
+<p style="color:#475569;text-align:center;padding:16px">No slots yet. Add your available hours above.</p>
+{%endif%}
+</div>
+<div class="card">
+<h2 style="margin-top:0">Block Dates</h2>
+<form method="POST" action="/admin/availability/block">
+<div class="grid">
+<div><label>Date to Block</label><input type="date" name="blocked_date" required></div>
+<div><label>Reason (optional)</label><input type="text" name="reason" placeholder="Holiday, vacation, etc."></div>
+<div><button type="submit">Block Date</button></div>
+</div>
+</form>
+{%if blocked%}
+<div class="table-wrap" style="margin-top:16px">
+<table><thead><tr><th>Date</th><th>Reason</th><th></th></tr></thead>
+<tbody>{%for b in blocked%}
+<tr>
+<td><strong>{{b.blocked_date}}</strong></td>
+<td style="font-size:12px;color:#475569">{{b.reason or"--"}}</td>
+<td><form method="POST" action="/admin/availability/unblock/{{b.id}}" onsubmit="return confirm('Remove block?')">
+<button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Remove</button>
+</form></td>
+</tr>
+{%endfor%}</tbody></table>
+</div>
+{%else%}
+<p style="color:#475569;text-align:center;padding:16px">No blocked dates.</p>
+{%endif%}
+</div>
+</div>
+{%endblock%}"""
+
+
+@app.route("/my/book-appointment", methods=["GET", "POST"])
+@login_required
+@client_required
+def book_appointment():
+    ensure_booking_tables()
+    import json
+    if request.method == "POST":
+        title = request.form.get("title") or "Appointment"
+        preferred_date = request.form.get("preferred_date") or ""
+        preferred_time = request.form.get("preferred_time") or ""
+        location = request.form.get("location") or "Virtual"
+        notes = request.form.get("notes") or ""
+        start_at = f"{preferred_date} {preferred_time}".strip()
+        execute_db(
+            "INSERT INTO appointments(client_id,title,start_at,end_at,location,status,notes) VALUES (?,?,?,?,?,?,?)",
+            (current_user.client_id, title, start_at, "", location, "Requested", notes)
+        )
+        execute_db(
+            "INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+            (current_user.client_id, "client", current_user.name,
+             f"Appointment Request: {title}",
+             f"Requested: {start_at} | Format: {location} | Notes: {notes}")
+        )
+        push_notification(current_user.client_id, "appointment",
+                          f"Appointment request submitted for {start_at}.", "/my/book-appointment")
+        flash("Appointment request submitted! We will confirm shortly.", "success")
+        return redirect(url_for("book_appointment"))
+
+    slots = query_db("SELECT * FROM availability_slots WHERE is_active=1 ORDER BY day_of_week,start_time")
+    blocked = query_db("SELECT * FROM blocked_dates ORDER BY blocked_date")
+    appointments = query_db(
+        "SELECT * FROM appointments WHERE client_id=? ORDER BY start_at DESC, id DESC",
+        (current_user.client_id,)
+    )
+    slots_json = json.dumps([{"day": s["day_of_week"], "start": s["start_time"], "end": s["end_time"]} for s in slots])
+    blocked_json = json.dumps([b["blocked_date"] for b in blocked])
+    today = datetime.now().strftime("%Y-%m-%d")
+    return render_template_string(BOOKING_HTML,
+        appointments=appointments, slots_json=slots_json,
+        blocked_json=blocked_json, today=today)
+
+
+@app.route("/admin/availability", methods=["GET"])
+@login_required
+@admin_required
+def manage_availability():
+    ensure_booking_tables()
+    slots = query_db("SELECT * FROM availability_slots ORDER BY day_of_week,start_time")
+    blocked = query_db("SELECT * FROM blocked_dates ORDER BY blocked_date DESC")
+    days_map = {i: d for i, d in enumerate(DAYS)}
+    return render_template_string(AVAILABILITY_HTML,
+        slots=slots, blocked=blocked,
+        days=list(enumerate(DAYS)), days_map=days_map)
+
+
+@app.route("/admin/availability/add", methods=["POST"])
+@login_required
+@admin_required
+def add_availability_slot():
+    ensure_booking_tables()
+    execute_db(
+        "INSERT INTO availability_slots(day_of_week,start_time,end_time,is_active) VALUES (?,?,?,1)",
+        (request.form.get("day_of_week"), request.form.get("start_time"), request.form.get("end_time"))
+    )
+    flash("Availability slot added.", "success")
+    return redirect(url_for("manage_availability"))
+
+
+@app.route("/admin/availability/<int:slot_id>/toggle", methods=["POST"])
+@login_required
+@admin_required
+def toggle_availability_slot(slot_id):
+    ensure_booking_tables()
+    row = query_db("SELECT is_active FROM availability_slots WHERE id=?", (slot_id,), one=True)
+    if row:
+        execute_db("UPDATE availability_slots SET is_active=? WHERE id=?",
+                   (0 if row["is_active"] else 1, slot_id))
+    flash("Slot updated.", "success")
+    return redirect(url_for("manage_availability"))
+
+
+@app.route("/admin/availability/<int:slot_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_availability_slot(slot_id):
+    ensure_booking_tables()
+    execute_db("DELETE FROM availability_slots WHERE id=?", (slot_id,))
+    flash("Slot deleted.", "success")
+    return redirect(url_for("manage_availability"))
+
+
+@app.route("/admin/availability/block", methods=["POST"])
+@login_required
+@admin_required
+def block_date():
+    ensure_booking_tables()
+    execute_db(
+        "INSERT INTO blocked_dates(blocked_date,reason) VALUES (?,?)",
+        (request.form.get("blocked_date"), request.form.get("reason") or "")
+    )
+    flash("Date blocked.", "success")
+    return redirect(url_for("manage_availability"))
+
+
+@app.route("/admin/availability/unblock/<int:block_id>", methods=["POST"])
+@login_required
+@admin_required
+def unblock_date(block_id):
+    ensure_booking_tables()
+    execute_db("DELETE FROM blocked_dates WHERE id=?", (block_id,))
+    flash("Date unblocked.", "success")
+    return redirect(url_for("manage_availability"))
+
+# ============================================================
+# END PPT APPOINTMENT BOOKING
+# ============================================================
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

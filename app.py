@@ -842,7 +842,7 @@ def admin_table_route(table_name, template_name, select_sql, insert_sql=None, re
 @admin_required
 def clients():
     if request.method=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
-    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Clients</h1><div class="card"><h2 style="margin-top:0">Add Client</h2><form method="POST" class="grid grid-3"><div><label>Name</label><input type="text" name="name" required></div><div><label>Business Name</label><input type="text" name="business_name"></div><div><label>Email</label><input type="email" name="email"></div><div><label>Phone</label><input type="tel" name="phone"></div><div><label>Type</label><select name="client_type"><option value="Individual">Individual</option><option value="Business">Business</option><option value="Full Service">Full Service</option></select></div><div><label>Status</label><select name="status"><option value="Active">Active</option><option value="New">New</option><option value="Inactive">Inactive</option></select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Add Client</button></div></form></div><div class="card"><h2 style="margin-top:0">{{clients|length}} Client{{"s"if clients|length!=1}}</h2>{%if clients%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for c in clients%}<tr><td><strong>{{c.name}}</strong></td><td style="font-size:12px">{{c.business_name or"--"}}</td><td style="font-size:12px">{{c.email or"--"}}</td><td style="font-size:12px">{{c.phone or"--"}}</td><td style="font-size:12px">{{c.client_type or"--"}}</td><td><span class="pill">{{c.status or"Active"}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/clients/{{c.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Edit</a><a href="/client/{{c.id}}/pl-report?year=2025" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a">P&L</a><a href="/client-statement/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Statement</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No clients yet.</p>{%endif%}</div>{%endblock%}""", clients=query_db('SELECT * FROM clients ORDER BY name'))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Clients</h1><div class="card"><h2 style="margin-top:0">Add Client</h2><form method="POST" class="grid grid-3"><div><label>Name</label><input type="text" name="name" required></div><div><label>Business Name</label><input type="text" name="business_name"></div><div><label>Email</label><input type="email" name="email"></div><div><label>Phone</label><input type="tel" name="phone"></div><div><label>Type</label><select name="client_type"><option value="Individual">Individual</option><option value="Business">Business</option><option value="Full Service">Full Service</option></select></div><div><label>Status</label><select name="status"><option value="Active">Active</option><option value="New">New</option><option value="Inactive">Inactive</option></select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Add Client</button></div></form></div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0">{{clients|length}} Client{{"s"if clients|length!=1}}</h2><form method="POST" action="/admin/retainer/generate-all"><button style="padding:8px 14px;font-size:13px;background:#0b5f2a">Generate All Retainers</button></form></div>{%if clients%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for c in clients%}<tr><td><strong>{{c.name}}</strong></td><td style="font-size:12px">{{c.business_name or"--"}}</td><td style="font-size:12px">{{c.email or"--"}}</td><td style="font-size:12px">{{c.phone or"--"}}</td><td style="font-size:12px">{{c.client_type or"--"}}</td><td><span class="pill">{{c.status or"Active"}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/clients/{{c.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Edit</a><a href="/client/{{c.id}}/pl-report?year=2025" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a">P&L</a><a href="/client-statement/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Statement</a><a href="/admin/retainer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412">Retainer</a><a href="/admin/tax-organizer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f0fdf4;color:#0b5f2a">Organizer</a><a href="/admin/savings-planner/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#faf5ff;color:#6b21a8">Savings</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No clients yet.</p>{%endif%}</div>{%endblock%}""", clients=query_db('SELECT * FROM clients ORDER BY name'))
 
 @app.route('/clients/<int:client_id>/edit')
 @login_required
@@ -3217,6 +3217,82 @@ def my_savings_planner():
 
 # ============================================================
 # END PPT UPGRADES
+# ============================================================
+
+
+# ============================================================
+# PPT RETAINER FEE MANAGEMENT
+# ============================================================
+
+def ensure_retainer_columns():
+    try:
+        add_column_if_missing("clients", "retainer_fee", "REAL DEFAULT 0")
+        add_column_if_missing("clients", "retainer_day", "INTEGER DEFAULT 1")
+        add_column_if_missing("clients", "retainer_active", "INTEGER DEFAULT 0")
+        add_column_if_missing("clients", "retainer_description", "TEXT DEFAULT 'Monthly Retainer Fee'")
+    except Exception:
+        pass
+
+@app.route("/admin/retainer/<int:client_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def manage_retainer(client_id):
+    ensure_retainer_columns()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "save":
+            fee = money(request.form.get("retainer_fee") or 0)
+            day = int(request.form.get("retainer_day") or 1)
+            active = 1 if request.form.get("retainer_active") else 0
+            desc = request.form.get("retainer_description") or "Monthly Retainer Fee"
+            execute_db("UPDATE clients SET retainer_fee=?,retainer_day=?,retainer_active=?,retainer_description=? WHERE id=?",
+                      (fee, day, active, desc, client_id))
+            flash(f"Retainer fee of ${fee:,.2f}/month saved.", "success")
+        elif action == "generate_now":
+            client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+            import time
+            inv_num = f"RET-{datetime.now().strftime('%Y%m')}-{int(time.time()*1000)%10000}"
+            inv_id = execute_db(
+                "INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,'Sent',?)",
+                (client_id, inv_num, datetime.now().strftime("%Y-%m-%d"),
+                 datetime.now().strftime(f"%Y-%m-{int(client['retainer_day'] or 1):02d}"),
+                 money(client["retainer_fee"]), client["retainer_description"] or "Monthly Retainer Fee")
+            )
+            push_notification(client_id, "invoice", f"New retainer invoice {inv_num} — ${money(client['retainer_fee']):,.2f}", "/my/invoices")
+            flash(f"Retainer invoice {inv_num} generated!", "success")
+        return redirect(url_for("manage_retainer", client_id=client_id))
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    recent_invoices = query_db("SELECT * FROM invoices WHERE client_id=? AND invoice_number LIKE 'RET-%' ORDER BY id DESC LIMIT 12", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Retainer Fee — {{client.name}}</h1><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div class="card"><h2 style="margin-top:0">Retainer Settings</h2><form method="POST"><input type="hidden" name="action" value="save"><div class="grid"><div><label>Monthly Retainer Amount ($)</label><input type="number" name="retainer_fee" step="0.01" value="{{client.retainer_fee or 0}}" placeholder="500.00"></div><div><label>Invoice Day of Month</label><select name="retainer_day">{%for d in range(1,29)%}<option value="{{d}}"{%if(client.retainer_day or 1)==d%} selected{%endif%}>{{d}}</option>{%endfor%}</select></div><div><label>Description on Invoice</label><input type="text" name="retainer_description" value="{{client.retainer_description or'Monthly Retainer Fee'}}"></div><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="retainer_active" value="1"{%if client.retainer_active%} checked{%endif%} style="width:auto;margin:0"><label style="margin:0">Active (auto-generate monthly)</label></div><div><button type="submit">Save Settings</button></div></div></form><div style="margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb"><h3 style="margin-top:0">Generate Invoice Now</h3><p style="font-size:13px;color:#475569">Manually generate a retainer invoice for this client right now.</p><form method="POST"><input type="hidden" name="action" value="generate_now"><button type="submit" style="background:#0b5f2a">Generate Retainer Invoice</button></form></div></div><div class="card"><h2 style="margin-top:0">Retainer Invoice History</h2>{%if recent_invoices%}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>{%for i in recent_invoices%}<tr><td><strong>{{i.invoice_number}}</strong></td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td style="font-size:12px">{{i.issue_date or"--"}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%endif%}">{{i.status}}</span></td><td><a href="/invoice/{{i.id}}/pdf" target="_blank" class="btn" style="padding:4px 8px;font-size:11px">PDF</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No retainer invoices yet.</p>{%endif%}</div></div>{%endblock%}""", client=client, recent_invoices=recent_invoices)
+
+@app.route("/admin/retainer/generate-all", methods=["POST"])
+@login_required
+@admin_required
+def generate_all_retainers():
+    ensure_retainer_columns()
+    import time
+    clients = query_db("SELECT * FROM clients WHERE retainer_active=1 AND retainer_fee>0")
+    generated = 0
+    for client in clients:
+        inv_num = f"RET-{datetime.now().strftime('%Y%m')}-{client['id']}"
+        # Check if already generated this month
+        existing = query_db("SELECT id FROM invoices WHERE client_id=? AND invoice_number=?", (client["id"], inv_num), one=True)
+        if not existing:
+            execute_db(
+                "INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,'Sent',?)",
+                (client["id"], inv_num, datetime.now().strftime("%Y-%m-%d"),
+                 datetime.now().strftime(f"%Y-%m-{int(client['retainer_day'] or 1):02d}"),
+                 money(client["retainer_fee"]), client["retainer_description"] or "Monthly Retainer Fee")
+            )
+            push_notification(client["id"], "invoice", f"Monthly retainer invoice {inv_num} — ${money(client['retainer_fee']):,.2f}", "/my/invoices")
+            generated += 1
+    flash(f"Generated {generated} retainer invoice(s).", "success")
+    return redirect(url_for("clients"))
+
+# ============================================================
+# END PPT RETAINER FEE MANAGEMENT
 # ============================================================
 
 if __name__=='__main__':

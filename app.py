@@ -2972,6 +2972,253 @@ def unblock_date(block_id):
 # END PPT APPOINTMENT BOOKING
 # ============================================================
 
+
+# ============================================================
+# PPT TAX ORGANIZER
+# ============================================================
+
+def ensure_tax_organizer_tables():
+    db = get_db()
+    db.execute("""CREATE TABLE IF NOT EXISTS tax_organizer_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        tax_year TEXT,
+        category TEXT,
+        item TEXT,
+        status TEXT DEFAULT 'Pending',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.commit()
+
+TAX_ORGANIZER_ITEMS = [
+    ("Personal Info", "Social Security Numbers for all family members"),
+    ("Personal Info", "Prior year tax return"),
+    ("Personal Info", "Bank account info for direct deposit"),
+    ("Income", "W-2 forms from all employers"),
+    ("Income", "1099-NEC (freelance/contractor income)"),
+    ("Income", "1099-MISC (other income)"),
+    ("Income", "1099-INT (bank interest)"),
+    ("Income", "1099-DIV (dividends)"),
+    ("Income", "1099-B (stock sales)"),
+    ("Income", "1099-G (unemployment/state refund)"),
+    ("Income", "Social Security SSA-1099"),
+    ("Business", "Business income and expenses"),
+    ("Business", "Mileage log"),
+    ("Business", "Home office measurements"),
+    ("Business", "Business receipts"),
+    ("Deductions", "Mortgage interest statement (1098)"),
+    ("Deductions", "Property tax statements"),
+    ("Deductions", "Charitable donation receipts"),
+    ("Deductions", "Medical expenses"),
+    ("Deductions", "Student loan interest (1098-E)"),
+    ("Deductions", "Childcare expenses and provider info"),
+    ("Deductions", "Education expenses (1098-T)"),
+    ("Health", "Health insurance 1095-A/B/C forms"),
+    ("Health", "HSA contributions (5498-SA)"),
+]
+
+@app.route("/admin/tax-organizer/<int:client_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_tax_organizer(client_id):
+    ensure_tax_organizer_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    year = request.args.get("year") or str(datetime.now().year)
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "preload":
+            for cat, item in TAX_ORGANIZER_ITEMS:
+                existing = query_db("SELECT id FROM tax_organizer_items WHERE client_id=? AND tax_year=? AND item=?", (client_id, year, item), one=True)
+                if not existing:
+                    execute_db("INSERT INTO tax_organizer_items(client_id,tax_year,category,item,status) VALUES (?,?,?,?,'Pending')", (client_id, year, cat, item))
+            flash(f"Tax organizer preloaded for {year}.", "success")
+        elif action == "update_status":
+            execute_db("UPDATE tax_organizer_items SET status=?,notes=? WHERE id=?",
+                      (request.form.get("status"), request.form.get("notes"), request.form.get("item_id")))
+            flash("Item updated.", "success")
+        elif action == "add_item":
+            execute_db("INSERT INTO tax_organizer_items(client_id,tax_year,category,item,status,notes) VALUES (?,?,?,?,'Pending',?)",
+                      (client_id, year, request.form.get("category"), request.form.get("item"), request.form.get("notes")))
+            flash("Item added.", "success")
+        return redirect(url_for("admin_tax_organizer", client_id=client_id, year=year))
+    items = query_db("SELECT * FROM tax_organizer_items WHERE client_id=? AND tax_year=? ORDER BY category,id", (client_id, year))
+    total = len(items)
+    done = len([i for i in items if i["status"] == "Received"])
+    pct = int(done/total*100) if total else 0
+    from itertools import groupby
+    grouped = {}
+    for item in items:
+        grouped.setdefault(item["category"], []).append(item)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Tax Organizer — {{client.name}}</h1><div style="display:flex;gap:12px;align-items:center;margin-bottom:16px"><form method="GET"><select name="year" onchange="this.form.submit()" style="padding:8px 12px;border-radius:10px;border:1px solid #cbd5d1"><option value="2023"{%if year=="2023"%}selected{%endif%}>2023</option><option value="2024"{%if year=="2024"%}selected{%endif%}>2024</option><option value="2025"{%if year=="2025"%}selected{%endif%}>2025</option><option value="2026"{%if year=="2026"%}selected{%endif%}>2026</option></select></form><form method="POST"><input type="hidden" name="action" value="preload"><button type="submit" style="padding:8px 14px;font-size:13px">Preload Checklist</button></form></div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">Progress</h2><strong style="color:#11823b">{{done}}/{{total}} items received</strong></div><div style="background:#e5e7eb;border-radius:999px;height:12px;overflow:hidden"><div style="background:#11823b;width:{{pct}}%;height:100%;border-radius:999px;transition:width .3s"></div></div><div style="font-size:12px;color:#475569;margin-top:6px">{{pct}}% complete</div></div>{%for cat,cat_items in grouped.items()%}<div class="card"><h2 style="margin-top:0">{{cat}}</h2><div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody>{%for i in cat_items%}<tr><td>{{i.item}}</td><td><span class="pill{%if i.status=="Received"%}{%elif i.status=="N/A"%} warn{%else%} warn{%endif%}">{{i.status}}</span></td><td style="font-size:12px;color:#475569">{{i.notes or"--"}}</td><td><form method="POST" style="display:flex;gap:4px"><input type="hidden" name="action" value="update_status"><input type="hidden" name="item_id" value="{{i.id}}"><select name="status" style="padding:4px 6px;font-size:11px;border-radius:8px"><option{%if i.status=="Pending"%} selected{%endif%}>Pending</option><option{%if i.status=="Received"%} selected{%endif%}>Received</option><option{%if i.status=="N/A"%} selected{%endif%}>N/A</option><option{%if i.status=="Requested"%} selected{%endif%}>Requested</option></select><input type="text" name="notes" value="{{i.notes or""}}" placeholder="Notes" style="padding:4px 6px;font-size:11px;border-radius:8px;width:120px"><button style="padding:4px 8px;font-size:11px">Save</button></form></td></tr>{%endfor%}</tbody></table></div></div>{%endfor%}<div class="card"><h2 style="margin-top:0">Add Custom Item</h2><form method="POST" class="grid grid-3"><input type="hidden" name="action" value="add_item"><div><label>Category</label><input type="text" name="category" placeholder="e.g. Business"></div><div style="grid-column:span 2"><label>Item</label><input type="text" name="item" required placeholder="e.g. QuickBooks export"></div><div><button type="submit">Add Item</button></div></form></div>{%endblock%}""", client=client, year=year, items=items, grouped=grouped, total=total, done=done, pct=pct)
+
+@app.route("/my/tax-organizer")
+@login_required
+@client_required
+def my_tax_organizer():
+    ensure_tax_organizer_tables()
+    year = request.args.get("year") or str(datetime.now().year)
+    items = query_db("SELECT * FROM tax_organizer_items WHERE client_id=? AND tax_year=? ORDER BY category,id", (current_user.client_id, year))
+    total = len(items)
+    done = len([i for i in items if i["status"] == "Received"])
+    pct = int(done/total*100) if total else 0
+    grouped = {}
+    for item in items:
+        grouped.setdefault(item["category"], []).append(item)
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Tax Organizer</h1><p class="sub">Track what documents we need from you.</p><div style="margin-bottom:16px"><form method="GET"><select name="year" onchange="this.form.submit()" style="padding:8px 12px;border-radius:10px;border:1px solid #cbd5d1"><option value="2023"{%if year=="2023"%}selected{%endif%}>2023</option><option value="2024"{%if year=="2024"%}selected{%endif%}>2024</option><option value="2025"{%if year=="2025"%}selected{%endif%}>2025</option><option value="2026"{%if year=="2026"%}selected{%endif%}>2026</option></select></form></div>{%if items%}<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h2 style="margin:0">Your Progress</h2><strong style="color:#11823b">{{done}}/{{total}} items received</strong></div><div style="background:#e5e7eb;border-radius:999px;height:14px;overflow:hidden"><div style="background:#11823b;width:{{pct}}%;height:100%;border-radius:999px"></div></div><div style="font-size:13px;color:#475569;margin-top:6px">{{pct}}% complete — {%if pct==100%}All documents received! 🎉{%elif pct>=50%}Great progress! Keep going.{%else%}Please upload your remaining documents.{%endif%}</div></div>{%for cat,cat_items in grouped.items()%}<div class="card"><h2 style="margin-top:0">{{cat}}</h2><div class="table-wrap"><table><thead><tr><th>Document Needed</th><th>Status</th><th>Notes</th></tr></thead><tbody>{%for i in cat_items%}<tr style="background:{{"#f0fdf4"if i.status=="Received"else"#fff"}}"><td>{{i.item}}</td><td><span class="pill{%if i.status=="Received"%}{%elif i.status=="N/A"%} warn{%else%} warn{%endif%}">{{i.status}}</span></td><td style="font-size:12px;color:#475569">{{i.notes or"--"}}</td></tr>{%endfor%}</tbody></table></div></div>{%endfor%}{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">Your tax organizer hasn't been set up yet. Please contact the office.</p></div>{%endif%}{%endblock%}""", year=year, items=items, grouped=grouped, total=total, done=done, pct=pct)
+
+# ============================================================
+# PPT CLIENT PROGRESS TRACKER
+# ============================================================
+
+def ensure_progress_tables():
+    db = get_db()
+    db.commit()
+
+RETURN_STAGES = ["Documents Requested", "Documents Received", "In Review", "Waiting on Client", "Ready for Review", "Sent to Client", "Approved", "Filed", "Complete"]
+
+@app.route("/admin/return-progress/<int:return_id>", methods=["POST"])
+@login_required
+@admin_required
+def update_return_progress(return_id):
+    stage = request.form.get("stage")
+    notes = request.form.get("notes") or ""
+    execute_db("UPDATE tax_returns SET workflow_stage=?,status=?,notes=? WHERE id=?", (stage, stage, notes, return_id))
+    row = query_db("SELECT client_id,tax_year FROM tax_returns WHERE id=?", (return_id,), one=True)
+    if row:
+        push_notification(row["client_id"], "tax_return", f"Your {row['tax_year']} tax return status: {stage}", "/my/return-progress")
+    flash("Progress updated and client notified.", "success")
+    return redirect(request.referrer or url_for("tax_returns"))
+
+@app.route("/my/return-progress")
+@login_required
+@client_required
+def my_return_progress():
+    returns = query_db("SELECT * FROM tax_returns WHERE client_id=? ORDER BY tax_year DESC, id DESC", (current_user.client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Tax Return Status</h1><p class="sub">Track where your tax return is in the process.</p>{%if returns%}{%for r in returns%}<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px"><div><h2 style="margin:0">{{r.tax_year}} Tax Return</h2><span style="font-size:13px;color:#475569">{{r.service_type or"Individual"}}</span></div><span class="pill" style="font-size:13px">{{r.workflow_stage or r.status or"In Progress"}}</span></div><div style="display:flex;gap:0;margin-bottom:16px;overflow-x:auto">{%set stages=["Documents Requested","Documents Received","In Review","Waiting on Client","Ready for Review","Sent to Client","Approved","Filed","Complete"]%}{%set current=r.workflow_stage or r.status or"In Progress"%}{%for s in stages%}{%set done=stages.index(s)<=stages.index(current)if current in stages else false%}<div style="flex:1;min-width:80px;text-align:center"><div style="width:28px;height:28px;border-radius:999px;background:{{"#11823b"if done else"#e5e7eb"}};color:{{"white"if done else"#9ca3af"}};display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:12px;font-weight:900">{{"✓"if done else loop.index}}</div><div style="font-size:10px;color:{{"#11823b"if done else"#9ca3af"}};margin-top:4px;font-weight:{{"900"if done else"400"}}">{{s}}</div></div>{%if not loop.last%}<div style="flex:0 0 20px;height:2px;background:{{"#11823b"if done else"#e5e7eb"}};margin-top:14px"></div>{%endif%}{%endfor%}</div>{%if r.notes%}<div style="background:#f9fafb;border-radius:10px;padding:12px;font-size:13px;color:#475569"><strong>Note from office:</strong> {{r.notes}}</div>{%endif%}</div>{%endfor%}{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No tax returns on file yet.</p></div>{%endif%}{%endblock%}""", returns=returns)
+
+# ============================================================
+# PPT AUTO INVOICE REMINDERS
+# ============================================================
+
+@app.route("/invoices/send-all-reminders", methods=["POST"])
+@login_required
+@admin_required
+def send_all_reminders():
+    today = datetime.now()
+    overdue = query_db("""SELECT i.*, c.name client_name, c.email client_email
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.status NOT IN ('Paid','Draft') AND i.due_date IS NOT NULL
+                          AND i.due_date < ? AND c.email IS NOT NULL""",
+                       (today.strftime("%Y-%m-%d"),))
+    sent = 0
+    for inv in overdue:
+        days_over = (today - datetime.strptime(inv["due_date"], "%Y-%m-%d")).days
+        msg = f"Your invoice {inv['invoice_number']} for ${money(inv['amount']):,.2f} was due {inv['due_date']} ({days_over} days ago). Please log in to your portal to pay."
+        execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                   (inv["client_id"], "admin", "Pinnacle Performance Tax", f"Payment Overdue — {inv['invoice_number']}", msg))
+        push_notification(inv["client_id"], "invoice", f"Invoice {inv['invoice_number']} is overdue. Please pay now.", "/my/invoices")
+        send_email(inv["client_email"], f"Payment Overdue — {inv['invoice_number']}",
+                   f"<h2>Payment Overdue</h2><p>Hi {inv['client_name']},</p><p>Invoice <strong>{inv['invoice_number']}</strong> for <strong>${money(inv['amount']):,.2f}</strong> was due {inv['due_date']}.</p><p>Please log in to your portal to pay immediately.</p>")
+        sent += 1
+    flash(f"Sent {sent} overdue reminder(s).", "success")
+    return redirect(url_for("invoices"))
+
+# ============================================================
+# PPT TAX SAVINGS PLANNER
+# ============================================================
+
+def ensure_savings_tables():
+    db = get_db()
+    db.execute("""CREATE TABLE IF NOT EXISTS savings_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        title TEXT NOT NULL,
+        category TEXT DEFAULT 'Tax Savings',
+        description TEXT,
+        target_amount REAL DEFAULT 0,
+        current_amount REAL DEFAULT 0,
+        deadline TEXT,
+        tax_savings REAL DEFAULT 0,
+        action_steps TEXT,
+        status TEXT DEFAULT 'Active',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS spending_budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        category TEXT NOT NULL,
+        monthly_budget REAL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.commit()
+
+@app.route("/admin/savings-planner/<int:client_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_savings_planner(client_id):
+    ensure_savings_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add_goal":
+            execute_db("INSERT INTO savings_goals(client_id,title,category,description,target_amount,current_amount,deadline,tax_savings,action_steps) VALUES (?,?,?,?,?,?,?,?,?)",
+                      (client_id, request.form.get("title"), request.form.get("category"),
+                       request.form.get("description"), money(request.form.get("target_amount")),
+                       money(request.form.get("current_amount")), request.form.get("deadline"),
+                       money(request.form.get("tax_savings")), request.form.get("action_steps")))
+            push_notification(client_id, "savings", f"New savings goal added: {request.form.get('title')}", "/my/savings-planner")
+            flash("Savings goal added.", "success")
+        elif action == "add_budget":
+            existing = query_db("SELECT id FROM spending_budgets WHERE client_id=? AND category=?", (client_id, request.form.get("category")), one=True)
+            if existing:
+                execute_db("UPDATE spending_budgets SET monthly_budget=?,notes=? WHERE id=?",
+                          (money(request.form.get("monthly_budget")), request.form.get("notes"), existing["id"]))
+            else:
+                execute_db("INSERT INTO spending_budgets(client_id,category,monthly_budget,notes) VALUES (?,?,?,?)",
+                          (client_id, request.form.get("category"), money(request.form.get("monthly_budget")), request.form.get("notes")))
+            flash("Spending budget set.", "success")
+        elif action == "update_goal":
+            execute_db("UPDATE savings_goals SET current_amount=?,status=? WHERE id=?",
+                      (money(request.form.get("current_amount")), request.form.get("status"), request.form.get("goal_id")))
+            flash("Goal updated.", "success")
+        elif action == "delete_goal":
+            execute_db("DELETE FROM savings_goals WHERE id=?", (request.form.get("goal_id"),))
+            flash("Goal deleted.", "success")
+        return redirect(url_for("admin_savings_planner", client_id=client_id))
+    goals = query_db("SELECT * FROM savings_goals WHERE client_id=? ORDER BY id DESC", (client_id,))
+    budgets = query_db("SELECT * FROM spending_budgets WHERE client_id=? ORDER BY category", (client_id,))
+    # Get actual spending by category this month
+    month = datetime.now().strftime("%Y-%m")
+    spending = query_db("""SELECT COALESCE(c.name,'Uncategorized') category, COALESCE(SUM(t.amount),0) total
+                           FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
+                           WHERE t.client_id=? AND t.type='expense' AND substr(t.date,1,7)=?
+                           GROUP BY COALESCE(c.name,'Uncategorized')""", (client_id, month))
+    spend_map = {s["category"]: s["total"] for s in spending}
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Savings Planner — {{client.name}}</h1><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><div class="card"><h2 style="margin-top:0">Add Savings Goal</h2><form method="POST"><input type="hidden" name="action" value="add_goal"><div class="grid"><div><label>Goal Title</label><input type="text" name="title" required placeholder="Max out SEP IRA"></div><div><label>Category</label><select name="category"><option>Tax Savings</option><option>Retirement</option><option>Business Investment</option><option>Emergency Fund</option><option>Debt Reduction</option></select></div><div><label>Description</label><textarea name="description" placeholder="What is this goal and why it matters"></textarea></div><div><label>Target Amount ($)</label><input type="number" name="target_amount" step="0.01" placeholder="66000"></div><div><label>Current Amount ($)</label><input type="number" name="current_amount" step="0.01" placeholder="0"></div><div><label>Deadline</label><input type="date" name="deadline"></div><div><label>Estimated Tax Savings ($)</label><input type="number" name="tax_savings" step="0.01" placeholder="15000"></div><div><label>Action Steps</label><textarea name="action_steps" placeholder="1. Open SEP IRA&#10;2. Contribute monthly&#10;3. Track contributions"></textarea></div><div><button type="submit">Add Goal</button></div></div></form></div><div class="card"><h2 style="margin-top:0">Set Spending Budgets</h2><form method="POST"><input type="hidden" name="action" value="add_budget"><div class="grid grid-3"><div><label>Category</label><input type="text" name="category" placeholder="Meals"></div><div><label>Monthly Budget ($)</label><input type="number" name="monthly_budget" step="0.01" placeholder="200"></div><div><label>Notes</label><input type="text" name="notes" placeholder="Reduce from current spend"></div><div><button type="submit">Set Budget</button></div></div></form>{%if budgets%}<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Category</th><th>Budget</th><th>This Month</th><th>Status</th></tr></thead><tbody>{%for b in budgets%}{%set actual=spend_map.get(b.category,0)%}<tr><td>{{b.category}}</td><td>${{"%.2f"|format(b.monthly_budget)}}</td><td style="font-weight:900;color:{{"#b91c1c"if actual>b.monthly_budget else"#0b5f2a"}}">${{"%.2f"|format(actual)}}</td><td><span class="pill{%if actual>b.monthly_budget%} warn{%endif%}">{{"Over Budget"if actual>b.monthly_budget else"On Track"}}</span></td></tr>{%endfor%}</tbody></table></div>{%endif%}</div></div><div><div class="card"><h2 style="margin-top:0">{{goals|length}} Savings Goal{{"s"if goals|length!=1}}</h2>{%if goals%}{%for g in goals%}{%set pct=(g.current_amount/g.target_amount*100)|int if g.target_amount>0 else 0%}<div style="border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>{{g.title}}</strong><span class="pill">{{g.category}}</span></div>{%if g.description%}<p style="font-size:13px;color:#475569;margin:4px 0">{{g.description}}</p>{%endif%}<div style="display:flex;justify-content:space-between;font-size:13px;margin:8px 0"><span>${{"%.2f"|format(g.current_amount)}} saved</span><span style="color:#11823b;font-weight:900">Target: ${{"%.2f"|format(g.target_amount)}}</span></div><div style="background:#e5e7eb;border-radius:999px;height:10px;margin-bottom:8px"><div style="background:#11823b;width:{{[pct,100]|min}}%;height:100%;border-radius:999px"></div></div>{%if g.tax_savings>0%}<div style="font-size:12px;color:#0b5f2a;font-weight:900;margin-bottom:8px">💰 Estimated tax savings: ${{"%.2f"|format(g.tax_savings)}}</div>{%endif%}{%if g.action_steps%}<div style="font-size:12px;color:#475569;background:#f9fafb;border-radius:8px;padding:8px;margin-bottom:8px"><strong>Action Steps:</strong><br>{{g.action_steps}}</div>{%endif%}<form method="POST" style="display:flex;gap:6px;flex-wrap:wrap"><input type="hidden" name="action" value="update_goal"><input type="hidden" name="goal_id" value="{{g.id}}"><input type="number" name="current_amount" value="{{g.current_amount}}" step="0.01" style="width:120px;padding:4px 8px;font-size:12px"><select name="status" style="padding:4px 8px;font-size:12px;border-radius:8px"><option{%if g.status=="Active"%}selected{%endif%}>Active</option><option{%if g.status=="Complete"%}selected{%endif%}>Complete</option><option{%if g.status=="Paused"%}selected{%endif%}>Paused</option></select><button style="padding:4px 10px;font-size:12px">Update</button></form></div>{%endfor%}{%else%}<p style="color:#475569;text-align:center;padding:20px">No savings goals yet. Add one above.</p>{%endif%}</div></div></div>{%endblock%}""", client=client, goals=goals, budgets=budgets, spend_map=spend_map)
+
+@app.route("/my/savings-planner")
+@login_required
+@client_required
+def my_savings_planner():
+    ensure_savings_tables()
+    goals = query_db("SELECT * FROM savings_goals WHERE client_id=? AND status='Active' ORDER BY id DESC", (current_user.client_id,))
+    budgets = query_db("SELECT * FROM spending_budgets WHERE client_id=? ORDER BY category", (current_user.client_id,))
+    month = datetime.now().strftime("%Y-%m")
+    spending = query_db("""SELECT COALESCE(c.name,'Uncategorized') category, COALESCE(SUM(t.amount),0) total
+                           FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
+                           WHERE t.client_id=? AND t.type='expense' AND substr(t.date,1,7)=?
+                           GROUP BY COALESCE(c.name,'Uncategorized')""", (current_user.client_id, month))
+    spend_map = {s["category"]: s["total"] for s in spending}
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Savings Planner</h1><p class="sub">Your personalized tax savings and spending goals.</p>{%if goals%}<h2>Tax Savings Goals</h2>{%for g in goals%}{%set pct=(g.current_amount/g.target_amount*100)|int if g.target_amount>0 else 0%}<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px"><div><strong style="font-size:16px">{{g.title}}</strong><br><span style="font-size:12px;color:#475569">{{g.category}}{%if g.deadline%} · Due {{g.deadline}}{%endif%}</span></div>{%if g.tax_savings>0%}<div style="text-align:right"><div style="font-size:11px;color:#475569">Est. Tax Savings</div><div style="font-size:18px;font-weight:900;color:#11823b">${{"%.2f"|format(g.tax_savings)}}</div></div>{%endif%}</div>{%if g.description%}<p style="font-size:13px;color:#475569;margin:0 0 12px">{{g.description}}</p>{%endif%}<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:#475569">Progress: ${{"%.2f"|format(g.current_amount)}} of ${{"%.2f"|format(g.target_amount)}}</span><strong style="color:#11823b">{{[pct,100]|min}}%</strong></div><div style="background:#e5e7eb;border-radius:999px;height:14px;overflow:hidden"><div style="background:{{"#11823b"if pct<100 else"#059669"}};width:{{[pct,100]|min}}%;height:100%;border-radius:999px"></div></div>{%if pct>=100%}<div style="color:#059669;font-weight:900;font-size:13px;margin-top:6px">🎉 Goal reached!</div>{%endif%}{%if g.action_steps%}<div style="margin-top:12px;background:#f0fdf4;border-radius:10px;padding:12px;font-size:13px"><strong style="color:#11823b">Your Action Steps:</strong><br><pre style="margin:6px 0 0;white-space:pre-wrap;font-family:inherit;color:#374151">{{g.action_steps}}</pre></div>{%endif%}</div>{%endfor%}{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:20px">No savings goals set yet. Your advisor will add recommendations here.</p></div>{%endif%}{%if budgets%}<h2 style="margin-top:24px">Spending Analysis — This Month</h2>{%for b in budgets%}{%set actual=spend_map.get(b.category,0)%}{%set pct2=(actual/b.monthly_budget*100)|int if b.monthly_budget>0 else 0%}<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>{{b.category}}</strong><span style="font-size:13px;color:{{"#b91c1c"if actual>b.monthly_budget else"#0b5f2a"}};font-weight:900">{{"⚠️ Over Budget"if actual>b.monthly_budget else"✅ On Track"}}</span></div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Spent: <strong>${{"%.2f"|format(actual)}}</strong></span><span>Budget: <strong>${{"%.2f"|format(b.monthly_budget)}}</strong></span></div><div style="background:#e5e7eb;border-radius:999px;height:10px;overflow:hidden"><div style="background:{{"#b91c1c"if actual>b.monthly_budget else"#11823b"}};width:{{[pct2,100]|min}}%;height:100%;border-radius:999px"></div></div>{%if actual>b.monthly_budget and b.notes%}<div style="font-size:12px;color:#b91c1c;margin-top:6px">💡 {{b.notes}}</div>{%endif%}</div>{%endfor%}{%endif%}{%endblock%}""", goals=goals, budgets=budgets, spend_map=spend_map)
+
+# ============================================================
+# END PPT UPGRADES
+# ============================================================
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

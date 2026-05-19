@@ -815,6 +815,9 @@ def dashboard():
 @app.route('/client')
 @login_required
 def client_dashboard():
+    # Redirect to upgraded dashboard
+    if current_user.is_authenticated and current_user.role != 'admin':
+        return client_dashboard_v2()
     if current_user.role=='admin': return redirect(url_for('dashboard'))
     if not current_user.client_id: return render_template('client_dashboard.html',client=None,invoices=[],payments=[],appointments=[],documents=[],tax_returns=[],transactions=[],crm_items=[],messages=[])
     cid=current_user.client_id
@@ -3663,7 +3666,6 @@ def admin_announcements():
 # ── MOBILE-FRIENDLY CLIENT DASHBOARD UPGRADE ────────────────
 
 @app.route("/client-dashboard-v2")
-@app.route("/client")
 @login_required  
 def client_dashboard_v2():
     if current_user.role == "admin": return redirect(url_for("dashboard"))

@@ -3720,6 +3720,377 @@ def client_dashboard_v2():
 # END PPT MEGA UPGRADE PACK
 # ============================================================
 
+
+# ============================================================
+# PPT AI + ADVANCED FEATURES PACK
+# AI Advisor | Tax Estimates | Quarterly Reminders | 
+# Business Health Score | Document Auto-Read | Mobile PWA
+# ============================================================
+
+def ensure_ai_tables():
+    db = get_db()
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        question TEXT,
+        answer TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS quarterly_estimates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        tax_year TEXT,
+        quarter TEXT,
+        estimated_tax REAL DEFAULT 0,
+        due_date TEXT,
+        status TEXT DEFAULT 'Pending',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS business_health_scores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        score_month TEXT,
+        overall_score INTEGER DEFAULT 0,
+        profit_margin REAL DEFAULT 0,
+        expense_ratio REAL DEFAULT 0,
+        revenue_trend TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    db.commit()
+
+# ── AI TAX ADVISOR ───────────────────────────────────────────
+
+@app.route("/my/ai-advisor", methods=["GET", "POST"])
+@login_required
+@client_required
+def my_ai_advisor():
+    ensure_ai_tables()
+    cid = current_user.client_id
+    # Get client financial context
+    year = str(datetime.now().year)
+    income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+    expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+    client = query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True)
+    top_expenses = query_db("""SELECT COALESCE(c.name,'Uncategorized') category, COALESCE(SUM(t.amount),0) total
+                               FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
+                               WHERE t.client_id=? AND t.type='expense' AND substr(t.date,1,4)=?
+                               GROUP BY category ORDER BY total DESC LIMIT 5""", (cid, year))
+    history = query_db("SELECT * FROM ai_conversations WHERE client_id=? ORDER BY id DESC LIMIT 10", (cid,))
+    answer = None
+    question = None
+    if request.method == "POST":
+        question = request.form.get("question") or ""
+        if question:
+            # Build context for AI
+            ctx = f"""You are a helpful tax and bookkeeping advisor for Pinnacle Performance Tax and Accounting.
+Client: {client['name'] if client else 'Client'}
+Business: {client.get('business_name','') if client else ''} 
+Entity Type: {client.get('entity_type','') if client else ''}
+Filing Status: {client.get('filing_status','') if client else ''}
+{year} Income so far: ${income:,.2f}
+{year} Expenses so far: ${expenses:,.2f}
+Net Profit: ${income-expenses:,.2f}
+Top expense categories: {', '.join([f"{r['category']} (${r['total']:,.2f})" for r in top_expenses])}
+
+Answer the client's tax/bookkeeping question concisely and practically. 
+Give specific dollar amounts or percentages when helpful.
+Always recommend consulting with their tax advisor (PPT) for final decisions.
+Keep response under 200 words."""
+            try:
+                import urllib.request, json
+                payload = json.dumps({
+                    "model": "claude-opus-4-5",
+                    "max_tokens": 400,
+                    "system": ctx,
+                    "messages": [{"role": "user", "content": question}]
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    "https://api.anthropic.com/v1/messages",
+                    data=payload,
+                    headers={
+                        "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json"
+                    },
+                    method="POST"
+                )
+                result = json.loads(urllib.request.urlopen(req, timeout=30).read())
+                answer = result["content"][0]["text"]
+            except Exception as e:
+                answer = f"I'm having trouble connecting right now. Please contact the office directly at 478-338-1632 or pinnacleperformancetax@gmail.com for immediate assistance."
+            execute_db("INSERT INTO ai_conversations(client_id,question,answer) VALUES (?,?,?)", (cid, question, answer))
+        return redirect(url_for("my_ai_advisor"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>💬 AI Tax Advisor</h1>
+<p class="sub">Ask me anything about your taxes, deductions, or bookkeeping.</p>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+<div>
+<div class="card">
+<h2 style="margin-top:0">Ask a Question</h2>
+<form method="POST">
+<div style="margin-bottom:12px">
+<textarea name="question" placeholder="Examples:&#10;• Can I deduct my home office?&#10;• How much should I set aside for taxes?&#10;• Is my meal expense deductible?&#10;• What is the best entity type for my business?&#10;• How do I reduce my tax bill?" style="min-height:120px;font-size:15px" required></textarea>
+</div>
+<button type="submit" style="font-size:15px;padding:13px 24px">Ask AI Advisor →</button>
+</form>
+</div>
+{%if history%}
+<div class="card">
+<h2 style="margin-top:0">Recent Questions</h2>
+{%for h in history%}
+<div style="border-bottom:1px solid #f3f4f6;padding:14px 0{%if loop.last%};border-bottom:none{%endif%}">
+<div style="font-weight:900;color:#0f172a;margin-bottom:6px">Q: {{h.question}}</div>
+<div style="font-size:13px;color:#374151;background:#f9fafb;border-radius:10px;padding:12px;line-height:1.6">{{h.answer}}</div>
+<div style="font-size:11px;color:#9ca3af;margin-top:4px">{{h.created_at[:16]}}</div>
+</div>
+{%endfor%}
+</div>
+{%endif%}
+</div>
+<div>
+<div class="card">
+<h2 style="margin-top:0">Your {{year}} Summary</h2>
+<div class="metric" style="margin-bottom:10px"><span>Income</span><strong style="color:#0b5f2a;font-size:20px">${{"%.2f"|format(income|float)}}</strong></div>
+<div class="metric" style="margin-bottom:10px"><span>Expenses</span><strong style="color:#b91c1c;font-size:20px">${{"%.2f"|format(expenses|float)}}</strong></div>
+<div class="metric"><span>Net Profit</span><strong style="color:{{"#0b5f2a"if profit>=0 else"#b91c1c"}};font-size:20px">${{"%.2f"|format(profit|float)}}</strong></div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">💡 Quick Tips</h2>
+<div style="font-size:13px;line-height:1.7;color:#374151">
+<p>• Track <strong>every</strong> business expense — even small ones add up</p>
+<p>• Keep personal and business accounts separate</p>
+<p>• Save <strong>25-30%</strong> of profit for taxes</p>
+<p>• Mileage is worth <strong>$0.67/mile</strong> in 2024</p>
+<p>• Home office deduction requires <strong>regular exclusive use</strong></p>
+</div>
+</div>
+<div class="card" style="background:#f0fdf4;border-color:#bbf7d0">
+<p style="font-size:12px;color:#065f46;margin:0"><strong>Disclaimer:</strong> AI responses are for general guidance only. Always consult with your PPT advisor for final tax decisions.</p>
+</div>
+</div>
+</div>
+{%endblock%}""", history=history, income=income, expenses=expenses, profit=income-expenses, year=year)
+
+# ── REAL-TIME TAX ESTIMATE ───────────────────────────────────
+
+@app.route("/my/tax-estimate")
+@login_required
+@client_required
+def my_tax_estimate():
+    ensure_ai_tables()
+    cid = current_user.client_id
+    year = str(datetime.now().year)
+    client = dict(query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True) or {})
+    income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+    expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+    profit = income - expenses
+    # Simple tax estimate based on filing status
+    filing = client.get("filing_status") or "Single"
+    # 2024 standard deductions
+    std_deduction = 29200 if "Joint" in filing else (21900 if "Head" in filing else 14600)
+    taxable = max(0, profit - std_deduction)
+    # Simple bracket estimate
+    if "Joint" in filing:
+        if taxable <= 23200: rate = 0.10
+        elif taxable <= 94300: rate = 0.12
+        elif taxable <= 201050: rate = 0.22
+        elif taxable <= 383900: rate = 0.24
+        else: rate = 0.32
+    else:
+        if taxable <= 11600: rate = 0.10
+        elif taxable <= 47150: rate = 0.12
+        elif taxable <= 100525: rate = 0.22
+        elif taxable <= 191950: rate = 0.24
+        else: rate = 0.32
+    est_tax = round(taxable * rate, 2)
+    se_tax = round(profit * 0.1413, 2) if profit > 400 else 0  # Self-employment tax
+    total_est = est_tax + se_tax
+    monthly_save = round(total_est / 12, 2)
+    # Quarterly breakdown
+    quarters = [
+        {"q": "Q1", "months": "Jan-Mar", "due": f"{year}-04-15", "amount": round(total_est/4, 2)},
+        {"q": "Q2", "months": "Apr-May", "due": f"{year}-06-15", "amount": round(total_est/4, 2)},
+        {"q": "Q3", "months": "Jun-Aug", "due": f"{year}-09-15", "amount": round(total_est/4, 2)},
+        {"q": "Q4", "months": "Sep-Dec", "due": f"{int(year)+1}-01-15", "amount": round(total_est/4, 2)},
+    ]
+    today = datetime.now().strftime("%Y-%m-%d")
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>📊 My Tax Estimate</h1>
+<p class="sub">Real-time estimate based on your {{year}} transactions. Updated automatically as you add income and expenses.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+<div class="card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac">
+<h2 style="margin-top:0;color:#15803d">Estimated Tax Bill</h2>
+<div style="font-size:48px;font-weight:900;color:{{"#15803d"if total_est<5000 else"#b91c1c"}}">${{"%.2f"|format(total_est)}}</div>
+<div style="font-size:13px;color:#475569;margin-top:8px">Based on {{year}} activity through today</div>
+<div style="margin-top:16px;padding-top:16px;border-top:1px solid #bbf7d0">
+<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px"><span>Income Tax (est.)</span><strong>${{"%.2f"|format(est_tax)}}</strong></div>
+<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px"><span>Self-Employment Tax</span><strong>${{"%.2f"|format(se_tax)}}</strong></div>
+<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;padding-top:6px;border-top:1px solid #bbf7d0"><span>Total Estimated</span><span>${{"%.2f"|format(total_est)}}</span></div>
+</div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">Your Numbers</h2>
+<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px"><span>Gross Income</span><strong style="color:#0b5f2a">${{"%.2f"|format(income)}}</strong></div>
+<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px"><span>Business Expenses</span><strong style="color:#b91c1c">-${{"%.2f"|format(expenses)}}</strong></div>
+<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px"><span>Net Profit</span><strong>${{"%.2f"|format(profit)}}</strong></div>
+<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px"><span>Standard Deduction</span><strong>-${{"%.2f"|format(std_deduction)}}</strong></div>
+<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px"><span>Taxable Income</span><strong>${{"%.2f"|format(taxable)}}</strong></div>
+<div style="background:#fef9c3;border-radius:10px;padding:12px;margin-top:12px;font-size:13px;color:#92400e">
+<strong>💰 Save ${{"%.2f"|format(monthly_save)}}/month</strong> to cover your tax bill
+</div>
+</div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">📅 Quarterly Payment Schedule</h2>
+<p style="font-size:13px;color:#475569">As a self-employed individual you may need to make quarterly estimated tax payments to avoid penalties.</p>
+<div class="table-wrap"><table><thead><tr><th>Quarter</th><th>Period</th><th>Due Date</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+{%for q in quarters%}<tr style="background:{{"#f0fdf4"if q.due<today else"#fff"}}">
+<td><strong>{{q.q}}</strong></td><td style="font-size:12px">{{q.months}}</td>
+<td style="font-size:12px{%if q.due<today%};color:#b91c1c;font-weight:900{%endif%}">{{q.due}}</td>
+<td style="font-weight:900">${{"%.2f"|format(q.amount)}}</td>
+<td><span class="pill{%if q.due<today%} warn{%endif%}">{{"Due Soon"if q.due<today else"Upcoming"}}</span></td>
+</tr>{%endfor%}
+</tbody></table></div>
+</div>
+<div class="card" style="background:#fef2f2;border-color:#fecaca">
+<p style="font-size:12px;color:#991b1b;margin:0"><strong>⚠️ Disclaimer:</strong> This is a simplified estimate for planning purposes only. Your actual tax liability depends on many factors. Please consult with your PPT advisor before making tax payments.</p>
+</div>
+{%endblock%}""", income=income, expenses=expenses, profit=profit, taxable=taxable,
+        est_tax=est_tax, se_tax=se_tax, total_est=total_est, monthly_save=monthly_save,
+        std_deduction=std_deduction, quarters=quarters, year=year, today=today)
+
+# ── QUARTERLY TAX REMINDERS (ADMIN) ─────────────────────────
+
+@app.route("/admin/quarterly-reminders", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_quarterly_reminders():
+    ensure_ai_tables()
+    clients = query_db("SELECT id,name,email FROM clients WHERE status='Active' ORDER BY name")
+    year = str(datetime.now().year)
+    quarters = [
+        {"q":"Q1","due":f"{year}-04-15","label":"April 15"},
+        {"q":"Q2","due":f"{year}-06-15","label":"June 15"},
+        {"q":"Q3","due":f"{year}-09-15","label":"September 15"},
+        {"q":"Q4","due":f"{int(year)+1}-01-15","label":"January 15"},
+    ]
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "send_reminders":
+            quarter = request.form.get("quarter")
+            due_date = request.form.get("due_date")
+            selected = request.form.getlist("client_ids")
+            sent = 0
+            for cid in selected:
+                client = query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True)
+                if not client: continue
+                # Calculate their estimate
+                income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+                expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (cid, year), one=True)["total"])
+                profit = income - expenses
+                q_estimate = round(max(0, profit * 0.25) / 4, 2)
+                msg = f"Quarterly estimated tax payment reminder: {quarter} payment of approximately ${q_estimate:,.2f} is due {due_date}. Log in to your portal to see your full tax estimate."
+                execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                          (cid, "admin", "Pinnacle Performance Tax", f"Quarterly Tax Reminder — {quarter} Due {due_date}", msg))
+                push_notification(cid, "invoice", f"Quarterly tax payment due {due_date} — ~${q_estimate:,.2f}", "/my/tax-estimate")
+                if client.get("email"):
+                    send_email(client["email"], f"Quarterly Tax Reminder — {quarter} Due {due_date}",
+                              f"<h2>Quarterly Tax Reminder</h2><p>Hi {client['name']},</p><p>Your {quarter} estimated tax payment of approximately <strong>${q_estimate:,.2f}</strong> is due <strong>{due_date}</strong>.</p><p>Log in to your portal to see your full breakdown: <a href='https://ppt-tax-portal.onrender.com/my/tax-estimate'>View Tax Estimate</a></p><p>Contact us with any questions!</p>")
+                sent += 1
+            flash(f"Sent {quarter} reminders to {sent} clients.", "success")
+        return redirect(url_for("admin_quarterly_reminders"))
+    estimates = query_db("SELECT * FROM quarterly_estimates ORDER BY id DESC LIMIT 50")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📅 Quarterly Tax Reminders</h1><p class="sub">Send estimated tax payment reminders to clients before each deadline.</p><div class="card"><h2 style="margin-top:0">Send Reminders</h2><form method="POST"><input type="hidden" name="action" value="send_reminders"><div class="grid grid-3"><div><label>Quarter</label><select name="quarter">{%for q in quarters%}<option value="{{q.q}}">{{q.q}} — Due {{q.label}}</option>{%endfor%}</select></div><div><label>Due Date</label><select name="due_date">{%for q in quarters%}<option value="{{q.due}}">{{q.due}}</option>{%endfor%}</select></div></div><div style="margin:16px 0"><label>Select Clients</label><div style="display:flex;gap:8px;margin-bottom:8px"><button type="button" onclick="document.querySelectorAll('input[name=client_ids]').forEach(c=>c.checked=true)" style="padding:6px 12px;font-size:12px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px;cursor:pointer">Select All</button><button type="button" onclick="document.querySelectorAll('input[name=client_ids]').forEach(c=>c.checked=false)" style="padding:6px 12px;font-size:12px;background:#f1f5f9;color:#0f172a;border:0;border-radius:8px;cursor:pointer">Clear</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">{%for c in clients%}<label style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer"><input type="checkbox" name="client_ids" value="{{c.id}}" style="width:auto;margin:0"><span style="font-size:13px"><strong>{{c.name}}</strong></span></label>{%endfor%}</div></div><button type="submit" style="font-size:15px;padding:13px 24px">Send Reminders</button></form></div>{%endblock%}""", clients=clients, quarters=quarters)
+
+# ── BUSINESS HEALTH SCORE ────────────────────────────────────
+
+@app.route("/admin/health-score/<int:client_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_health_score(client_id):
+    ensure_ai_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    year = str(datetime.now().year)
+    month = datetime.now().strftime("%Y-%m")
+    # Calculate auto score
+    income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
+    expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
+    profit = income - expenses
+    profit_margin = round((profit/income*100), 1) if income > 0 else 0
+    expense_ratio = round((expenses/income*100), 1) if income > 0 else 100
+    unpaid_invoices = query_db("SELECT COUNT(*) c FROM invoices WHERE client_id=? AND status!='Paid'", (client_id,), one=True)["c"]
+    # Score calculation
+    score = 50
+    if profit_margin >= 30: score += 20
+    elif profit_margin >= 15: score += 10
+    elif profit_margin < 0: score -= 20
+    if expense_ratio <= 50: score += 15
+    elif expense_ratio <= 70: score += 5
+    elif expense_ratio >= 90: score -= 15
+    if unpaid_invoices == 0: score += 15
+    elif unpaid_invoices <= 2: score += 5
+    elif unpaid_invoices >= 5: score -= 10
+    score = max(0, min(100, score))
+    if request.method == "POST":
+        notes = request.form.get("notes") or ""
+        execute_db("INSERT OR REPLACE INTO business_health_scores(client_id,score_month,overall_score,profit_margin,expense_ratio,notes) VALUES (?,?,?,?,?,?)",
+                  (client_id, month, score, profit_margin, expense_ratio, notes))
+        push_notification(client_id, "savings", f"Your Business Health Score for {month}: {score}/100", "/my/health-score")
+        flash(f"Health score of {score}/100 saved and client notified.", "success")
+        return redirect(url_for("admin_health_score", client_id=client_id))
+    history = query_db("SELECT * FROM business_health_scores WHERE client_id=? ORDER BY score_month DESC LIMIT 12", (client_id,))
+    score_color = "#0b5f2a" if score >= 70 else ("#f59e0b" if score >= 40 else "#b91c1c")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📈 Business Health Score — {{client.name}}</h1><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><div class="card" style="text-align:center"><h2 style="margin-top:0">{{month}} Score</h2><div style="font-size:80px;font-weight:900;color:{{score_color}}">{{score}}</div><div style="font-size:16px;color:#475569">out of 100</div><div style="background:#e5e7eb;border-radius:999px;height:16px;margin:16px 0;overflow:hidden"><div style="background:{{score_color}};width:{{score}}%;height:100%;border-radius:999px"></div></div><div style="font-size:14px;font-weight:900;color:{{score_color}}">{{"Excellent"if score>=80 else"Good"if score>=60 else"Fair"if score>=40 else"Needs Attention"}}</div></div><div class="card"><h2 style="margin-top:0">Breakdown</h2><div style="font-size:14px"><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6"><span>Profit Margin</span><strong style="color:{{"#0b5f2a"if profit_margin>=20 else"#b91c1c"}}">{{profit_margin}}%</strong></div><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6"><span>Expense Ratio</span><strong style="color:{{"#0b5f2a"if expense_ratio<=60 else"#b91c1c"}}">{{expense_ratio}}%</strong></div><div style="display:flex;justify-content:space-between;padding:8px 0"><span>Unpaid Invoices</span><strong style="color:{{"#0b5f2a"if unpaid_invoices==0 else"#b91c1c"}}">{{unpaid_invoices}}</strong></div></div><form method="POST" style="margin-top:16px"><div><label>Notes for Client</label><textarea name="notes" placeholder="Your business is performing well. Consider reducing meal expenses..."></textarea></div><button type="submit" style="margin-top:8px">Save & Notify Client</button></form></div></div><div class="card"><h2 style="margin-top:0">Score History</h2>{%if history%}<div class="table-wrap"><table><thead><tr><th>Month</th><th>Score</th><th>Profit Margin</th><th>Expense Ratio</th></tr></thead><tbody>{%for h in history%}<tr><td>{{h.score_month}}</td><td style="font-weight:900;color:{{"#0b5f2a"if h.overall_score>=70 else"#f59e0b"if h.overall_score>=40 else"#b91c1c"}}">{{h.overall_score}}/100</td><td>{{h.profit_margin}}%</td><td>{{h.expense_ratio}}%</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No history yet.</p>{%endif%}</div></div>{%endblock%}""", client=client, score=score, score_color=score_color, profit_margin=profit_margin, expense_ratio=expense_ratio, unpaid_invoices=unpaid_invoices, month=month, history=history)
+
+@app.route("/my/health-score")
+@login_required
+@client_required
+def my_health_score():
+    ensure_ai_tables()
+    cid = current_user.client_id
+    scores = query_db("SELECT * FROM business_health_scores WHERE client_id=? ORDER BY score_month DESC LIMIT 12", (cid,))
+    latest = scores[0] if scores else None
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📈 Business Health Score</h1><p class="sub">Your monthly business performance score from Pinnacle Performance Tax.</p>{%if latest%}<div style="display:grid;grid-template-columns:1fr 2fr;gap:20px"><div class="card" style="text-align:center">{%set sc=latest.overall_score%}{%set color="#0b5f2a"if sc>=70 else"#f59e0b"if sc>=40 else"#b91c1c"%}<h2 style="margin-top:0">Latest Score</h2><div style="font-size:72px;font-weight:900;color:{{color}}">{{sc}}</div><div style="font-size:14px;color:#475569">out of 100 — {{latest.score_month}}</div><div style="background:#e5e7eb;border-radius:999px;height:14px;margin:14px 0;overflow:hidden"><div style="background:{{color}};width:{{sc}}%;height:100%;border-radius:999px"></div></div><div style="font-size:15px;font-weight:900;color:{{color}}">{{"Excellent 🌟"if sc>=80 else"Good 👍"if sc>=60 else"Fair ⚠️"if sc>=40 else"Needs Attention ❗"}}</div>{%if latest.notes%}<div style="margin-top:14px;background:#f9fafb;border-radius:10px;padding:12px;font-size:13px;text-align:left;color:#374151"><strong>Note from your advisor:</strong><br>{{latest.notes}}</div>{%endif%}</div><div><div class="card"><h2 style="margin-top:0">What This Means</h2><div style="font-size:14px;line-height:1.8"><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6"><span>Profit Margin</span><strong>{{latest.profit_margin}}%</strong></div><div style="display:flex;justify-content:space-between;padding:6px 0"><span>Expense Ratio</span><strong>{{latest.expense_ratio}}%</strong></div></div></div>{%if scores|length>1%}<div class="card"><h2 style="margin-top:0">Score History</h2><div class="table-wrap"><table><thead><tr><th>Month</th><th>Score</th></tr></thead><tbody>{%for s in scores%}<tr><td>{{s.score_month}}</td><td style="font-weight:900;color:{{"#0b5f2a"if s.overall_score>=70 else"#f59e0b"if s.overall_score>=40 else"#b91c1c"}}">{{s.overall_score}}/100</td></tr>{%endfor%}</tbody></table></div></div>{%endif%}</div></div>{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">Your business health score hasn't been calculated yet. Check back after your advisor reviews your account.</p></div>{%endif%}{%endblock%}""", scores=scores, latest=latest)
+
+# ── PWA / MOBILE MANIFEST ────────────────────────────────────
+
+@app.route("/manifest.json")
+def pwa_manifest():
+    from flask import jsonify
+    return jsonify({
+        "name": "PPT Portal",
+        "short_name": "PPT",
+        "description": "Pinnacle Performance Tax Client Portal",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#11823b",
+        "theme_color": "#11823b",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
+    })
+
+@app.route("/sw.js")
+def service_worker():
+    from flask import Response
+    sw = """
+const CACHE = 'ppt-v1';
+const URLS = ['/', '/login', '/client', '/my/invoices', '/my/documents'];
+self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))));
+self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+"""
+    return Response(sw, mimetype="application/javascript")
+
+# ============================================================
+# END PPT AI + ADVANCED FEATURES PACK
+# ============================================================
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

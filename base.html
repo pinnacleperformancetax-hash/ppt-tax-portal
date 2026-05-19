@@ -71,28 +71,39 @@
         <div class="nav-section">Tax & Billing</div>
         <a href="/tax-returns">📁 Tax Returns</a>
         <a href="/invoices">🧾 Invoices</a>
+        <a href="/invoices/bulk-create">📋 Bulk Invoices</a>
         <a href="/payments">💳 Payments</a>
+        <a href="/admin/payment-plans">📆 Payment Plans</a>
 
         <div class="nav-section">Files & Comms</div>
         <a href="/documents">📂 Documents</a>
         <a href="/admin/documents/upload">⬆️ Upload to Client</a>
         <a href="/messages">✉️ Messages</a>
         <a href="/appointments">📅 Appointments</a>
+        <a href="/admin/engagement-letters">✍️ E-Signatures</a>
+        <a href="/admin/announcements">📢 Announcements</a>
 
         <div class="nav-section">Tools</div>
         <a href="/workflow">⚙️ Workflow Hub</a>
+        <a href="/admin/referrals">🤝 Referrals</a>
         <a href="/notifications/list">🔔 Notifications</a>
         <a href="/settings">🔧 Users</a>
 
       {% elif current_user.is_authenticated %}
         <div class="nav-section">My Portal</div>
-        <a href="/client-dashboard">🏠 Dashboard</a>
+        <a href="/client">🏠 Dashboard</a>
         <a href="/my/documents">📂 My Documents</a>
         <a href="/my/invoices">🧾 My Invoices</a>
+        <a href="/my/payment-plan">📆 Payment Plan</a>
         <a href="/my/tax-returns">📁 Tax Returns</a>
+        <a href="/my/return-progress">📊 Return Status</a>
         <a href="/my/bookkeeping">💰 Bookkeeping</a>
         <a href="/my/appointments">📅 Appointments</a>
+        <a href="/my/book-appointment">📅 Book Appointment</a>
         <a href="/my/messages">✉️ Messages</a>
+        <a href="/my/sign-documents" style="background:rgba(245,158,11,.25);border-radius:10px">✍️ Sign Documents</a>
+        <a href="/my/tax-organizer">✅ Tax Organizer</a>
+        <a href="/my/savings-planner">💡 Savings Planner</a>
         <a href="/my/year-end">📊 Year-End Summary</a>
         <a href="/my/crm">📋 My Requests</a>
         <a href="/notifications/list">🔔 Notifications</a>

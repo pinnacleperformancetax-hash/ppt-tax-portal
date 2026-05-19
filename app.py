@@ -875,7 +875,7 @@ def update_client(client_id):
 @admin_required
 def transactions():
     if request.method=='POST': execute_db('INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)',(request.form.get('date'),request.form.get('description'),request.form.get('type'),request.form.get('category_id') or None,request.form.get('client_id') or None,money(request.form.get('amount')),request.form.get('notes'))); return redirect(url_for('transactions'))
-    return render_template('transactions.html',transactions=query_db('SELECT t.*,c.name category_name,cl.name client_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN clients cl ON cl.id=t.client_id ORDER BY t.id DESC'),categories=query_db('SELECT * FROM categories ORDER BY kind,name'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Transactions</h1><div class="card"><h2 style="margin-top:0">Add Transaction</h2><form method="POST" class="grid grid-3"><div><label>Date</label><input type="date" name="date" required></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description" required></div><div><label>Amount</label><input type="number" name="amount" step="0.01" required></div><div><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for c in categories%}<option value="{{c.id}}">[{{c.kind|title}}] {{c.name}}</option>{%endfor%}</select></div><div><label>Client</label><select name="client_id"><option value="">None</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Add Transaction</button></div></form></div><div class="card"><h2 style="margin-top:0">{{transactions|length}} Transactions</h2>{%if transactions%}<div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Client</th><th>Type</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead><tbody>{%for t in transactions%}<tr><td style="font-size:12px">{{t.date}}</td><td>{{t.description}}</td><td style="font-size:12px;color:#475569">{{t.category_name or"--"}}</td><td style="font-size:12px">{{t.client_name or"--"}}</td><td><span class="pill{%if t.type!="income"%} warn{%endif%}">{{t.type|title}}</span></td><td style="text-align:right;font-weight:900">${{"%.2f"|format(t.amount|float)}}</td><td style="display:flex;gap:4px"><a href="/transactions/{{t.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Edit</a><form method="POST" action="/transactions/{{t.id}}/delete" onsubmit="return confirm('Delete?')"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No transactions yet.</p>{%endif%}</div>{%endblock%}""", transactions=query_db('SELECT t.*,c.name category_name,cl.name client_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN clients cl ON cl.id=t.client_id ORDER BY t.id DESC'),categories=query_db('SELECT * FROM categories ORDER BY kind,name'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/invoices',methods=['GET','POST'])
 @login_required
 @admin_required
@@ -887,7 +887,7 @@ def invoices():
         if request.form.get('client_id') and request.form.get('status') != 'Draft':
             email_new_invoice(inv_id)
         return redirect(url_for('invoices'))
-    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Invoices</h1><div class="card"><h2 style="margin-top:0">New Invoice</h2><form method="POST" class="grid grid-3"><div><label>Client</label><select name="client_id"><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Issue Date</label><input type="date" name="issue_date"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option><option value="Paid">Paid</option></select></div><div style="grid-column:span 3"><label>Description</label><input type="text" name="description"></div><div><button type="submit">Create Invoice</button></div></form></div><div class="card"><h2 style="margin-top:0">{{invoices|length}} Invoice{{"s"if invoices|length!=1}}</h2>{%if invoices%}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Description</th><th>Amount</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for i in invoices%}<tr><td><strong>{{i.invoice_number or"--"}}</strong></td><td>{{i.client_name or"--"}}</td><td style="font-size:12px">{{i.description or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td style="font-size:12px">{{i.due_date or"--"}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%elif i.status=="Paid"%}{%endif%}">{{i.status}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/invoice/{{i.id}}/pdf" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">PDF</a>{%if i.status!="Paid"%}<form method="POST" action="/invoices/{{i.id}}/mark-paid" style="display:inline"><button style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px">Paid</button></form><form method="POST" action="/invoices/{{i.id}}/send-reminder" style="display:inline"><button style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412;border:0;border-radius:8px">Remind</button></form>{%endif%}</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No invoices yet.</p>{%endif%}</div>{%endblock%}""", invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Invoices</h1><div class="card"><h2 style="margin-top:0">New Invoice</h2><form method="POST" class="grid grid-3"><div><label>Client</label><select name="client_id"><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto"></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="0.00"></div><div><label>Issue Date</label><input type="date" name="issue_date"></div><div><label>Due Date</label><input type="date" name="due_date"></div><div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option><option value="Paid">Paid</option></select></div><div style="grid-column:span 3"><label>Description</label><input type="text" name="description"></div><div><button type="submit">Create Invoice</button></div></form></div><div class="card"><h2 style="margin-top:0">{{invoices|length}} Invoice{{"s"if invoices|length!=1}}</h2>{%if invoices%}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Description</th><th>Amount</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for i in invoices%}<tr><td><strong>{{i.invoice_number or"--"}}</strong></td><td>{{i.client_name or"--"}}</td><td style="font-size:12px">{{i.description or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td style="font-size:12px">{{i.due_date or"--"}}</td><td><span class="pill{%if i.status=="Overdue"%} warn{%elif i.status=="Paid"%}{%endif%}">{{i.status}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/invoice/{{i.id}}/pdf" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">PDF</a><a href="/invoices/{{i.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Edit</a>{%if i.status!="Paid"%}<form method="POST" action="/invoices/{{i.id}}/mark-paid" style="display:inline"><button style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px">Paid</button></form><form method="POST" action="/invoices/{{i.id}}/send-reminder" style="display:inline"><button style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412;border:0;border-radius:8px">Remind</button></form>{%endif%}<form method="POST" action="/invoices/{{i.id}}/delete" style="display:inline" onsubmit="return confirm('Delete this invoice?')"><button style="padding:5px 10px;font-size:12px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No invoices yet.</p>{%endif%}</div>{%endblock%}""", invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),clients=query_db('SELECT id,name FROM clients ORDER BY name'))
 @app.route('/payments',methods=['GET','POST'])
 @login_required
 @admin_required
@@ -897,7 +897,7 @@ def payments():
         if inv:
             execute_db("INSERT INTO payments(invoice_id,client_id,amount,method,reference,status,notes) VALUES (?,?,?,?,?,'Paid',?)",(inv['id'],inv['client_id'],money(request.form.get('amount')) or money(inv['amount']),request.form.get('method'),request.form.get('reference'),request.form.get('notes'))); execute_db("UPDATE invoices SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?",(inv['id'],))
         return redirect(url_for('payments'))
-    return render_template('payments.html',invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),payments=query_db('SELECT p.*,i.invoice_number,cl.name client_name FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id LEFT JOIN clients cl ON cl.id=p.client_id ORDER BY p.id DESC'))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Payments</h1><div class="card"><h2 style="margin-top:0">Record Payment</h2><form method="POST" class="grid grid-3"><div style="grid-column:span 3"><label>Invoice</label><select name="invoice_id" required><option value="">-- Select Invoice --</option>{%for i in invoices%}<option value="{{i.id}}">{{i.invoice_number}} — {{i.client_name}} — ${{"%.2f"|format(i.amount|float)}}</option>{%endfor%}</select></div><div><label>Amount</label><input type="number" name="amount" step="0.01" placeholder="Auto from invoice"></div><div><label>Method</label><select name="method"><option>Manual Entry</option><option>Cash</option><option>Check</option><option>Credit Card</option><option>Zelle</option><option>PayPal</option></select></div><div><label>Reference #</label><input type="text" name="reference"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Record Payment</button></div></form></div><div class="card"><h2 style="margin-top:0">{{payments|length}} Payment{{'s'if payments|length!=1}}</h2>{%if payments%}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Amount</th><th>Method</th><th>Date</th><th>Actions</th></tr></thead><tbody>{%for p in payments%}<tr><td style="font-size:12px">{{p.invoice_number or"--"}}</td><td>{{p.client_name or"--"}}</td><td style="font-weight:900;color:#11823b">${{"%.2f"|format(p.amount|float)}}</td><td style="font-size:12px">{{p.method or"--"}}</td><td style="font-size:12px;color:#475569">{{p.created_at[:10]if p.created_at else"--"}}</td><td style="display:flex;gap:4px"><a href="/payments/{{p.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Edit</a><form method="POST" action="/payments/{{p.id}}/delete" onsubmit="return confirm('Delete?')"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No payments yet.</p>{%endif%}</div>{%endblock%}""", invoices=query_db('SELECT i.*,cl.name client_name FROM invoices i LEFT JOIN clients cl ON cl.id=i.client_id ORDER BY i.id DESC'),payments=query_db('SELECT p.*,i.invoice_number,cl.name client_name FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id LEFT JOIN clients cl ON cl.id=p.client_id ORDER BY p.id DESC'))
 @app.route('/appointments',methods=['GET','POST'])
 @login_required
 @admin_required
@@ -3293,6 +3293,89 @@ def generate_all_retainers():
 
 # ============================================================
 # END PPT RETAINER FEE MANAGEMENT
+# ============================================================
+
+
+# ============================================================
+# PPT EDIT / DELETE — Invoices, Payments, Transactions
+# ============================================================
+
+@app.route("/invoices/<int:invoice_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_invoice(invoice_id):
+    invoice = query_db("SELECT i.*,c.name client_name FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.id=?", (invoice_id,), one=True)
+    if not invoice: abort(404)
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    if request.method == "POST":
+        execute_db("UPDATE invoices SET client_id=?,invoice_number=?,issue_date=?,due_date=?,amount=?,status=?,description=? WHERE id=?",
+                  (request.form.get("client_id"), request.form.get("invoice_number"),
+                   request.form.get("issue_date"), request.form.get("due_date"),
+                   money(request.form.get("amount")), request.form.get("status"),
+                   request.form.get("description"), invoice_id))
+        flash("Invoice updated.", "success")
+        return redirect(url_for("invoices"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Edit Invoice</h1><div class="card" style="max-width:600px"><form method="POST"><div class="grid grid-3"><div><label>Client</label><select name="client_id">{%for c in clients%}<option value="{{c.id}}"{%if c.id==invoice.client_id%} selected{%endif%}>{{c.name}}</option>{%endfor%}</select></div><div><label>Invoice #</label><input type="text" name="invoice_number" value="{{invoice.invoice_number}}" required></div><div><label>Amount ($)</label><input type="number" name="amount" step="0.01" value="{{invoice.amount}}" required></div><div><label>Issue Date</label><input type="date" name="issue_date" value="{{invoice.issue_date or""}}"></div><div><label>Due Date</label><input type="date" name="due_date" value="{{invoice.due_date or""}}"></div><div><label>Status</label><select name="status"><option{%if invoice.status=="Draft"%}selected{%endif%}>Draft</option><option{%if invoice.status=="Sent"%}selected{%endif%}>Sent</option><option{%if invoice.status=="Paid"%}selected{%endif%}>Paid</option><option{%if invoice.status=="Overdue"%}selected{%endif%}>Overdue</option></select></div><div style="grid-column:span 3"><label>Description</label><input type="text" name="description" value="{{invoice.description or""}}"></div><div style="display:flex;gap:8px"><button type="submit">Save Changes</button><a href="/invoices" class="btn" style="background:#f1f5f9;color:#0f172a">Cancel</a></div></div></form></div>{%endblock%}""", invoice=invoice, clients=clients)
+
+@app.route("/invoices/<int:invoice_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_invoice(invoice_id):
+    execute_db("DELETE FROM invoices WHERE id=?", (invoice_id,))
+    execute_db("DELETE FROM payments WHERE invoice_id=?", (invoice_id,))
+    flash("Invoice deleted.", "success")
+    return redirect(url_for("invoices"))
+
+@app.route("/payments/<int:payment_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_payment(payment_id):
+    payment = query_db("SELECT p.*,i.invoice_number FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id WHERE p.id=?", (payment_id,), one=True)
+    if not payment: abort(404)
+    if request.method == "POST":
+        execute_db("UPDATE payments SET amount=?,method=?,reference=?,notes=? WHERE id=?",
+                  (money(request.form.get("amount")), request.form.get("method"),
+                   request.form.get("reference"), request.form.get("notes"), payment_id))
+        flash("Payment updated.", "success")
+        return redirect(url_for("payments"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Edit Payment</h1><div class="card" style="max-width:500px"><form method="POST"><div class="grid"><div><label>Amount ($)</label><input type="number" name="amount" step="0.01" value="{{payment.amount}}" required></div><div><label>Method</label><select name="method"><option{%if payment.method=="Manual Entry"%}selected{%endif%}>Manual Entry</option><option{%if payment.method=="Cash"%}selected{%endif%}>Cash</option><option{%if payment.method=="Check"%}selected{%endif%}>Check</option><option{%if payment.method=="Credit Card"%}selected{%endif%}>Credit Card</option><option{%if payment.method=="Zelle"%}selected{%endif%}>Zelle</option><option{%if payment.method=="PayPal"%}selected{%endif%}>PayPal</option><option{%if payment.method=="Stripe"%}selected{%endif%}>Stripe</option></select></div><div><label>Reference #</label><input type="text" name="reference" value="{{payment.reference or""}}"></div><div><label>Notes</label><textarea name="notes">{{payment.notes or""}}</textarea></div><div style="display:flex;gap:8px"><button type="submit">Save Changes</button><a href="/payments" class="btn" style="background:#f1f5f9;color:#0f172a">Cancel</a></div></div></form></div>{%endblock%}""", payment=payment)
+
+@app.route("/payments/<int:payment_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_payment(payment_id):
+    execute_db("DELETE FROM payments WHERE id=?", (payment_id,))
+    flash("Payment deleted.", "success")
+    return redirect(url_for("payments"))
+
+@app.route("/transactions/<int:tx_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_transaction(tx_id):
+    tx = query_db("SELECT * FROM transactions WHERE id=?", (tx_id,), one=True)
+    if not tx: abort(404)
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    if request.method == "POST":
+        execute_db("UPDATE transactions SET date=?,description=?,type=?,category_id=?,client_id=?,amount=?,notes=? WHERE id=?",
+                  (request.form.get("date"), request.form.get("description"),
+                   request.form.get("type"), request.form.get("category_id") or None,
+                   request.form.get("client_id") or None, money(request.form.get("amount")),
+                   request.form.get("notes"), tx_id))
+        flash("Transaction updated.", "success")
+        return redirect(url_for("transactions"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Edit Transaction</h1><div class="card" style="max-width:600px"><form method="POST"><div class="grid grid-3"><div><label>Date</label><input type="date" name="date" value="{{tx.date}}" required></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description" value="{{tx.description}}" required></div><div><label>Amount ($)</label><input type="number" name="amount" step="0.01" value="{{tx.amount}}" required></div><div><label>Type</label><select name="type"><option value="income"{%if tx.type=="income"%}selected{%endif%}>Income</option><option value="expense"{%if tx.type=="expense"%}selected{%endif%}>Expense</option></select></div><div><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for c in categories%}<option value="{{c.id}}"{%if c.id==tx.category_id%}selected{%endif%}>[{{c.kind|title}}] {{c.name}}</option>{%endfor%}</select></div><div><label>Client</label><select name="client_id"><option value="">None</option>{%for c in clients%}<option value="{{c.id}}"{%if c.id==tx.client_id%}selected{%endif%}>{{c.name}}</option>{%endfor%}</select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes">{{tx.notes or""}}</textarea></div><div style="display:flex;gap:8px"><button type="submit">Save Changes</button><a href="/transactions" class="btn" style="background:#f1f5f9;color:#0f172a">Cancel</a></div></div></form></div>{%endblock%}""", tx=tx, categories=categories, clients=clients)
+
+@app.route("/transactions/<int:tx_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_transaction(tx_id):
+    execute_db("DELETE FROM transactions WHERE id=?", (tx_id,))
+    flash("Transaction deleted.", "success")
+    return redirect(url_for("transactions"))
+
+# ============================================================
+# END PPT EDIT / DELETE
 # ============================================================
 
 if __name__=='__main__':

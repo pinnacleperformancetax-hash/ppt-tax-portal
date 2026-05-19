@@ -3378,6 +3378,348 @@ def delete_transaction(tx_id):
 # END PPT EDIT / DELETE
 # ============================================================
 
+
+# ============================================================
+# PPT MEGA UPGRADE PACK
+# E-Signature | Bulk Invoices | Payment Plans | Mobile | Enhancements
+# ============================================================
+
+def ensure_mega_tables():
+    db = get_db()
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS engagement_letters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        title TEXT NOT NULL,
+        body TEXT,
+        status TEXT DEFAULT 'Pending',
+        signed_at TEXT,
+        signed_name TEXT,
+        signed_ip TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS payment_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        invoice_id INTEGER,
+        total_amount REAL DEFAULT 0,
+        installments INTEGER DEFAULT 3,
+        amount_per_installment REAL DEFAULT 0,
+        frequency TEXT DEFAULT 'monthly',
+        start_date TEXT,
+        status TEXT DEFAULT 'Active',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS payment_plan_installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plan_id INTEGER,
+        client_id INTEGER,
+        due_date TEXT,
+        amount REAL DEFAULT 0,
+        status TEXT DEFAULT 'Pending',
+        paid_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    db.commit()
+
+# ── E-SIGNATURE ──────────────────────────────────────────────
+
+@app.route("/admin/engagement-letters", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_engagement_letters():
+    ensure_mega_tables()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    if request.method == "POST":
+        client_id = request.form.get("client_id")
+        title = request.form.get("title") or "Engagement Letter"
+        body = request.form.get("body") or ""
+        execute_db("INSERT INTO engagement_letters(client_id,title,body,status) VALUES (?,?,?,'Pending')",
+                  (client_id, title, body))
+        push_notification(client_id, "document", f"Please sign: {title}", "/my/sign-documents")
+        flash("Engagement letter sent to client for signature.", "success")
+        return redirect(url_for("admin_engagement_letters"))
+    letters = query_db("""SELECT e.*,c.name client_name FROM engagement_letters e
+                          LEFT JOIN clients c ON c.id=e.client_id
+                          ORDER BY e.id DESC""")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Engagement Letters</h1><div class="card"><h2 style="margin-top:0">Send New Letter</h2><form method="POST"><div class="grid"><div><label>Client</label><select name="client_id" required><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Title</label><input type="text" name="title" value="Tax Preparation Engagement Letter {{year}}"></div><div style="grid-column:span 1"><label>Letter Body</label><textarea name="body" style="min-height:200px" placeholder="Dear [Client Name],&#10;&#10;This letter confirms our engagement for tax preparation services...&#10;&#10;Services: Tax return preparation&#10;Fee: $___&#10;&#10;By signing below you agree to our terms."></textarea></div><div><button type="submit">Send for Signature</button></div></div></form></div><div class="card"><h2 style="margin-top:0">{{letters|length}} Letter{{"s"if letters|length!=1}}</h2>{%if letters%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Title</th><th>Status</th><th>Signed</th><th>Actions</th></tr></thead><tbody>{%for l in letters%}<tr><td><strong>{{l.client_name or"--"}}</strong></td><td>{{l.title}}</td><td><span class="pill{%if l.status=="Signed"%}{%else%} warn{%endif%}">{{l.status}}</span></td><td style="font-size:12px;color:#475569">{{l.signed_at[:10]if l.signed_at else"--"}}{%if l.signed_name%}<br><span style="font-size:11px">{{l.signed_name}}</span>{%endif%}</td><td><a href="/engagement-letter/{{l.id}}/view" class="btn" style="padding:4px 8px;font-size:11px">View</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No letters yet.</p>{%endif%}</div>{%endblock%}""", clients=clients, letters=letters, year=datetime.now().year)
+
+@app.route("/engagement-letter/<int:letter_id>/view")
+@login_required
+def view_engagement_letter(letter_id):
+    letter = query_db("SELECT e.*,c.name client_name,c.email client_email FROM engagement_letters e LEFT JOIN clients c ON c.id=e.client_id WHERE e.id=?", (letter_id,), one=True)
+    if not letter: abort(404)
+    if current_user.role != "admin" and letter["client_id"] != current_user.client_id: abort(403)
+    return render_template_string("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{letter.title}}</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:30px;color:#1f2937}.header{text-align:center;border-bottom:3px solid #11823b;padding-bottom:20px;margin-bottom:30px}.brand{font-size:20px;font-weight:900;color:#11823b}.status{display:inline-block;padding:6px 16px;border-radius:999px;font-weight:900;font-size:13px;background:{{"#e8f5ec"if letter.status=="Signed"else"#fff7ed"}};color:{{"#0b5f2a"if letter.status=="Signed"else"#9a3412"}}}.body{background:#f9fafb;border-radius:12px;padding:24px;margin:20px 0;white-space:pre-wrap;font-size:14px;line-height:1.7}.sign-box{border:2px solid #11823b;border-radius:16px;padding:24px;margin-top:24px}.no-print{background:#11823b;color:white;padding:10px 20px;margin:-30px -30px 20px;display:flex;justify-content:space-between;align-items:center}@media print{.no-print{display:none}}</style></head><body><div class="no-print"><span style="font-weight:900">{{letter.title}}</span><button onclick="window.print()" style="background:white;color:#11823b;border:0;border-radius:8px;padding:6px 16px;font-weight:900">Print</button></div><div class="header"><div class="brand">Pinnacle Performance Tax and Accounting</div><div style="font-size:13px;color:#475569;margin-top:4px">pinnacleperformancetax@gmail.com | 478-338-1632</div></div><h2>{{letter.title}}</h2><div style="margin-bottom:12px"><span class="status">{{letter.status}}</span></div><p style="color:#475569;font-size:13px">Client: <strong>{{letter.client_name}}</strong> | Sent: {{letter.created_at[:10]}}</p><div class="body">{{letter.body}}</div>{%if letter.status=="Signed"%}<div style="background:#e8f5ec;border-radius:12px;padding:16px;margin-top:16px"><strong style="color:#0b5f2a">✅ Signed by {{letter.signed_name}}</strong><br><span style="font-size:12px;color:#475569">Signed on {{letter.signed_at[:16]}}</span></div>{%elif current_user.role!="admin"%}<div class="sign-box"><h3 style="margin-top:0;color:#11823b">Sign This Document</h3><p style="font-size:13px;color:#475569">By typing your full name below and clicking Sign, you agree to the terms above.</p><form method="POST" action="/engagement-letter/{{letter.id}}/sign"><div style="margin-bottom:12px"><label style="font-size:13px;font-weight:900">Full Name</label><input type="text" name="signed_name" required placeholder="Type your full legal name" style="width:100%;padding:12px;border:1px solid #cbd5d1;border-radius:10px;font-size:15px;margin-top:4px;box-sizing:border-box"></div><button style="width:100%;background:#11823b;color:white;border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:900">Sign Document</button></form></div>{%endif%}</body></html>""", letter=letter)
+
+@app.route("/engagement-letter/<int:letter_id>/sign", methods=["POST"])
+@login_required
+@client_required
+def sign_engagement_letter(letter_id):
+    letter = query_db("SELECT * FROM engagement_letters WHERE id=? AND client_id=?", (letter_id, current_user.client_id), one=True)
+    if not letter: abort(404)
+    signed_name = request.form.get("signed_name") or current_user.name
+    execute_db("UPDATE engagement_letters SET status='Signed',signed_at=CURRENT_TIMESTAMP,signed_name=?,signed_ip=? WHERE id=?",
+              (signed_name, request.remote_addr, letter_id))
+    push_notification(current_user.client_id, "document", f"You signed: {letter['title']}", "/my/sign-documents")
+    notify_admin(f"Document Signed — {letter['title']}", f"<p>{current_user.name} signed <strong>{letter['title']}</strong> on {datetime.now().strftime('%B %d, %Y')}.</p>")
+    flash("Document signed successfully!", "success")
+    return redirect(url_for("my_sign_documents"))
+
+@app.route("/my/sign-documents")
+@login_required
+@client_required
+def my_sign_documents():
+    ensure_mega_tables()
+    letters = query_db("SELECT * FROM engagement_letters WHERE client_id=? ORDER BY id DESC", (current_user.client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Documents to Sign</h1><p class="sub">Review and sign your engagement letters and agreements.</p>{%if letters%}{%for l in letters%}<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong style="font-size:15px">{{l.title}}</strong><br><span style="font-size:12px;color:#475569">Sent {{l.created_at[:10]}}</span></div><div style="display:flex;gap:8px;align-items:center"><span class="pill{%if l.status!="Signed"%} warn{%endif%}">{{l.status}}</span><a href="/engagement-letter/{{l.id}}/view" class="btn" style="padding:6px 14px;font-size:13px">{{"View"if l.status=="Signed"else"Sign Now"}}</a></div></div>{%if l.status=="Signed"%}<div style="font-size:12px;color:#0b5f2a;margin-top:8px">✅ Signed by {{l.signed_name}} on {{l.signed_at[:10]}}</div>{%endif%}</div>{%endfor%}{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No documents to sign yet.</p></div>{%endif%}{%endblock%}""", letters=letters)
+
+# ── BULK INVOICE CREATOR ─────────────────────────────────────
+
+@app.route("/invoices/bulk-create", methods=["GET", "POST"])
+@login_required
+@admin_required
+def bulk_create_invoices():
+    clients = query_db("SELECT * FROM clients WHERE status='Active' ORDER BY name")
+    if request.method == "POST":
+        import time
+        description = request.form.get("description") or "Tax Preparation Services"
+        amount = money(request.form.get("amount"))
+        due_date = request.form.get("due_date")
+        status = request.form.get("status") or "Sent"
+        selected = request.form.getlist("client_ids")
+        created = 0
+        for cid in selected:
+            inv_num = f"BULK-{datetime.now().strftime('%Y%m%d')}-{cid}-{int(time.time()*1000)%1000}"
+            execute_db("INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)",
+                      (cid, inv_num, datetime.now().strftime("%Y-%m-%d"), due_date, amount, status, description))
+            push_notification(cid, "invoice", f"New invoice {inv_num} — ${amount:,.2f}", "/my/invoices")
+            created += 1
+        flash(f"Created {created} invoices.", "success")
+        return redirect(url_for("invoices"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Bulk Invoice Creator</h1><p class="sub">Create the same invoice for multiple clients at once.</p><form method="POST"><div class="card"><h2 style="margin-top:0">Invoice Details</h2><div class="grid grid-3"><div style="grid-column:span 3"><label>Description</label><input type="text" name="description" value="Tax Preparation Services" required></div><div><label>Amount ($)</label><input type="number" name="amount" step="0.01" required placeholder="500.00"></div><div><label>Due Date</label><input type="date" name="due_date" required></div><div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option></select></div></div></div><div class="card"><h2 style="margin-top:0">Select Clients</h2><div style="margin-bottom:12px;display:flex;gap:8px"><button type="button" onclick="document.querySelectorAll('input[name=client_ids]').forEach(c=>c.checked=true)" style="padding:6px 12px;font-size:12px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px;cursor:pointer">Select All</button><button type="button" onclick="document.querySelectorAll('input[name=client_ids]').forEach(c=>c.checked=false)" style="padding:6px 12px;font-size:12px;background:#f1f5f9;color:#0f172a;border:0;border-radius:8px;cursor:pointer">Clear</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">{%for c in clients%}<label style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer"><input type="checkbox" name="client_ids" value="{{c.id}}" style="width:auto;margin:0"><span><strong>{{c.name}}</strong>{%if c.business_name%}<br><span style="font-size:11px;color:#475569">{{c.business_name}}</span>{%endif%}</span></label>{%endfor%}</div></div><div class="card"><button type="submit" style="font-size:16px;padding:14px 24px">Create Invoices for Selected Clients</button></div></form>{%endblock%}""", clients=clients)
+
+# ── PAYMENT PLANS ────────────────────────────────────────────
+
+@app.route("/admin/payment-plans", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_payment_plans():
+    ensure_mega_tables()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    invoices = query_db("SELECT i.*,c.name client_name FROM invoices i LEFT JOIN clients c ON c.id=i.client_id WHERE i.status!='Paid' ORDER BY i.id DESC")
+    if request.method == "POST":
+        client_id = request.form.get("client_id")
+        invoice_id = request.form.get("invoice_id") or None
+        total = money(request.form.get("total_amount"))
+        installments = int(request.form.get("installments") or 3)
+        frequency = request.form.get("frequency") or "monthly"
+        start_date = request.form.get("start_date") or datetime.now().strftime("%Y-%m-%d")
+        notes = request.form.get("notes") or ""
+        per = round(total / installments, 2)
+        plan_id = execute_db("INSERT INTO payment_plans(client_id,invoice_id,total_amount,installments,amount_per_installment,frequency,start_date,status,notes) VALUES (?,?,?,?,?,?,?,'Active',?)",
+                            (client_id, invoice_id, total, installments, per, frequency, start_date, notes))
+        # Create installment records
+        from datetime import timedelta
+        base = datetime.strptime(start_date, "%Y-%m-%d")
+        for i in range(installments):
+            if frequency == "weekly":
+                due = base + timedelta(weeks=i)
+            elif frequency == "biweekly":
+                due = base + timedelta(weeks=i*2)
+            else:
+                month = base.month + i
+                year = base.year + (month-1)//12
+                month = (month-1)%12+1
+                due = base.replace(year=year, month=month)
+            execute_db("INSERT INTO payment_plan_installments(plan_id,client_id,due_date,amount,status) VALUES (?,?,?,?,'Pending')",
+                      (plan_id, client_id, due.strftime("%Y-%m-%d"), per))
+        push_notification(client_id, "invoice", f"Payment plan created — {installments} payments of ${per:,.2f}", "/my/payment-plan")
+        flash(f"Payment plan created: {installments} payments of ${per:,.2f}.", "success")
+        return redirect(url_for("admin_payment_plans"))
+    plans = query_db("""SELECT pp.*,c.name client_name FROM payment_plans pp
+                        LEFT JOIN clients c ON c.id=pp.client_id ORDER BY pp.id DESC""")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Payment Plans</h1><div class="card"><h2 style="margin-top:0">Create Payment Plan</h2><form method="POST"><div class="grid grid-3"><div><label>Client</label><select name="client_id" required><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Linked Invoice (optional)</label><select name="invoice_id"><option value="">None</option>{%for i in invoices%}<option value="{{i.id}}">{{i.invoice_number}} — {{i.client_name}} — ${{i.amount}}</option>{%endfor%}</select></div><div><label>Total Amount ($)</label><input type="number" name="total_amount" step="0.01" required placeholder="1500.00"></div><div><label>Number of Installments</label><select name="installments"><option value="2">2 payments</option><option value="3" selected>3 payments</option><option value="4">4 payments</option><option value="6">6 payments</option><option value="12">12 payments</option></select></div><div><label>Frequency</label><select name="frequency"><option value="monthly">Monthly</option><option value="biweekly">Bi-weekly</option><option value="weekly">Weekly</option></select></div><div><label>Start Date</label><input type="date" name="start_date"></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes" placeholder="Payment plan for 2024 tax preparation"></textarea></div><div><button type="submit">Create Plan</button></div></div></form></div><div class="card"><h2 style="margin-top:0">{{plans|length}} Active Plan{{"s"if plans|length!=1}}</h2>{%if plans%}<div class="table-wrap"><table><thead><tr><th>Client</th><th>Total</th><th>Installments</th><th>Per Payment</th><th>Frequency</th><th>Status</th><th></th></tr></thead><tbody>{%for p in plans%}<tr><td><strong>{{p.client_name}}</strong></td><td style="font-weight:900">${{"%.2f"|format(p.total_amount|float)}}</td><td style="text-align:center">{{p.installments}}</td><td style="color:#11823b;font-weight:900">${{"%.2f"|format(p.amount_per_installment|float)}}</td><td style="font-size:12px">{{p.frequency|title}}</td><td><span class="pill">{{p.status}}</span></td><td><a href="/admin/payment-plans/{{p.id}}" class="btn" style="padding:4px 8px;font-size:11px">View</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No payment plans yet.</p>{%endif%}</div>{%endblock%}""", clients=clients, invoices=invoices, plans=plans)
+
+@app.route("/admin/payment-plans/<int:plan_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def view_payment_plan(plan_id):
+    ensure_mega_tables()
+    plan = query_db("SELECT pp.*,c.name client_name FROM payment_plans pp LEFT JOIN clients c ON c.id=pp.client_id WHERE pp.id=?", (plan_id,), one=True)
+    if not plan: abort(404)
+    if request.method == "POST":
+        inst_id = request.form.get("installment_id")
+        execute_db("UPDATE payment_plan_installments SET status='Paid',paid_at=CURRENT_TIMESTAMP WHERE id=?", (inst_id,))
+        # Check if all paid
+        remaining = query_db("SELECT COUNT(*) c FROM payment_plan_installments WHERE plan_id=? AND status!='Paid'", (plan_id,), one=True)["c"]
+        if remaining == 0:
+            execute_db("UPDATE payment_plans SET status='Complete' WHERE id=?", (plan_id,))
+        flash("Installment marked paid.", "success")
+        return redirect(url_for("view_payment_plan", plan_id=plan_id))
+    installments = query_db("SELECT * FROM payment_plan_installments WHERE plan_id=? ORDER BY due_date", (plan_id,))
+    paid = sum(1 for i in installments if i["status"] == "Paid")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Payment Plan — {{plan.client_name}}</h1><div class="card"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:0"><div class="metric"><span>Total</span><strong>${{"%.2f"|format(plan.total_amount|float)}}</strong></div><div class="metric"><span>Per Payment</span><strong style="color:#11823b">${{"%.2f"|format(plan.amount_per_installment|float)}}</strong></div><div class="metric"><span>Installments</span><strong>{{paid}}/{{installments|length}} paid</strong></div><div class="metric"><span>Status</span><strong>{{plan.status}}</strong></div></div></div><div class="card"><h2 style="margin-top:0">Installment Schedule</h2><div class="table-wrap"><table><thead><tr><th>#</th><th>Due Date</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>{%for i in installments%}<tr style="background:{{"#f0fdf4"if i.status=="Paid"else"#fff"}}"><td>{{loop.index}}</td><td>{{i.due_date}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td><span class="pill{%if i.status!="Paid"%} warn{%endif%}">{{i.status}}</span></td><td>{%if i.status!="Paid"%}<form method="POST"><input type="hidden" name="installment_id" value="{{i.id}}"><button style="padding:4px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px">Mark Paid</button></form>{%else%}<span style="font-size:11px;color:#475569">{{i.paid_at[:10]if i.paid_at else""}}</span>{%endif%}</td></tr>{%endfor%}</tbody></table></div></div>{%endblock%}""", plan=plan, installments=installments, paid=paid)
+
+@app.route("/my/payment-plan")
+@login_required
+@client_required
+def my_payment_plan():
+    ensure_mega_tables()
+    plans = query_db("SELECT * FROM payment_plans WHERE client_id=? ORDER BY id DESC", (current_user.client_id,))
+    all_installments = {}
+    for p in plans:
+        all_installments[p["id"]] = query_db("SELECT * FROM payment_plan_installments WHERE plan_id=? ORDER BY due_date", (p["id"],))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>My Payment Plan</h1><p class="sub">Your installment payment schedule.</p>{%if plans%}{%for p in plans%}{%set insts=all_installments[p.id]%}{%set paid_count=insts|selectattr("status","eq","Paid")|list|length%}<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><strong style="font-size:16px">Payment Plan</strong><br><span style="font-size:12px;color:#475569">{{p.frequency|title}} · {{p.installments}} payments</span></div><span class="pill">{{p.status}}</span></div><div style="background:#e5e7eb;border-radius:999px;height:10px;margin-bottom:12px"><div style="background:#11823b;width:{{(paid_count/p.installments*100)|int if p.installments>0 else 0}}%;height:100%;border-radius:999px"></div></div><div style="font-size:13px;color:#475569;margin-bottom:16px">{{paid_count}} of {{p.installments}} payments made · ${{"%.2f"|format(p.amount_per_installment|float)}} each</div><div class="table-wrap"><table><thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Status</th></tr></thead><tbody>{%for i in insts%}<tr style="background:{{"#f0fdf4"if i.status=="Paid"else"#fff"}}"><td>{{loop.index}}</td><td>{{i.due_date}}</td><td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td><td><span class="pill{%if i.status!="Paid"%} warn{%endif%}">{{i.status}}</span></td></tr>{%endfor%}</tbody></table></div></div>{%endfor%}{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No payment plans on file.</p></div>{%endif%}{%endblock%}""", plans=plans, all_installments=all_installments)
+
+# ── CLIENT REFERRAL TRACKER ──────────────────────────────────
+
+def ensure_referral_table():
+    db = get_db()
+    db.execute("""CREATE TABLE IF NOT EXISTS referrals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_client_id INTEGER,
+        referred_name TEXT,
+        referred_email TEXT,
+        status TEXT DEFAULT 'Pending',
+        reward_amount REAL DEFAULT 0,
+        reward_paid INTEGER DEFAULT 0,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.commit()
+
+@app.route("/admin/referrals", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_referrals():
+    ensure_referral_table()
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db("INSERT INTO referrals(referrer_client_id,referred_name,referred_email,status,reward_amount,notes) VALUES (?,?,?,?,?,?)",
+                      (request.form.get("referrer_client_id"), request.form.get("referred_name"),
+                       request.form.get("referred_email"), request.form.get("status") or "Pending",
+                       money(request.form.get("reward_amount")), request.form.get("notes")))
+            flash("Referral recorded.", "success")
+        elif action == "mark_paid":
+            execute_db("UPDATE referrals SET reward_paid=1 WHERE id=?", (request.form.get("referral_id"),))
+            flash("Reward marked paid.", "success")
+        return redirect(url_for("admin_referrals"))
+    referrals = query_db("""SELECT r.*,c.name referrer_name FROM referrals r
+                            LEFT JOIN clients c ON c.id=r.referrer_client_id ORDER BY r.id DESC""")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Referral Tracker</h1><div class="card"><h2 style="margin-top:0">Record Referral</h2><form method="POST"><input type="hidden" name="action" value="add"><div class="grid grid-3"><div><label>Referred By (Client)</label><select name="referrer_client_id"><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Referred Person Name</label><input type="text" name="referred_name" required></div><div><label>Referred Email</label><input type="email" name="referred_email"></div><div><label>Status</label><select name="status"><option>Pending</option><option>Contacted</option><option>Converted</option><option>Lost</option></select></div><div><label>Reward Amount ($)</label><input type="number" name="reward_amount" step="0.01" placeholder="50.00"></div><div><label>Notes</label><input type="text" name="notes"></div><div><button type="submit">Save Referral</button></div></div></form></div><div class="card"><h2 style="margin-top:0">{{referrals|length}} Referral{{"s"if referrals|length!=1}}</h2>{%if referrals%}<div class="table-wrap"><table><thead><tr><th>Referred By</th><th>New Client</th><th>Email</th><th>Status</th><th>Reward</th><th>Paid</th><th></th></tr></thead><tbody>{%for r in referrals%}<tr><td><strong>{{r.referrer_name or"--"}}</strong></td><td>{{r.referred_name}}</td><td style="font-size:12px">{{r.referred_email or"--"}}</td><td><span class="pill{%if r.status!="Converted"%} warn{%endif%}">{{r.status}}</span></td><td style="font-weight:900">{%if r.reward_amount%}${{"%.2f"|format(r.reward_amount|float)}}{%else%}--{%endif%}</td><td><span class="pill{%if not r.reward_paid%} warn{%endif%}">{{"Paid"if r.reward_paid else"Unpaid"}}</span></td><td>{%if not r.reward_paid and r.reward_amount%}<form method="POST"><input type="hidden" name="action" value="mark_paid"><input type="hidden" name="referral_id" value="{{r.id}}"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px">Mark Paid</button></form>{%endif%}</td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No referrals yet.</p>{%endif%}</div>{%endblock%}""", clients=clients, referrals=referrals)
+
+# ── QUICK NOTES (sticky notes per client) ───────────────────
+
+@app.route("/admin/quick-notes/<int:client_id>", methods=["POST"])
+@login_required
+@admin_required
+def save_quick_note(client_id):
+    note = request.form.get("note") or ""
+    execute_db("INSERT INTO internal_notes(client_id,note,created_by) VALUES (?,?,?)", (client_id, note, current_user.name))
+    flash("Note saved.", "success")
+    return redirect(request.referrer or url_for("clients"))
+
+# ── ADMIN ANNOUNCEMENTS ──────────────────────────────────────
+
+def ensure_announcements_table():
+    db = get_db()
+    db.execute("""CREATE TABLE IF NOT EXISTS announcements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        body TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.commit()
+
+@app.route("/admin/announcements", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_announcements():
+    ensure_announcements_table()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db("INSERT INTO announcements(title,body,is_active) VALUES (?,?,1)",
+                      (request.form.get("title"), request.form.get("body")))
+            flash("Announcement posted.", "success")
+        elif action == "toggle":
+            row = query_db("SELECT is_active FROM announcements WHERE id=?", (request.form.get("id"),), one=True)
+            if row:
+                execute_db("UPDATE announcements SET is_active=? WHERE id=?", (0 if row["is_active"] else 1, request.form.get("id")))
+            flash("Announcement updated.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM announcements WHERE id=?", (request.form.get("id"),))
+            flash("Announcement deleted.", "success")
+        return redirect(url_for("admin_announcements"))
+    items = query_db("SELECT * FROM announcements ORDER BY id DESC")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Announcements</h1><p class="sub">Post announcements visible to all clients on their dashboard.</p><div class="card"><h2 style="margin-top:0">New Announcement</h2><form method="POST"><input type="hidden" name="action" value="add"><div class="grid"><div><label>Title</label><input type="text" name="title" required placeholder="Tax Season 2025 — Important Dates"></div><div><label>Message</label><textarea name="body" placeholder="Dear clients, please have your documents ready by..."></textarea></div><div><button type="submit">Post Announcement</button></div></div></form></div><div class="card"><h2 style="margin-top:0">{{items|length}} Announcement{{"s"if items|length!=1}}</h2>{%if items%}<div class="table-wrap"><table><thead><tr><th>Title</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>{%for a in items%}<tr><td><strong>{{a.title}}</strong></td><td style="font-size:12px;max-width:200px">{{a.body[:80]if a.body else"--"}}...</td><td><span class="pill{%if not a.is_active%} warn{%endif%}">{{"Active"if a.is_active else"Hidden"}}</span></td><td style="font-size:12px;color:#475569">{{a.created_at[:10]}}</td><td style="display:flex;gap:4px"><form method="POST" style="display:inline"><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{a.id}}"><button style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a;border:0;border-radius:8px">{{"Hide"if a.is_active else"Show"}}</button></form><form method="POST" style="display:inline" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{a.id}}"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No announcements yet.</p>{%endif%}</div>{%endblock%}""", items=items)
+
+# ── MOBILE-FRIENDLY CLIENT DASHBOARD UPGRADE ────────────────
+
+@app.route("/client-dashboard-v2")
+@app.route("/client")
+@login_required  
+def client_dashboard_v2():
+    if current_user.role == "admin": return redirect(url_for("dashboard"))
+    if not current_user.client_id:
+        return redirect(url_for("client_dashboard"))
+    cid = current_user.client_id
+    ensure_announcements_table()
+    ensure_mega_tables()
+    ensure_savings_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True)
+    unpaid_invoices = query_db("SELECT * FROM invoices WHERE client_id=? AND status!='Paid' ORDER BY due_date ASC LIMIT 3", (cid,))
+    recent_docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND visible_to_client=1 ORDER BY id DESC LIMIT 5", (cid,))
+    next_appt = query_db("SELECT * FROM appointments WHERE client_id=? AND status IN ('Approved','Scheduled') ORDER BY start_at ASC LIMIT 1", (cid,), one=True)
+    open_letters = query_db("SELECT * FROM engagement_letters WHERE client_id=? AND status='Pending' ORDER BY id DESC", (cid,))
+    pending_docs = query_db("SELECT COUNT(*) c FROM document_requests WHERE client_id=? AND status!='Completed'", (cid,), one=True)["c"]
+    unread_msgs = query_db("SELECT COUNT(*) c FROM messages WHERE client_id=? AND sender_role='admin'", (cid,), one=True)["c"]
+    announcements = query_db("SELECT * FROM announcements WHERE is_active=1 ORDER BY id DESC LIMIT 3")
+    savings_goals = query_db("SELECT * FROM savings_goals WHERE client_id=? AND status='Active' ORDER BY id DESC LIMIT 3", (cid,))
+    tax_return = query_db("SELECT * FROM tax_returns WHERE client_id=? ORDER BY tax_year DESC LIMIT 1", (cid,), one=True)
+    total_billed = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE client_id=?", (cid,), one=True)["total"]
+    total_paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE client_id=?", (cid,), one=True)["total"]
+    balance = money(total_billed) - money(total_paid)
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="max-width:900px;margin:0 auto">
+{%if announcements%}{%for a in announcements%}<div style="background:linear-gradient(135deg,#11823b,#0b5f2a);color:white;border-radius:16px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">📢</span><div><strong>{{a.title}}</strong>{%if a.body%}<div style="font-size:13px;opacity:.9;margin-top:2px">{{a.body[:100]}}</div>{%endif%}</div></div>{%endfor%}{%endif%}
+{%if open_letters%}<div style="background:#fff7ed;border:2px solid #f59e0b;border-radius:16px;padding:14px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center"><div><strong style="color:#92400e">✍️ Documents Need Your Signature</strong><div style="font-size:13px;color:#92400e;margin-top:2px">{{open_letters|length}} document{{"s"if open_letters|length!=1}} waiting</div></div><a href="/my/sign-documents" class="btn" style="padding:8px 14px;font-size:13px;background:#f59e0b;border:0">Sign Now</a></div>{%endif%}
+<h1 style="margin-bottom:4px">Welcome back{%if client%}, {{client.name.split()[0]}}{%endif%}! 👋</h1>
+<p style="color:#475569;margin-bottom:20px">Here's your financial overview.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+<div class="metric"><span>Balance Due</span><strong style="color:{{"#b91c1c"if balance>0 else"#11823b"}}">${{"%.2f"|format(balance)}}</strong></div>
+<div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{unpaid_invoices|length}}</strong></div>
+<div class="metric"><span>Documents</span><strong>{{recent_docs|length}}</strong></div>
+<div class="metric"><span>Messages</span><strong style="color:{{"#11823b"if unread_msgs>0 else"#475569"}}">{{unread_msgs}}</strong></div>
+{%if pending_docs>0%}<div class="metric"><span>Docs Needed</span><strong style="color:#ef4444">{{pending_docs}}</strong></div>{%endif%}
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+{%if unpaid_invoices%}<div class="card"><h2 style="margin-top:0;font-size:15px">💰 Outstanding Invoices</h2>{%for i in unpaid_invoices%}<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6">{%if not loop.last%}{%endif%}<div><strong style="font-size:13px">{{i.invoice_number}}</strong><div style="font-size:11px;color:#475569">Due {{i.due_date or"--"}}</div></div><div style="display:flex;gap:6px;align-items:center"><strong style="color:#b91c1c">${{"%.2f"|format(i.amount|float)}}</strong><a href="/invoice/{{i.id}}/pay" class="btn" style="padding:4px 10px;font-size:12px">Pay</a></div></div>{%endfor%}</div>{%endif%}
+{%if next_appt%}<div class="card"><h2 style="margin-top:0;font-size:15px">📅 Next Appointment</h2><strong>{{next_appt.title or"Appointment"}}</strong><div style="font-size:13px;color:#475569;margin-top:4px">{{next_appt.start_at or"TBD"}}</div><div style="font-size:12px;color:#475569">{{next_appt.location or""}}</div><span class="pill" style="margin-top:8px;display:inline-block">{{next_appt.status}}</span></div>{%endif%}
+{%if tax_return%}<div class="card"><h2 style="margin-top:0;font-size:15px">📋 Tax Return Status</h2><strong>{{tax_return.tax_year}} — {{tax_return.service_type or"Return"}}</strong><div style="margin-top:8px"><span class="pill warn">{{tax_return.workflow_stage or tax_return.status}}</span></div><a href="/my/return-progress" style="font-size:12px;color:#11823b;display:block;margin-top:8px">View full progress →</a></div>{%endif%}
+</div>
+<div>
+{%if savings_goals%}<div class="card"><h2 style="margin-top:0;font-size:15px">💡 Savings Goals</h2>{%for g in savings_goals%}{%set pct=(g.current_amount/g.target_amount*100)|int if g.target_amount>0 else 0%}<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span><strong>{{g.title}}</strong></span><span style="color:#11823b;font-weight:900">{{[pct,100]|min}}%</span></div><div style="background:#e5e7eb;border-radius:999px;height:8px"><div style="background:#11823b;width:{{[pct,100]|min}}%;height:100%;border-radius:999px"></div></div></div>{%endfor%}<a href="/my/savings-planner" style="font-size:12px;color:#11823b">View all goals →</a></div>{%endif%}
+{%if recent_docs%}<div class="card"><h2 style="margin-top:0;font-size:15px">📁 Recent Documents</h2>{%for d in recent_docs%}<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6"><span style="font-size:13px">{{d.display_name[:30]}}</span>{%if d.filename%}<a href="/documents/download/{{d.id}}" class="btn" style="padding:3px 8px;font-size:11px">↓</a>{%endif%}</div>{%endfor%}<a href="/my/documents" style="font-size:12px;color:#11823b;display:block;margin-top:8px">View all documents →</a></div>{%endif%}
+<div class="card"><h2 style="margin-top:0;font-size:15px">Quick Actions</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><a href="/my/book-appointment" class="btn" style="text-align:center;padding:10px;font-size:13px">📅 Book Appointment</a><a href="/my/documents" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">📤 Upload Doc</a><a href="/my/messages" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">💬 Message Us</a><a href="/my/tax-organizer" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">✅ Tax Checklist</a></div></div>
+</div>
+</div>
+</div>{%endblock%}""", client=client, unpaid_invoices=unpaid_invoices, recent_docs=recent_docs,
+        next_appt=next_appt, open_letters=open_letters, pending_docs=pending_docs,
+        unread_msgs=unread_msgs, announcements=announcements, savings_goals=savings_goals,
+        tax_return=tax_return, balance=balance)
+
+# ============================================================
+# END PPT MEGA UPGRADE PACK
+# ============================================================
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

@@ -4107,12 +4107,8 @@ def pwa_manifest():
 @app.route("/sw.js")
 def service_worker():
     from flask import Response
-    sw = """
-const CACHE = 'ppt-v1';
-const URLS = ['/', '/login', '/client', '/my/invoices', '/my/documents'];
-self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))));
-self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-"""
+    # Minimal service worker - no caching to avoid auth issues
+    sw = "self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));"
     return Response(sw, mimetype="application/javascript")
 
 # ============================================================

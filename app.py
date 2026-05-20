@@ -834,6 +834,10 @@ def dashboard():
 <a href="/admin/documents/upload" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">⬆️ Upload Doc</a>
 <a href="/messages" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">✉️ Messages</a>
 <a href="/admin/engagement-letters" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#fff7ed;color:#9a3412">✍️ E-Signatures</a>
+<a href="/admin/revenue-dashboard" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#e8f5ec;color:#0b5f2a">📊 Revenue</a>
+<a href="/admin/tax-deadlines" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📅 Deadlines</a>
+<form method="POST" action="/admin/late-payment-check" style="display:contents"><button style="text-align:center;padding:12px;font-size:14px;background:#fef2f2;color:#b91c1c;border:0;border-radius:12px;font-weight:900;cursor:pointer">⚠️ Late Pay Check</button></form>
+<form method="POST" action="/admin/send-monthly-reports" style="display:contents"><button style="text-align:center;padding:12px;font-size:14px;background:#f0fdf4;color:#15803d;border:0;border-radius:12px;font-weight:900;cursor:pointer">📨 Monthly Reports</button></form>
 <a href="/workflow" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">⚙️ Workflow Hub</a>
 <a href="/clients" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#e8f5ec;color:#0b5f2a">👥 Add Client</a>
 </div>
@@ -4302,6 +4306,7 @@ def client_actions(client_id):
 <h2 style="margin-top:0;font-size:15px">📋 Client Management</h2>
 <div style="display:grid;gap:8px">
 <a href="/clients/{{client.id}}/edit" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">✏️ Edit Client Info</a>
+<form method="POST" action="/clients/{{client.id}}/send-welcome" style="display:contents"><input type="hidden" name="temp_password" value="Welcome123!"><button style="text-align:center;padding:11px;font-size:14px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:12px;font-weight:900;cursor:pointer;width:100%">📧 Send Welcome Email</button></form>
 <a href="/admin/tax-organizer/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#e8f5ec;color:#0b5f2a">✅ Tax Organizer</a>
 <a href="/admin/savings-planner/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#faf5ff;color:#6b21a8">💡 Savings Planner</a>
 <a href="/admin/health-score/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#fff7ed;color:#9a3412">📈 Health Score</a>
@@ -4582,6 +4587,352 @@ def admin_client_bookkeeping(client_id):
 
 # ============================================================
 # END PPT ADMIN CLIENT VIEWS
+# ============================================================
+
+
+# ============================================================
+# PPT MEGA UPGRADES PACK 2
+# Welcome Email | Invoice Templates | Service Packages |
+# Late Payment Escalation | Monthly Reports | Revenue Dashboard
+# Tax Deadline Calendar | Document Expiry
+# ============================================================
+
+def ensure_upgrades2_tables():
+    db = get_db()
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS invoice_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        amount REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS service_packages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        price REAL DEFAULT 0,
+        features TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS tax_deadlines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        deadline_date TEXT,
+        description TEXT,
+        applies_to TEXT DEFAULT 'All',
+        is_recurring INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS document_expiry (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        document_name TEXT,
+        expiry_date TEXT,
+        category TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    db.commit()
+    # Preload standard tax deadlines
+    existing = db.execute("SELECT COUNT(*) c FROM tax_deadlines").fetchone()["c"]
+    if existing == 0:
+        year = datetime.now().year
+        defaults = [
+            ("Q1 Estimated Tax Payment", f"{year}-04-15", "First quarter estimated tax payment due"),
+            ("Q2 Estimated Tax Payment", f"{year}-06-15", "Second quarter estimated tax payment due"),
+            ("Q3 Estimated Tax Payment", f"{year}-09-15", "Third quarter estimated tax payment due"),
+            ("Q4 Estimated Tax Payment", f"{year+1}-01-15", "Fourth quarter estimated tax payment due"),
+            ("Individual Tax Return (1040)", f"{year}-04-15", "Federal individual income tax return due"),
+            ("S-Corp/Partnership Return", f"{year}-03-15", "S-Corp and partnership returns due"),
+            ("C-Corp Return", f"{year}-04-15", "C-Corp returns due"),
+            ("W-2/1099 Deadline", f"{year}-01-31", "W-2 and 1099 forms must be sent to employees/contractors"),
+            ("FBAR Deadline", f"{year}-04-15", "Foreign bank account reporting deadline"),
+        ]
+        for title, date, desc in defaults:
+            db.execute("INSERT INTO tax_deadlines(title,deadline_date,description) VALUES (?,?,?)", (title, date, desc))
+        db.commit()
+
+# ── WELCOME EMAIL ON CLIENT CREATION ────────────────────────
+
+@app.route("/clients/<int:client_id>/send-welcome", methods=["POST"])
+@login_required
+@admin_required
+def send_welcome_email(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    user = query_db("SELECT * FROM users WHERE client_id=?", (client_id,), one=True)
+    if not user:
+        flash("No login found for this client. Create a login first in Settings.", "danger")
+        return redirect(url_for("client_actions", client_id=client_id))
+    temp_pw = request.form.get("temp_password") or "Welcome123!"
+    sent = send_email(
+        client["email"],
+        "Welcome to Pinnacle Performance Tax Portal!",
+        f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:#11823b;padding:24px;border-radius:12px 12px 0 0;text-align:center">
+          <h1 style="color:white;margin:0;font-size:24px">Welcome to Your Client Portal!</h1>
+          <p style="color:rgba(255,255,255,.85);margin:8px 0 0">Pinnacle Performance Tax and Accounting</p>
+        </div>
+        <div style="background:#f9fafb;padding:28px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+          <p style="font-size:16px">Hi <strong>{client['name']}</strong>,</p>
+          <p>Your secure client portal is ready! You can now view invoices, upload documents, track your tax return, and more — all in one place.</p>
+          <div style="background:white;border-radius:10px;padding:20px;margin:20px 0;border:1px solid #e5e7eb">
+            <p style="margin:0 0 12px;font-weight:900;color:#11823b">Your Login Details:</p>
+            <p style="margin:6px 0;font-size:15px">🌐 Portal: <a href="https://ppt-tax-portal.onrender.com" style="color:#11823b">ppt-tax-portal.onrender.com</a></p>
+            <p style="margin:6px 0;font-size:15px">📧 Email: <strong>{user['email']}</strong></p>
+            <p style="margin:6px 0;font-size:15px">🔑 Password: <strong>{temp_pw}</strong></p>
+          </div>
+          <p style="font-size:13px;color:#475569">Please log in and change your password. If you have any questions, reply to this email or call us at 478-338-1632.</p>
+          <p style="margin-top:20px">Thank you for choosing Pinnacle Performance Tax!</p>
+          <p style="color:#475569;font-size:13px">— The PPT Team<br>pinnacleperformancetax@gmail.com | 478-338-1632</p>
+        </div></div>"""
+    )
+    if sent:
+        flash(f"Welcome email sent to {client['email']}!", "success")
+    else:
+        flash("Email failed — check SENDGRID_API_KEY. Login details: " + user['email'] + " / " + temp_pw, "danger")
+    return redirect(url_for("client_actions", client_id=client_id))
+
+# ── INVOICE TEMPLATES ────────────────────────────────────────
+
+@app.route("/admin/invoice-templates", methods=["GET", "POST"])
+@login_required
+@admin_required
+def invoice_templates():
+    ensure_upgrades2_tables()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db("INSERT INTO invoice_templates(name,description,amount) VALUES (?,?,?)",
+                      (request.form.get("name"), request.form.get("description"), money(request.form.get("amount"))))
+            flash("Template saved.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM invoice_templates WHERE id=?", (request.form.get("id"),))
+            flash("Template deleted.", "success")
+        return redirect(url_for("invoice_templates"))
+    templates = query_db("SELECT * FROM invoice_templates WHERE is_active=1 ORDER BY id DESC")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📋 Invoice Templates</h1><p class="sub">Save common invoice types for one-click creation.</p><div class="card"><h2 style="margin-top:0">Add Template</h2><form method="POST"><input type="hidden" name="action" value="add"><div class="grid grid-3"><div><label>Template Name</label><input type="text" name="name" required placeholder="Individual Tax Return"></div><div><label>Default Amount ($)</label><input type="number" name="amount" step="0.01" placeholder="350.00"></div><div><label>Description</label><input type="text" name="description" placeholder="Federal and state tax preparation"></div><div><button type="submit">Save Template</button></div></div></form></div><div class="card"><h2 style="margin-top:0">{{templates|length}} Template{{"s"if templates|length!=1}}</h2>{%if templates%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead><tbody>{%for t in templates%}<tr><td><strong>{{t.name}}</strong></td><td style="font-size:12px">{{t.description or"--"}}</td><td style="font-weight:900">${{"%.2f"|format(t.amount|float)}}</td><td style="display:flex;gap:4px"><a href="/invoices/create-from-template/{{t.id}}" class="btn" style="padding:4px 8px;font-size:11px">Use</a><form method="POST" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{t.id}}"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No templates yet. Add your common services above.</p>{%endif%}</div>{%endblock%}""", templates=templates)
+
+@app.route("/invoices/create-from-template/<int:template_id>")
+@login_required
+@admin_required
+def create_invoice_from_template(template_id):
+    ensure_upgrades2_tables()
+    t = query_db("SELECT * FROM invoice_templates WHERE id=?", (template_id,), one=True)
+    if not t: abort(404)
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Create Invoice from Template</h1><div class="card" style="max-width:500px"><h2 style="margin-top:0">{{template.name}}</h2><form method="POST" action="/invoices"><div class="grid"><div><label>Client</label><select name="client_id" required><option value="">-- Select client --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div><div><label>Amount ($)</label><input type="number" name="amount" step="0.01" value="{{template.amount}}"></div><div><label>Due Date</label><input type="date" name="due_date"></div><input type="hidden" name="description" value="{{template.description}}"><input type="hidden" name="status" value="Sent"><div><button type="submit">Create Invoice</button></div></div></form></div>{%endblock%}""", template=t, clients=clients)
+
+# ── SERVICE PACKAGES ─────────────────────────────────────────
+
+@app.route("/admin/service-packages", methods=["GET", "POST"])
+@login_required
+@admin_required
+def service_packages():
+    ensure_upgrades2_tables()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db("INSERT INTO service_packages(name,description,price,features) VALUES (?,?,?,?)",
+                      (request.form.get("name"), request.form.get("description"),
+                       money(request.form.get("price")), request.form.get("features")))
+            flash("Package saved.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM service_packages WHERE id=?", (request.form.get("id"),))
+            flash("Package deleted.", "success")
+        return redirect(url_for("service_packages"))
+    packages = query_db("SELECT * FROM service_packages WHERE is_active=1 ORDER BY price")
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📦 Service Packages</h1><p class="sub">Bundle your services into packages with clear pricing.</p><div class="card"><h2 style="margin-top:0">Add Package</h2><form method="POST"><input type="hidden" name="action" value="add"><div class="grid grid-3"><div><label>Package Name</label><input type="text" name="name" required placeholder="Basic / Standard / Premium"></div><div><label>Monthly Price ($)</label><input type="number" name="price" step="0.01" placeholder="199.00"></div><div><label>Short Description</label><input type="text" name="description" placeholder="Perfect for individuals"></div><div style="grid-column:span 3"><label>Features (one per line)</label><textarea name="features" placeholder="Individual tax return&#10;Quarterly check-in&#10;Email support"></textarea></div><div><button type="submit">Save Package</button></div></div></form></div>{%if packages%}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:8px">{%for p in packages%}<div class="card" style="position:relative"><h2 style="margin-top:0;color:#11823b">{{p.name}}</h2><div style="font-size:32px;font-weight:900;color:#0f172a;margin:8px 0">${{"%.0f"|format(p.price|float)}}<span style="font-size:14px;font-weight:400;color:#475569">/mo</span></div><p style="font-size:13px;color:#475569">{{p.description or""}}</p>{%if p.features%}<div style="font-size:13px;margin-top:12px">{%for f in p.features.split("
+")%}<div style="padding:4px 0;display:flex;gap:8px"><span style="color:#11823b">✓</span><span>{{f}}</span></div>{%endfor%}</div>{%endif%}<form method="POST" style="margin-top:12px" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{p.id}}"><button style="padding:6px 12px;font-size:12px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Delete</button></form></div>{%endfor%}</div>{%endif%}{%endblock%}""", packages=packages)
+
+# ── TAX DEADLINE CALENDAR ────────────────────────────────────
+
+@app.route("/admin/tax-deadlines", methods=["GET", "POST"])
+@login_required
+@admin_required
+def tax_deadlines():
+    ensure_upgrades2_tables()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            execute_db("INSERT INTO tax_deadlines(title,deadline_date,description,applies_to) VALUES (?,?,?,?)",
+                      (request.form.get("title"), request.form.get("deadline_date"),
+                       request.form.get("description"), request.form.get("applies_to") or "All"))
+            flash("Deadline added.", "success")
+        elif action == "delete":
+            execute_db("DELETE FROM tax_deadlines WHERE id=?", (request.form.get("id"),))
+            flash("Deadline deleted.", "success")
+        return redirect(url_for("tax_deadlines"))
+    today = datetime.now().strftime("%Y-%m-%d")
+    deadlines = query_db("SELECT * FROM tax_deadlines ORDER BY deadline_date")
+    upcoming = [d for d in deadlines if d["deadline_date"] >= today]
+    past = [d for d in deadlines if d["deadline_date"] < today]
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📅 Tax Deadline Calendar</h1><p class="sub">Track all important tax deadlines for your clients.</p><div class="card"><h2 style="margin-top:0">Add Deadline</h2><form method="POST"><input type="hidden" name="action" value="add"><div class="grid grid-3"><div style="grid-column:span 2"><label>Title</label><input type="text" name="title" required placeholder="Q1 Estimated Tax Payment"></div><div><label>Date</label><input type="date" name="deadline_date" required></div><div style="grid-column:span 2"><label>Description</label><input type="text" name="description" placeholder="Details about this deadline"></div><div><label>Applies To</label><select name="applies_to"><option value="All">All Clients</option><option value="Individual">Individual</option><option value="Business">Business</option><option value="S-Corp">S-Corp</option></select></div><div><button type="submit">Add Deadline</button></div></div></form></div>{%if upcoming%}<div class="card"><h2 style="margin-top:0">📌 Upcoming Deadlines</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Deadline</th><th>Description</th><th>Applies To</th><th></th></tr></thead><tbody>{%for d in upcoming%}<tr style="background:{{'#fef9c3'if d.deadline_date<=thirty_days else'#fff'}}"><td style="font-weight:900;color:{{'#b91c1c'if d.deadline_date<=today else'#0f172a'}}">{{d.deadline_date}}</td><td><strong>{{d.title}}</strong></td><td style="font-size:12px;color:#475569">{{d.description or"--"}}</td><td style="font-size:12px">{{d.applies_to}}</td><td><form method="POST" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{d.id}}"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div></div>{%endif%}{%if past%}<div class="card"><h2 style="margin-top:0;color:#9ca3af">Past Deadlines</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Deadline</th><th>Applies To</th><th></th></tr></thead><tbody>{%for d in past%}<tr style="opacity:.6"><td>{{d.deadline_date}}</td><td>{{d.title}}</td><td style="font-size:12px">{{d.applies_to}}</td><td><form method="POST" onsubmit="return confirm('Delete?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{d.id}}"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form></td></tr>{%endfor%}</tbody></table></div></div>{%endif%}{%endblock%}""", deadlines=deadlines, upcoming=upcoming, past=past, today=today, thirty_days=(datetime.now().replace(day=min(datetime.now().day+30,28))).strftime("%Y-%m-%d"))
+
+@app.route("/my/tax-deadlines")
+@login_required
+@client_required
+def my_tax_deadlines():
+    ensure_upgrades2_tables()
+    today = datetime.now().strftime("%Y-%m-%d")
+    deadlines = query_db("SELECT * FROM tax_deadlines WHERE deadline_date>=? ORDER BY deadline_date LIMIT 10", (today,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>📅 Tax Deadlines</h1><p class="sub">Important upcoming tax dates to keep in mind.</p>{%if deadlines%}<div class="card">{%for d in deadlines%}<div style="display:flex;gap:16px;padding:14px 0;border-bottom:1px solid #f3f4f6{%if loop.last%};border-bottom:none{%endif%}"><div style="min-width:80px;text-align:center;background:{{'#fef2f2'if d.deadline_date<=thirty_days else'#f0fdf4'}};border-radius:10px;padding:8px"><div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#475569">{{d.deadline_date[:7]}}</div><div style="font-size:20px;font-weight:900;color:{{'#b91c1c'if d.deadline_date<=thirty_days else'#11823b'}}">{{d.deadline_date[8:]}}</div></div><div><strong style="font-size:14px">{{d.title}}</strong>{%if d.description%}<div style="font-size:13px;color:#475569;margin-top:4px">{{d.description}}</div>{%endif%}</div></div>{%endfor%}</div>{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No upcoming deadlines.</p></div>{%endif%}{%endblock%}""", deadlines=deadlines, today=today, thirty_days=(datetime.now().replace(day=min(datetime.now().day+30,28))).strftime("%Y-%m-%d"))
+
+# ── REVENUE DASHBOARD ─────────────────────────────────────────
+
+@app.route("/admin/revenue-dashboard")
+@login_required
+@admin_required
+def revenue_dashboard():
+    year = str(datetime.now().year)
+    month = datetime.now().strftime("%Y-%m")
+    # Monthly revenue for current year
+    monthly = []
+    months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    for i in range(1, 13):
+        m = f"{year}-{i:02d}"
+        rev = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE substr(created_at,1,7)=?", (m,), one=True)["total"])
+        monthly.append({"month": months[i-1], "revenue": rev})
+    # Top clients by revenue
+    top_clients = query_db("""SELECT c.name, COALESCE(SUM(p.amount),0) total
+                               FROM payments p LEFT JOIN clients c ON c.id=p.client_id
+                               WHERE substr(p.created_at,1,4)=?
+                               GROUP BY c.id ORDER BY total DESC LIMIT 5""", (year,))
+    # Totals
+    total_year = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE substr(created_at,1,4)=?", (year,), one=True)["total"])
+    total_month = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE substr(created_at,1,7)=?", (month,), one=True)["total"])
+    total_unpaid = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"])
+    total_clients = query_db("SELECT COUNT(*) c FROM clients WHERE status='Active'", one=True)["c"]
+    avg_per_client = round(total_year / total_clients, 2) if total_clients > 0 else 0
+    max_rev = max([m["revenue"] for m in monthly]) or 1
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>📊 Revenue Dashboard</h1>
+<p class="sub">{{year}} financial overview for Pinnacle Performance Tax.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+<div class="metric"><span>{{year}} Revenue</span><strong style="color:#11823b">${{"%.0f"|format(total_year)}}</strong></div>
+<div class="metric"><span>This Month</span><strong style="color:#11823b">${{"%.0f"|format(total_month)}}</strong></div>
+<div class="metric"><span>Outstanding</span><strong style="color:#b91c1c">${{"%.0f"|format(total_unpaid)}}</strong></div>
+<div class="metric"><span>Active Clients</span><strong>{{total_clients}}</strong></div>
+<div class="metric"><span>Avg Per Client</span><strong>${{"%.0f"|format(avg_per_client)}}</strong></div>
+</div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+<div class="card">
+<h2 style="margin-top:0">Monthly Revenue — {{year}}</h2>
+<div style="display:flex;align-items:flex-end;gap:6px;height:200px;padding-bottom:24px;position:relative">
+{%for m in monthly%}
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+<div style="font-size:10px;color:#475569;font-weight:900">{%if m.revenue>0%}${{"{:.0f}".format(m.revenue)}}{%endif%}</div>
+<div style="width:100%;background:{{"#11823b"if m.revenue>0 else"#e5e7eb"}};border-radius:6px 6px 0 0;min-height:4px" style="height:{{(m.revenue/max_rev*160)|int}}px"></div>
+<div style="font-size:10px;color:#475569">{{m.month}}</div>
+</div>
+{%endfor%}
+</div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">Top Clients — {{year}}</h2>
+{%if top_clients%}
+{%for c in top_clients%}
+<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px">
+<span>{{c.name or"Unknown"}}</span>
+<strong style="color:#11823b">${{"%.0f"|format(c.total|float)}}</strong>
+</div>
+{%endfor%}
+{%else%}<p style="color:#475569;text-align:center;padding:20px">No payment data yet.</p>{%endif%}
+</div>
+</div>
+{%endblock%}""", monthly=monthly, top_clients=top_clients, total_year=total_year,
+        total_month=total_month, total_unpaid=total_unpaid, total_clients=total_clients,
+        avg_per_client=avg_per_client, year=year, max_rev=max_rev)
+
+# ── LATE PAYMENT ESCALATION ──────────────────────────────────
+
+@app.route("/admin/late-payment-check", methods=["POST"])
+@login_required
+@admin_required
+def late_payment_check():
+    today = datetime.now()
+    overdue = query_db("""SELECT i.*, c.name client_name, c.email client_email,
+                          julianday('now') - julianday(i.due_date) days_late
+                          FROM invoices i LEFT JOIN clients c ON c.id=i.client_id
+                          WHERE i.status NOT IN ('Paid','Draft') AND i.due_date < ?
+                          AND c.email IS NOT NULL""", (today.strftime("%Y-%m-%d"),))
+    sent30 = sent60 = sent90 = 0
+    for inv in overdue:
+        days = int(inv["days_late"] or 0)
+        if days >= 90:
+            msg = f"FINAL NOTICE: Invoice {inv['invoice_number']} for ${money(inv['amount']):,.2f} is {days} days overdue. Please contact us immediately at 478-338-1632."
+            subject = f"⚠️ FINAL NOTICE — Invoice {inv['invoice_number']} Overdue {days} Days"
+            sent90 += 1
+        elif days >= 60:
+            msg = f"Second reminder: Invoice {inv['invoice_number']} for ${money(inv['amount']):,.2f} is {days} days past due. Please pay immediately to avoid service interruption."
+            subject = f"Second Notice — Invoice {inv['invoice_number']} Overdue {days} Days"
+            sent60 += 1
+        elif days >= 30:
+            msg = f"Reminder: Invoice {inv['invoice_number']} for ${money(inv['amount']):,.2f} is {days} days past due. Please log in to pay."
+            subject = f"Payment Reminder — Invoice {inv['invoice_number']} Overdue {days} Days"
+            sent30 += 1
+        else:
+            continue
+        execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                  (inv["client_id"], "admin", "Pinnacle Performance Tax", subject, msg))
+        push_notification(inv["client_id"], "invoice", f"Invoice {inv['invoice_number']} is overdue — please pay now.", "/my/invoices")
+        send_email(inv["client_email"], subject, f"<h2>{subject}</h2><p>{msg}</p><p><a href='https://ppt-tax-portal.onrender.com/my/invoices'>Pay Now →</a></p>")
+    flash(f"Late payment escalation complete: {sent30} 30-day, {sent60} 60-day, {sent90} 90-day notices sent.", "success")
+    return redirect(url_for("invoices"))
+
+# ── MONTHLY REPORT EMAIL ─────────────────────────────────────
+
+@app.route("/admin/send-monthly-reports", methods=["POST"])
+@login_required
+@admin_required
+def send_monthly_reports():
+    month = request.form.get("month") or datetime.now().strftime("%Y-%m")
+    clients = query_db("SELECT * FROM clients WHERE status='Active' AND email IS NOT NULL AND email!=''")
+    sent = 0
+    for client in clients:
+        cid = client["id"]
+        income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,7)=?", (cid, month), one=True)["total"])
+        expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,7)=?", (cid, month), one=True)["total"])
+        profit = income - expenses
+        unpaid_count = query_db("SELECT COUNT(*) c FROM invoices WHERE client_id=? AND status!='Paid'", (cid,), one=True)["c"]
+        if income == 0 and expenses == 0 and unpaid_count == 0:
+            continue
+        subject = f"Your Monthly Financial Summary — {month}"
+        body = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:#11823b;padding:20px;border-radius:12px 12px 0 0">
+          <h2 style="color:white;margin:0">Monthly Summary — {month}</h2>
+        </div>
+        <div style="background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+          <p>Hi <strong>{client['name']}</strong>, here's your financial summary for {month}:</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0">
+            <div style="background:white;border-radius:10px;padding:14px;text-align:center;border:1px solid #e5e7eb">
+              <div style="font-size:11px;color:#6b7280;font-weight:900;text-transform:uppercase">Income</div>
+              <div style="font-size:22px;font-weight:900;color:#0b5f2a">${income:,.2f}</div>
+            </div>
+            <div style="background:white;border-radius:10px;padding:14px;text-align:center;border:1px solid #e5e7eb">
+              <div style="font-size:11px;color:#6b7280;font-weight:900;text-transform:uppercase">Expenses</div>
+              <div style="font-size:22px;font-weight:900;color:#b91c1c">${expenses:,.2f}</div>
+            </div>
+            <div style="background:white;border-radius:10px;padding:14px;text-align:center;border:1px solid #e5e7eb">
+              <div style="font-size:11px;color:#6b7280;font-weight:900;text-transform:uppercase">Net Profit</div>
+              <div style="font-size:22px;font-weight:900;color:{'#0b5f2a' if profit>=0 else '#b91c1c'}">${profit:,.2f}</div>
+            </div>
+          </div>
+          {f'<p style="background:#fef2f2;border-radius:8px;padding:12px;color:#991b1b">⚠️ You have <strong>{unpaid_count} unpaid invoice(s)</strong>. Please log in to view and pay.</p>' if unpaid_count > 0 else ''}
+          <p style="margin-top:16px"><a href="https://ppt-tax-portal.onrender.com/my/bookkeeping" style="background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900">View Full Details →</a></p>
+          <p style="font-size:12px;color:#9ca3af;margin-top:20px">Pinnacle Performance Tax and Accounting | 478-338-1632</p>
+        </div></div>"""
+        if send_email(client["email"], subject, body):
+            sent += 1
+    flash(f"Monthly reports sent to {sent} clients.", "success")
+    return redirect(url_for("dashboard"))
+
+# ============================================================
+# END PPT MEGA UPGRADES PACK 2
 # ============================================================
 
 if __name__=='__main__':

@@ -810,7 +810,32 @@ def logout(): logout_user(); return redirect(url_for('login'))
 @admin_required
 def dashboard():
     counts={k:query_db(v,one=True)['c'] for k,v in {'clients':'SELECT COUNT(*) c FROM clients','open_invoices':"SELECT COUNT(*) c FROM invoices WHERE status!='Paid'",'documents':'SELECT COUNT(*) c FROM documents','returns':'SELECT COUNT(*) c FROM tax_returns','messages':"SELECT COUNT(*) c FROM messages WHERE status='Open'"}.items()}
-    return render_template('dashboard.html',income=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'",one=True)['total'],expenses=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'",one=True)['total'],unpaid=query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'",one=True)['total'],counts=counts,recent_documents=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC LIMIT 8"),open_messages=query_db("SELECT m.*,cl.name client_name FROM messages m LEFT JOIN clients cl ON cl.id=m.client_id WHERE m.status='Open' ORDER BY m.id DESC LIMIT 5"))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>📊 Dashboard</h1>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+<div class="metric"><span>Clients</span><strong>{{counts.clients}}</strong></div>
+<div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{counts.open_invoices}}</strong></div>
+<div class="metric"><span>Unpaid</span><strong style="color:#b91c1c">${{"%.0f"|format(unpaid|float)}}</strong></div>
+<div class="metric"><span>Documents</span><strong>{{counts.documents}}</strong></div>
+<div class="metric"><span>Tax Returns</span><strong>{{counts.returns}}</strong></div>
+<div class="metric"><span>Messages</span><strong style="color:{{"#11823b"if counts.messages>0 else"#475569"}}">{{counts.messages}}</strong></div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">⚡ Quick Actions</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+<a href="/command-center" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#0b5f2a">🎯 Command Center</a>
+<a href="/service-entry" class="btn" style="text-align:center;padding:12px;font-size:14px">⚡ Quick Entry</a>
+<a href="/invoices/bulk-create" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 Bulk Invoice</a>
+<a href="/admin/documents/upload" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">⬆️ Upload Doc</a>
+<a href="/messages" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">✉️ Messages</a>
+<a href="/admin/engagement-letters" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#fff7ed;color:#9a3412">✍️ E-Signatures</a>
+<a href="/workflow" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">⚙️ Workflow Hub</a>
+<a href="/clients" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#e8f5ec;color:#0b5f2a">👥 Add Client</a>
+</div>
+</div>
+{%if open_messages%}<div class="card"><h2 style="margin-top:0">✉️ Open Messages</h2><div class="table-wrap"><table><thead><tr><th>Client</th><th>Subject</th><th>Date</th><th></th></tr></thead><tbody>{%for m in open_messages%}<tr><td>{{m.client_name or"--"}}</td><td>{{m.subject or"--"}}</td><td style="font-size:12px;color:#475569">{{m.created_at[:10]if m.created_at else"--"}}</td><td><a href="/messages" class="btn" style="padding:4px 8px;font-size:11px">View</a></td></tr>{%endfor%}</tbody></table></div></div>{%endif%}
+{%if recent_documents%}<div class="card"><h2 style="margin-top:0">📂 Recent Documents</h2><div class="table-wrap"><table><thead><tr><th>Document</th><th>Client</th><th>Date</th><th></th></tr></thead><tbody>{%for d in recent_documents%}<tr><td><strong>{{d.display_name}}</strong></td><td style="font-size:12px">{{d.client_name or"--"}}</td><td style="font-size:12px;color:#475569">{{d.created_at[:10]if d.created_at else"--"}}</td><td>{%if d.filename%}<a href="/documents/download/{{d.id}}" class="btn" style="padding:4px 8px;font-size:11px">↓</a>{%endif%}</td></tr>{%endfor%}</tbody></table></div></div>{%endif%}
+{%endblock%}""", income=income, expenses=expenses, unpaid=unpaid, counts=counts, recent_documents=recent_documents, open_messages=open_messages)
 @app.route('/client-dashboard')
 @app.route('/client')
 @login_required
@@ -4108,6 +4133,131 @@ def pwa_manifest():
 
 # ============================================================
 # END PPT AI + ADVANCED FEATURES PACK
+# ============================================================
+
+
+# ============================================================
+# PPT COMMAND CENTER — Quick access to everything
+# ============================================================
+
+@app.route("/command-center")
+@login_required
+@admin_required
+def command_center():
+    # Stats
+    clients_count = query_db("SELECT COUNT(*) c FROM clients", one=True)["c"]
+    open_invoices = query_db("SELECT COUNT(*) c FROM invoices WHERE status!='Paid'", one=True)["c"]
+    unpaid_amount = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'", one=True)["total"]
+    open_msgs = query_db("SELECT COUNT(*) c FROM messages WHERE status='Open'", one=True)["c"]
+    pending_apts = query_db("SELECT COUNT(*) c FROM appointments WHERE status='Requested'", one=True)["c"]
+    unsigned = query_db("SELECT COUNT(*) c FROM engagement_letters WHERE status='Pending'", one=True)["c"] if query_db("SELECT name FROM sqlite_master WHERE type='table' AND name='engagement_letters'", one=True) else 0
+    recent_clients = query_db("SELECT * FROM clients ORDER BY id DESC LIMIT 5")
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>⚡ Command Center</h1>
+<p class="sub">Everything in one place — no searching required.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+<div class="metric"><span>Clients</span><strong>{{clients_count}}</strong></div>
+<div class="metric"><span>Open Invoices</span><strong style="color:#f59e0b">{{open_invoices}}</strong></div>
+<div class="metric"><span>Unpaid</span><strong style="color:#b91c1c">${{"%.0f"|format(unpaid_amount|float)}}</strong></div>
+<div class="metric"><span>Messages</span><strong style="color:{{"#11823b"if open_msgs>0 else"#475569"}}">{{open_msgs}}</strong></div>
+<div class="metric"><span>Appt Requests</span><strong style="color:#0891b2">{{pending_apts}}</strong></div>
+<div class="metric"><span>Unsigned Docs</span><strong style="color:#f59e0b">{{unsigned}}</strong></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">👥 Clients</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/clients" class="btn" style="text-align:center;padding:10px;font-size:13px">All Clients</a>
+<a href="/clients" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Add Client</a>
+<a href="/crm" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">CRM Leads</a>
+<a href="/client-workflow" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Workflow</a>
+<a href="/intake" target="_blank" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#e8f5ec;color:#0b5f2a;grid-column:span 2">📋 Intake Form Link</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">🧾 Billing</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/invoices" class="btn" style="text-align:center;padding:10px;font-size:13px">Invoices</a>
+<a href="/invoices/bulk-create" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Bulk Invoice</a>
+<a href="/payments" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Payments</a>
+<a href="/admin/payment-plans" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Pay Plans</a>
+<a href="/admin/quarterly-reminders" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#fff7ed;color:#9a3412;grid-column:span 2">📅 Send Q Reminders</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">📁 Tax & Returns</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/tax-returns" class="btn" style="text-align:center;padding:10px;font-size:13px">Tax Returns</a>
+<a href="/service-entry" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Quick Entry</a>
+<a href="/bookkeeping/csv-import" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">CSV Import</a>
+<a href="/bookkeeping/rules" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Auto Rules</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">📂 Documents</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/documents" class="btn" style="text-align:center;padding:10px;font-size:13px">All Docs</a>
+<a href="/admin/documents/upload" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Upload Doc</a>
+<a href="/admin/engagement-letters" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">E-Signatures</a>
+<a href="/document-requests" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Request Doc</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">✉️ Communications</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/messages" class="btn" style="text-align:center;padding:10px;font-size:13px">Messages</a>
+<a href="/appointments" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Appointments</a>
+<a href="/admin/announcements" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Announcements</a>
+<a href="/notifications/list" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Notifications</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">🔧 Tools</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<a href="/workflow" class="btn" style="text-align:center;padding:10px;font-size:13px">Workflow Hub</a>
+<a href="/settings" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#0b5f2a">Users</a>
+<a href="/admin/referrals" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Referrals</a>
+<a href="/preload-rules" class="btn" style="text-align:center;padding:10px;font-size:13px;background:#f1f5f9;color:#0f172a">Load Rules</a>
+</div>
+</div>
+
+</div>
+
+{%if recent_clients%}
+<div class="card" style="margin-top:20px">
+<h2 style="margin-top:0;font-size:15px">👥 Recent Clients — Quick Actions</h2>
+<div class="table-wrap"><table><thead><tr><th>Client</th><th>Business</th><th>Status</th><th>Quick Actions</th></tr></thead><tbody>
+{%for c in recent_clients%}
+<tr>
+<td><strong>{{c.name}}</strong></td>
+<td style="font-size:12px">{{c.business_name or"--"}}</td>
+<td><span class="pill">{{c.status or"Active"}}</span></td>
+<td style="display:flex;gap:4px;flex-wrap:wrap">
+<a href="/admin/tax-organizer/{{c.id}}" class="btn" style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#0b5f2a">Organizer</a>
+<a href="/admin/savings-planner/{{c.id}}" class="btn" style="padding:4px 8px;font-size:11px;background:#faf5ff;color:#6b21a8">Savings</a>
+<a href="/admin/health-score/{{c.id}}" class="btn" style="padding:4px 8px;font-size:11px;background:#fff7ed;color:#9a3412">Score</a>
+<a href="/admin/retainer/{{c.id}}" class="btn" style="padding:4px 8px;font-size:11px;background:#f0fdf4;color:#15803d">Retainer</a>
+<a href="/client/{{c.id}}/pl-report" target="_blank" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">P&L</a>
+</td>
+</tr>
+{%endfor%}
+</tbody></table></div>
+</div>
+{%endif%}
+{%endblock%}""", clients_count=clients_count, open_invoices=open_invoices,
+        unpaid_amount=unpaid_amount, open_msgs=open_msgs, pending_apts=pending_apts,
+        unsigned=unsigned, recent_clients=recent_clients)
+
+# ============================================================
+# END PPT COMMAND CENTER
 # ============================================================
 
 if __name__=='__main__':

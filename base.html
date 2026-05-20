@@ -128,25 +128,36 @@
 {% endif %}
 
 <script>
-// Remember sidebar scroll position
-const sidebar = document.querySelector('aside');
-if(sidebar){
-  const saved = sessionStorage.getItem('sidebarScroll');
-  if(saved) sidebar.scrollTop = parseInt(saved);
-  sidebar.addEventListener('scroll', () => {
-    sessionStorage.setItem('sidebarScroll', sidebar.scrollTop);
-  });
-  // Highlight current page
-  const path = window.location.pathname;
-  sidebar.querySelectorAll('a').forEach(a => {
+(function(){
+  var sb = document.querySelector('aside');
+  if(!sb) return;
+
+  // Restore scroll IMMEDIATELY before paint
+  var pos = localStorage.getItem('sb');
+  if(pos) sb.scrollTop = parseInt(pos);
+
+  // Highlight active link
+  var path = window.location.pathname;
+  sb.querySelectorAll('a').forEach(function(a){
     if(a.getAttribute('href') === path){
-      a.style.background = 'rgba(255,255,255,.25)';
-      a.style.borderRadius = '10px';
-      // Scroll it into view
-      setTimeout(() => a.scrollIntoView({block:'nearest'}), 100);
+      a.style.background = 'rgba(255,255,255,.22)';
+      a.style.borderLeft = '3px solid white';
+      a.style.paddingLeft = '9px';
     }
   });
-}
+
+  // Save scroll on every scroll event
+  sb.addEventListener('scroll', function(){
+    localStorage.setItem('sb', sb.scrollTop);
+  });
+
+  // Save scroll before navigating away
+  sb.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){
+      localStorage.setItem('sb', sb.scrollTop);
+    });
+  });
+})();
 </script>
 </body>
 </html>

@@ -875,7 +875,7 @@ def admin_table_route(table_name, template_name, select_sql, insert_sql=None, re
 @admin_required
 def clients():
     if request.method=='POST': execute_db('INSERT INTO clients(name,business_name,email,phone,address,client_type,status,notes) VALUES (?,?,?,?,?,?,?,?)',(request.form.get('name'),request.form.get('business_name'),request.form.get('email'),request.form.get('phone'),request.form.get('address'),request.form.get('client_type'),request.form.get('status'),request.form.get('notes'))); return redirect(url_for('clients'))
-    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Clients</h1><div class="card"><h2 style="margin-top:0">Add Client</h2><form method="POST" class="grid grid-3"><div><label>Name</label><input type="text" name="name" required></div><div><label>Business Name</label><input type="text" name="business_name"></div><div><label>Email</label><input type="email" name="email"></div><div><label>Phone</label><input type="tel" name="phone"></div><div><label>Type</label><select name="client_type"><option value="Individual">Individual</option><option value="Business">Business</option><option value="Full Service">Full Service</option></select></div><div><label>Status</label><select name="status"><option value="Active">Active</option><option value="New">New</option><option value="Inactive">Inactive</option></select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Add Client</button></div></form></div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0">{{clients|length}} Client{{"s"if clients|length!=1}}</h2><form method="POST" action="/admin/retainer/generate-all"><button style="padding:8px 14px;font-size:13px;background:#0b5f2a">Generate All Retainers</button></form></div>{%if clients%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for c in clients%}<tr><td><strong>{{c.name}}</strong></td><td style="font-size:12px">{{c.business_name or"--"}}</td><td style="font-size:12px">{{c.email or"--"}}</td><td style="font-size:12px">{{c.phone or"--"}}</td><td style="font-size:12px">{{c.client_type or"--"}}</td><td><span class="pill">{{c.status or"Active"}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/clients/{{c.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Edit</a><a href="/client/{{c.id}}/pl-report?year=2025" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a">P&L</a><a href="/client-statement/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Statement</a><a href="/admin/retainer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412">Retainer</a><a href="/admin/tax-organizer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f0fdf4;color:#0b5f2a">Organizer</a><a href="/admin/savings-planner/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#faf5ff;color:#6b21a8">Savings</a><a href="/admin/health-score/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412">Score</a><a href="/admin/engagement-letters?client_id={{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fef9c3;color:#92400e">✍️ Sign</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No clients yet.</p>{%endif%}</div>{%endblock%}""", clients=query_db('SELECT * FROM clients ORDER BY name'))
+    return render_template_string("""{%extends"base.html"%}{%block content%}<h1>Clients</h1><div class="card"><h2 style="margin-top:0">Add Client</h2><form method="POST" class="grid grid-3"><div><label>Name</label><input type="text" name="name" required></div><div><label>Business Name</label><input type="text" name="business_name"></div><div><label>Email</label><input type="email" name="email"></div><div><label>Phone</label><input type="tel" name="phone"></div><div><label>Type</label><select name="client_type"><option value="Individual">Individual</option><option value="Business">Business</option><option value="Full Service">Full Service</option></select></div><div><label>Status</label><select name="status"><option value="Active">Active</option><option value="New">New</option><option value="Inactive">Inactive</option></select></div><div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div><div><button type="submit">Add Client</button></div></form></div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0">{{clients|length}} Client{{"s"if clients|length!=1}}</h2><form method="POST" action="/admin/retainer/generate-all"><button style="padding:8px 14px;font-size:13px;background:#0b5f2a">Generate All Retainers</button></form></div>{%if clients%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Business</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>{%for c in clients%}<tr><td><a href="/clients/{{c.id}}/actions" style="color:#11823b;font-weight:900">{{c.name}}</a></td><td style="font-size:12px">{{c.business_name or"--"}}</td><td style="font-size:12px">{{c.email or"--"}}</td><td style="font-size:12px">{{c.phone or"--"}}</td><td style="font-size:12px">{{c.client_type or"--"}}</td><td><span class="pill">{{c.status or"Active"}}</span></td><td style="display:flex;gap:4px;flex-wrap:wrap"><a href="/clients/{{c.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Edit</a><a href="/client/{{c.id}}/pl-report?year=2025" target="_blank" class="btn" style="padding:5px 10px;font-size:12px;background:#e8f5ec;color:#0b5f2a">P&L</a><a href="/client-statement/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">Statement</a><a href="/admin/retainer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412">Retainer</a><a href="/admin/tax-organizer/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#f0fdf4;color:#0b5f2a">Organizer</a><a href="/admin/savings-planner/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#faf5ff;color:#6b21a8">Savings</a><a href="/admin/health-score/{{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fff7ed;color:#9a3412">Score</a><a href="/admin/engagement-letters?client_id={{c.id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#fef9c3;color:#92400e">✍️ Sign</a></td></tr>{%endfor%}</tbody></table></div>{%else%}<p style="color:#475569;text-align:center;padding:20px">No clients yet.</p>{%endif%}</div>{%endblock%}""", clients=query_db('SELECT * FROM clients ORDER BY name'))
 
 @app.route('/clients/<int:client_id>/edit')
 @login_required
@@ -4263,6 +4263,325 @@ def command_center():
 
 # ============================================================
 # END PPT COMMAND CENTER
+# ============================================================
+
+
+@app.route("/clients/<int:client_id>/actions")
+@login_required
+@admin_required
+def client_actions(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    # Get quick stats
+    unpaid = query_db("SELECT COUNT(*) c FROM invoices WHERE client_id=? AND status!='Paid'", (client_id,), one=True)["c"]
+    docs = query_db("SELECT COUNT(*) c FROM documents WHERE client_id=?", (client_id,), one=True)["c"]
+    returns = query_db("SELECT COUNT(*) c FROM tax_returns WHERE client_id=?", (client_id,), one=True)["c"]
+    messages = query_db("SELECT COUNT(*) c FROM messages WHERE client_id=? AND status='Open'", (client_id,), one=True)["c"]
+    try:
+        unsigned = query_db("SELECT COUNT(*) c FROM engagement_letters WHERE client_id=? AND status='Pending'", (client_id,), one=True)["c"]
+    except:
+        unsigned = 0
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+<a href="/clients" style="color:#475569;font-size:13px">← Back to Clients</a>
+</div>
+<h1>{{client.name}}</h1>
+{%if client.business_name%}<p class="sub">{{client.business_name}}</p>{%endif%}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px">
+<div class="metric"><span>Unpaid Invoices</span><strong style="color:{{'#b91c1c'if unpaid>0 else'#11823b'}}">{{unpaid}}</strong></div>
+<div class="metric"><span>Documents</span><strong>{{docs}}</strong></div>
+<div class="metric"><span>Tax Returns</span><strong>{{returns}}</strong></div>
+<div class="metric"><span>Open Messages</span><strong style="color:{{'#f59e0b'if messages>0 else'#475569'}}">{{messages}}</strong></div>
+{%if unsigned>0%}<div class="metric" style="background:#fef9c3;border-color:#fde68a"><span>Needs Signature</span><strong style="color:#92400e">{{unsigned}}</strong></div>{%endif%}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">📋 Client Management</h2>
+<div style="display:grid;gap:8px">
+<a href="/clients/{{client.id}}/edit" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">✏️ Edit Client Info</a>
+<a href="/admin/tax-organizer/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#e8f5ec;color:#0b5f2a">✅ Tax Organizer</a>
+<a href="/admin/savings-planner/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#faf5ff;color:#6b21a8">💡 Savings Planner</a>
+<a href="/admin/health-score/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#fff7ed;color:#9a3412">📈 Health Score</a>
+<a href="/admin/retainer/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f0fdf4;color:#15803d">💰 Retainer Fee</a>
+<a href="/clients/{{client.id}}/timeline" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">🕐 Timeline & Notes</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">🧾 Billing & Tax</h2>
+<div style="display:grid;gap:8px">
+<a href="/admin/client/{{client.id}}/invoices" class="btn" style="text-align:center;padding:11px;font-size:14px">🧾 Invoices</a>
+<a href="/admin/client/{{client.id}}/bookkeeping" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">💰 Bookkeeping</a>
+<a href="/tax-returns" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">📁 Tax Returns</a>
+<a href="/admin/payment-plans" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">📆 Payment Plan</a>
+<a href="/client/{{client.id}}/pl-report" target="_blank" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#e8f5ec;color:#0b5f2a">📊 P&L Report</a>
+<a href="/client-statement/{{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">📄 Statement</a>
+</div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0;font-size:15px">📂 Docs & Comms</h2>
+<div style="display:grid;gap:8px">
+<a href="/admin/client/{{client.id}}/documents" class="btn" style="text-align:center;padding:11px;font-size:14px">📂 Documents</a>
+<a href="/admin/engagement-letters?client_id={{client.id}}" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#fef9c3;color:#92400e">✍️ Send for Signature</a>
+<a href="/document-requests" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 Request Document</a>
+<a href="/admin/client/{{client.id}}/messages" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">✉️ Messages</a>
+<a href="/admin/client/{{client.id}}/appointments" class="btn" style="text-align:center;padding:11px;font-size:14px;background:#f1f5f9;color:#0f172a">📅 Appointments</a>
+</div>
+</div>
+
+</div>
+{%endblock%}""", client=client, unpaid=unpaid, docs=docs, returns=returns, messages=messages, unsigned=unsigned)
+
+
+# ============================================================
+# PPT ADMIN CLIENT VIEW — Admin can see/enter everything for a client
+# ============================================================
+
+@app.route("/admin/client/<int:client_id>/invoices", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_client_invoices(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        import time
+        inv_num = request.form.get("invoice_number") or f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}-{int(time.time()*1000)%10000}"
+        execute_db("INSERT INTO invoices(client_id,invoice_number,issue_date,due_date,amount,status,description) VALUES (?,?,?,?,?,?,?)",
+                  (client_id, inv_num, request.form.get("issue_date") or datetime.now().strftime("%Y-%m-%d"),
+                   request.form.get("due_date"), money(request.form.get("amount")),
+                   request.form.get("status") or "Sent", request.form.get("description")))
+        push_notification(client_id, "invoice", f"New invoice {inv_num} created.", "/my/invoices")
+        flash("Invoice created.", "success")
+        return redirect(url_for("admin_client_invoices", client_id=client_id))
+    invoices = query_db("SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC", (client_id,))
+    payments = query_db("SELECT p.*,i.invoice_number FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id WHERE p.client_id=? ORDER BY p.id DESC", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>🧾 Invoices — {{client.name}}</h1>
+<div class="card"><h2 style="margin-top:0">Create Invoice</h2>
+<form method="POST" class="grid grid-3">
+<div><label>Invoice #</label><input type="text" name="invoice_number" placeholder="Auto"></div>
+<div><label>Amount ($)</label><input type="number" name="amount" step="0.01" required></div>
+<div><label>Status</label><select name="status"><option value="Sent">Sent</option><option value="Draft">Draft</option><option value="Paid">Paid</option></select></div>
+<div><label>Issue Date</label><input type="date" name="issue_date"></div>
+<div><label>Due Date</label><input type="date" name="due_date"></div>
+<div><label>Description</label><input type="text" name="description"></div>
+<div><button type="submit">Create Invoice</button></div>
+</form></div>
+{%if invoices%}<div class="card"><h2 style="margin-top:0">{{invoices|length}} Invoice{{"s"if invoices|length!=1}}</h2>
+<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Amount</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{%for i in invoices%}<tr>
+<td><strong>{{i.invoice_number}}</strong></td>
+<td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td>
+<td style="font-size:12px">{{i.due_date or"--"}}</td>
+<td><span class="pill{%if i.status=="Overdue"%} warn{%endif%}">{{i.status}}</span></td>
+<td style="display:flex;gap:4px">
+<a href="/invoice/{{i.id}}/pdf" target="_blank" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">PDF</a>
+<a href="/invoices/{{i.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Edit</a>
+{%if i.status!="Paid"%}<form method="POST" action="/invoices/{{i.id}}/mark-paid" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#0b5f2a;border:0;border-radius:8px">Paid</button></form>{%endif%}
+</td></tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%if payments%}<div class="card"><h2 style="margin-top:0">Payment History</h2>
+<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead><tbody>
+{%for p in payments%}<tr><td>{{p.invoice_number or"--"}}</td><td style="font-weight:900;color:#11823b">${{"%.2f"|format(p.amount|float)}}</td><td style="font-size:12px">{{p.method or"--"}}</td><td style="font-size:12px;color:#475569">{{p.created_at[:10]if p.created_at else"--"}}</td></tr>
+{%endfor%}</tbody></table></div></div>{%endif%}
+{%endblock%}""", client=client, invoices=invoices, payments=payments)
+
+@app.route("/admin/client/<int:client_id>/documents", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_client_documents(client_id):
+    ensure_upgrade_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        f = request.files.get("file")
+        filename = None
+        if f and f.filename and allowed_file(f.filename):
+            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{client_id}_{secure_filename(f.filename)}"
+            f.save(UPLOAD_DIR / filename)
+        doc_name = request.form.get("document_name") or (f.filename if f and f.filename else "Document")
+        visible = 1 if request.form.get("visible_to_client") else 0
+        execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by,visible_to_client) VALUES (?,?,?,?,?,'Admin Upload',?,?,?,?,?)",
+                  (client_id, doc_name, doc_name, filename, request.form.get("tax_year"),
+                   request.form.get("notes"), request.form.get("category") or "Tax Documents",
+                   current_user.name, visible, 1))
+        if visible:
+            push_notification(client_id, "document", f"New document: {doc_name}", "/my/documents")
+        flash("Document uploaded.", "success")
+        return redirect(url_for("admin_client_documents", client_id=client_id))
+    docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>📂 Documents — {{client.name}}</h1>
+<div class="card"><h2 style="margin-top:0">Upload Document</h2>
+<form method="POST" enctype="multipart/form-data" class="grid grid-3">
+<div style="grid-column:span 3"><label>File</label><input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.csv,.txt"></div>
+<div style="grid-column:span 2"><label>Document Name</label><input type="text" name="document_name" placeholder="Auto from filename"></div>
+<div><label>Tax Year</label><input type="text" name="tax_year" placeholder="2025"></div>
+<div><label>Category</label><select name="category"><option>Tax Documents</option><option>Identification</option><option>Payroll</option><option>Bank Statements</option><option>Receipts</option><option>Engagement Letters</option><option>Signed Returns</option><option>Other</option></select></div>
+<div style="display:flex;align-items:center;gap:8px;padding-top:28px"><input type="checkbox" name="visible_to_client" value="1" checked style="width:auto;margin:0"><label style="margin:0;font-size:13px">Visible to client</label></div>
+<div><label>Notes</label><input type="text" name="notes"></div>
+<div><button type="submit">Upload</button></div>
+</form></div>
+<div class="card"><h2 style="margin-top:0">{{docs|length}} Document{{"s"if docs|length!=1}}</h2>
+{%if docs%}<div class="table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Year</th><th>Visible</th><th>Date</th><th>Actions</th></tr></thead><tbody>
+{%for d in docs%}<tr>
+<td><strong>{{d.display_name}}</strong></td>
+<td style="font-size:12px">{{d.category or"--"}}</td>
+<td style="font-size:12px">{{d.tax_year or"--"}}</td>
+<td><span class="pill{%if not d.visible_to_client%} warn{%endif%}">{{"Yes"if d.visible_to_client else"Hidden"}}</span></td>
+<td style="font-size:12px;color:#475569">{{d.created_at[:10]if d.created_at else"--"}}</td>
+<td style="display:flex;gap:4px">
+{%if d.filename%}<a href="/documents/download/{{d.id}}" class="btn" style="padding:4px 8px;font-size:11px">↓</a>{%endif%}
+<form method="POST" action="/documents/{{d.id}}/toggle-visibility" style="display:inline"><button style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a;border:0;border-radius:8px">{{"Hide"if d.visible_to_client else"Show"}}</button></form>
+<form method="POST" action="/documents/{{d.id}}/delete" style="display:inline" onsubmit="return confirm('Delete?')"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form>
+</td></tr>{%endfor%}
+</tbody></table></div>
+{%else%}<p style="color:#475569;text-align:center;padding:20px">No documents yet.</p>{%endif%}</div>
+{%endblock%}""", client=client, docs=docs)
+
+@app.route("/admin/client/<int:client_id>/messages", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_client_messages(client_id):
+    ensure_messages_table()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        subject = request.form.get("subject") or "Message from Pinnacle Performance Tax"
+        body = request.form.get("body") or ""
+        execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
+                  (client_id, "admin", current_user.name, subject, body))
+        push_notification(client_id, "message", "New message from the office.", "/my/messages")
+        flash("Message sent.", "success")
+        return redirect(url_for("admin_client_messages", client_id=client_id))
+    msgs = query_db("SELECT * FROM messages WHERE client_id=? ORDER BY id DESC", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>✉️ Messages — {{client.name}}</h1>
+<div class="card"><h2 style="margin-top:0">Send Message</h2>
+<form method="POST" class="grid">
+<div><label>Subject</label><input type="text" name="subject" value="Message from Pinnacle Performance Tax"></div>
+<div><label>Message</label><textarea name="body" style="min-height:120px" required></textarea></div>
+<div><button type="submit">Send Message</button></div>
+</form></div>
+{%if msgs%}<div class="card"><h2 style="margin-top:0">Message History</h2>
+{%for m in msgs%}<div style="border-bottom:1px solid #f3f4f6;padding:14px 0{%if loop.last%};border-bottom:none{%endif%}">
+<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+<strong style="font-size:14px">{{m.subject or"--"}}</strong>
+<span class="pill{%if m.sender_role=='client'%} warn{%endif%}">{{m.sender_role|title}}</span>
+</div>
+<div style="font-size:13px;color:#374151;background:#f9fafb;border-radius:8px;padding:10px">{{m.body or"--"}}</div>
+<div style="font-size:11px;color:#9ca3af;margin-top:4px">{{m.created_at[:16]if m.created_at else"--"}}</div>
+</div>{%endfor%}
+</div>{%endif%}
+{%endblock%}""", client=client, msgs=msgs)
+
+@app.route("/admin/client/<int:client_id>/appointments", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_client_appointments(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        execute_db("INSERT INTO appointments(client_id,title,start_at,end_at,location,meeting_link,status,notes) VALUES (?,?,?,?,?,?,?,?)",
+                  (client_id, request.form.get("title") or "Appointment",
+                   request.form.get("start_at"), request.form.get("end_at"),
+                   request.form.get("location"), request.form.get("meeting_link"),
+                   request.form.get("status") or "Scheduled", request.form.get("notes")))
+        push_notification(client_id, "appointment", "An appointment has been scheduled.", "/my/appointments")
+        flash("Appointment scheduled.", "success")
+        return redirect(url_for("admin_client_appointments", client_id=client_id))
+    apts = query_db("SELECT * FROM appointments WHERE client_id=? ORDER BY start_at DESC, id DESC", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>📅 Appointments — {{client.name}}</h1>
+<div class="card"><h2 style="margin-top:0">Schedule Appointment</h2>
+<form method="POST" class="grid grid-3">
+<div style="grid-column:span 3"><label>Title</label><input type="text" name="title" value="Tax Consultation"></div>
+<div><label>Start</label><input type="datetime-local" name="start_at"></div>
+<div><label>End</label><input type="datetime-local" name="end_at"></div>
+<div><label>Status</label><select name="status"><option>Scheduled</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select></div>
+<div><label>Location</label><input type="text" name="location" placeholder="Virtual or In-Person"></div>
+<div style="grid-column:span 2"><label>Meeting Link</label><input type="text" name="meeting_link" placeholder="Zoom/Google Meet link"></div>
+<div style="grid-column:span 3"><label>Notes</label><textarea name="notes"></textarea></div>
+<div><button type="submit">Schedule</button></div>
+</form></div>
+{%if apts%}<div class="card"><h2 style="margin-top:0">{{apts|length}} Appointment{{"s"if apts|length!=1}}</h2>
+<div class="table-wrap"><table><thead><tr><th>Title</th><th>When</th><th>Location</th><th>Status</th></tr></thead><tbody>
+{%for a in apts%}<tr>
+<td><strong>{{a.title or"Appointment"}}</strong></td>
+<td style="font-size:12px">{{a.start_at or"--"}}</td>
+<td style="font-size:12px">{{a.location or"--"}}</td>
+<td><span class="pill{%if a.status in["Cancelled","Declined"]%} warn{%endif%}">{{a.status}}</span></td>
+</tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%endblock%}""", client=client, apts=apts)
+
+@app.route("/admin/client/<int:client_id>/bookkeeping", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_client_bookkeeping(client_id):
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    year = request.args.get("year") or str(datetime.now().year)
+    categories = query_db("SELECT * FROM categories ORDER BY kind,name")
+    if request.method == "POST":
+        cat_id, auto_type = auto_categorize(request.form.get("description") or "")
+        execute_db("INSERT INTO transactions(date,description,type,category_id,client_id,amount,notes) VALUES (?,?,?,?,?,?,?)",
+                  (request.form.get("date") or datetime.now().strftime("%Y-%m-%d"),
+                   request.form.get("description"), request.form.get("type"),
+                   request.form.get("category_id") or cat_id or None,
+                   client_id, money(request.form.get("amount")), request.form.get("notes")))
+        flash("Transaction added.", "success")
+        return redirect(url_for("admin_client_bookkeeping", client_id=client_id, year=year))
+    transactions = query_db("SELECT t.*,c.name category_name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.client_id=? AND substr(t.date,1,4)=? ORDER BY t.date DESC,t.id DESC", (client_id, year))
+    income = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='income' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
+    expenses = money(query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE client_id=? AND type='expense' AND substr(date,1,4)=?", (client_id, year), one=True)["total"])
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>💰 Bookkeeping — {{client.name}}</h1>
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+<form method="GET"><select name="year" onchange="this.form.submit()" style="padding:8px 12px;border-radius:10px;border:1px solid #cbd5d1"><option value="2023"{%if year=="2023"%}selected{%endif%}>2023</option><option value="2024"{%if year=="2024"%}selected{%endif%}>2024</option><option value="2025"{%if year=="2025"%}selected{%endif%}>2025</option><option value="2026"{%if year=="2026"%}selected{%endif%}>2026</option></select></form>
+<a href="/client/{{client.id}}/pl-report?year={{year}}" target="_blank" class="btn" style="padding:8px 14px;font-size:13px;background:#e8f5ec;color:#0b5f2a">Download P&L</a>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+<div class="metric"><span>Income</span><strong style="color:#0b5f2a">${{"%.2f"|format(income)}}</strong></div>
+<div class="metric"><span>Expenses</span><strong style="color:#b91c1c">${{"%.2f"|format(expenses)}}</strong></div>
+<div class="metric"><span>Net Profit</span><strong style="color:{{"#0b5f2a"if income-expenses>=0 else"#b91c1c"}}">${{"%.2f"|format(income-expenses)}}</strong></div>
+</div>
+<div class="card"><h2 style="margin-top:0">Add Transaction</h2>
+<form method="POST" class="grid grid-3">
+<div><label>Date</label><input type="date" name="date" value="{{today}}"></div>
+<div style="grid-column:span 2"><label>Description</label><input type="text" name="description" required></div>
+<div><label>Amount</label><input type="number" name="amount" step="0.01" required></div>
+<div><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div>
+<div><label>Category</label><select name="category_id"><option value="">Uncategorized</option>{%for c in categories%}<option value="{{c.id}}">[{{c.kind|title}}] {{c.name}}</option>{%endfor%}</select></div>
+<div style="grid-column:span 3"><label>Notes</label><input type="text" name="notes"></div>
+<div><button type="submit">Add Transaction</button></div>
+</form></div>
+{%if transactions%}<div class="card"><h2 style="margin-top:0">{{transactions|length}} Transactions — {{year}}</h2>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead><tbody>
+{%for t in transactions%}<tr>
+<td style="font-size:12px">{{t.date}}</td>
+<td>{{t.description}}</td>
+<td style="font-size:12px;color:#475569">{{t.category_name or"--"}}</td>
+<td><span class="pill{%if t.type!="income"%} warn{%endif%}">{{t.type|title}}</span></td>
+<td style="text-align:right;font-weight:900">${{"%.2f"|format(t.amount|float)}}</td>
+<td style="display:flex;gap:4px">
+<a href="/transactions/{{t.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Edit</a>
+<form method="POST" action="/transactions/{{t.id}}/delete" onsubmit="return confirm('Delete?')"><button style="padding:4px 8px;font-size:11px;background:#fef2f2;color:#b91c1c;border:0;border-radius:8px">Del</button></form>
+</td></tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%endblock%}""", client=client, transactions=transactions, income=income, expenses=expenses, year=year, categories=categories, today=datetime.now().strftime("%Y-%m-%d"))
+
+# ============================================================
+# END PPT ADMIN CLIENT VIEWS
 # ============================================================
 
 if __name__=='__main__':

@@ -442,7 +442,34 @@ def client_statement(client_id):
                            FROM payments p LEFT JOIN invoices i ON i.id=p.invoice_id
                            WHERE p.client_id=? ORDER BY p.id DESC""", (client_id,))
     totals = ppt_client_money_totals(client_id)
-    return render_template("client_statement.html", client=client, invoices=invoices, payments=payments, totals=totals)
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>📄 Account Statement — {{client.name}}</h1>
+{%if client.business_name%}<p class="sub">{{client.business_name}}</p>{%endif%}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+<div class="metric"><span>Total Billed</span><strong>${{"%.2f"|format(totals.billed|float)}}</strong></div>
+<div class="metric"><span>Total Paid</span><strong style="color:#11823b">${{"%.2f"|format(totals.paid|float)}}</strong></div>
+<div class="metric"><span>Balance Due</span><strong style="color:{{"#b91c1c"if totals.balance>0 else"#11823b"}}">${{"%.2f"|format(totals.balance|float)}}</strong></div>
+</div>
+{%if invoices%}<div class="card"><h2 style="margin-top:0">Invoices</h2><div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>Description</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr></thead><tbody>
+{%for i in invoices%}<tr>
+<td><strong>{{i.invoice_number or"--"}}</strong></td>
+<td style="font-size:12px">{{i.description or"--"}}</td>
+<td style="font-weight:900">${{"%.2f"|format(i.amount|float)}}</td>
+<td style="font-size:12px">{{i.due_date or"--"}}</td>
+<td><span class="pill{%if i.status=="Overdue"%} warn{%elif i.status=="Paid"%}{%endif%}">{{i.status}}</span></td>
+<td><a href="/invoice/{{i.id}}/pdf" target="_blank" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">PDF</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%if payments%}<div class="card"><h2 style="margin-top:0">Payments Received</h2><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead><tbody>
+{%for p in payments%}<tr>
+<td>{{p.invoice_number or"--"}}</td>
+<td style="font-weight:900;color:#11823b">${{"%.2f"|format(p.amount|float)}}</td>
+<td style="font-size:12px">{{p.method or"--"}}</td>
+<td style="font-size:12px;color:#475569">{{p.created_at[:10]if p.created_at else"--"}}</td>
+</tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%endblock%}""", client=client, invoices=invoices, payments=payments, totals=totals)
 
 @app.route('/my/statement')
 @login_required

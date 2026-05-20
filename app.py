@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 import os, sqlite3
 from datetime import datetime
@@ -700,7 +701,40 @@ def client_timeline_view(client_id):
         abort(404)
     timeline = query_db("SELECT * FROM client_timeline WHERE client_id=? ORDER BY id DESC", (client_id,))
     notes = query_db("SELECT * FROM internal_notes WHERE client_id=? ORDER BY id DESC", (client_id,))
-    return render_template("client_timeline.html", client=client, timeline=timeline, notes=notes)
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>🕐 Timeline & Notes — {{client.name}}</h1>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div>
+<div class="card"><h2 style="margin-top:0">Add Internal Note</h2>
+<form method="POST" action="/clients/{{client.id}}/notes">
+<div class="grid">
+<div><label>Note</label><textarea name="note" required placeholder="Internal note visible only to admin..."></textarea></div>
+<div><button type="submit">Save Note</button></div>
+</div></form></div>
+{%if notes%}<div class="card"><h2 style="margin-top:0">Internal Notes</h2>
+{%for n in notes%}<div style="border-bottom:1px solid #f3f4f6;padding:12px 0{%if loop.last%};border-bottom:none{%endif%}">
+<div style="font-size:14px;color:#374151">{{n.note}}</div>
+<div style="font-size:11px;color:#9ca3af;margin-top:4px">{{n.created_by}} — {{n.created_at[:16]if n.created_at else""}}</div>
+</div>{%endfor%}
+</div>{%endif%}
+</div>
+<div class="card"><h2 style="margin-top:0">Activity Timeline</h2>
+{%if timeline%}
+{%for t in timeline%}<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6{%if loop.last%};border-bottom:none{%endif%}">
+<div style="min-width:36px;height:36px;border-radius:999px;background:#e8f5ec;display:flex;align-items:center;justify-content:center;font-size:16px">
+{%if t.event_type=="Invoice"%}🧾{%elif t.event_type=="Payment"%}💳{%elif t.event_type=="Document"%}📂{%elif t.event_type=="Message"%}✉️{%elif t.event_type=="Appointment"%}📅{%else%}📌{%endif%}
+</div>
+<div>
+<div style="font-weight:900;font-size:14px">{{t.title}}</div>
+{%if t.details%}<div style="font-size:12px;color:#475569">{{t.details}}</div>{%endif%}
+<div style="font-size:11px;color:#9ca3af;margin-top:2px">{{t.created_at[:16]if t.created_at else""}}</div>
+</div>
+</div>{%endfor%}
+{%else%}<p style="color:#475569;text-align:center;padding:20px">No activity yet.</p>{%endif%}
+</div>
+</div>
+{%endblock%}""", client=client, timeline=timeline, notes=notes)
 
 @app.route('/clients/<int:client_id>/notes', methods=['POST'])
 @login_required
@@ -916,7 +950,31 @@ def edit_client(client_id):
     client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
     if not client:
         abort(404)
-    return render_template("client_edit.html", client=client)
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/clients/{{client.id}}/actions" style="color:#475569;font-size:13px">← {{client.name}}</a></div>
+<h1>✏️ Edit Client — {{client.name}}</h1>
+<div class="card"><form method="POST" action="/clients/{{client.id}}/update">
+<div class="grid grid-3">
+<div><label>Full Name</label><input type="text" name="name" value="{{client.name}}" required></div>
+<div><label>Business Name</label><input type="text" name="business_name" value="{{client.business_name or""}}"></div>
+<div><label>Email</label><input type="email" name="email" value="{{client.email or""}}"></div>
+<div><label>Phone</label><input type="tel" name="phone" value="{{client.phone or""}}"></div>
+<div><label>Address</label><input type="text" name="address" value="{{client.address or""}}"></div>
+<div><label>Client Type</label><select name="client_type"><option{%if client.client_type=="Individual"%} selected{%endif%}>Individual</option><option{%if client.client_type=="Business"%} selected{%endif%}>Business</option><option{%if client.client_type=="Full Service"%} selected{%endif%}>Full Service</option></select></div>
+<div><label>Status</label><select name="status"><option{%if client.status=="Active"%} selected{%endif%}>Active</option><option{%if client.status=="New"%} selected{%endif%}>New</option><option{%if client.status=="Inactive"%} selected{%endif%}>Inactive</option></select></div>
+<div><label>Entity Type</label><select name="entity_type"><option value="">--</option><option{%if client.entity_type=="Sole Proprietor"%} selected{%endif%}>Sole Proprietor</option><option{%if client.entity_type=="LLC"%} selected{%endif%}>LLC</option><option{%if client.entity_type=="S-Corp"%} selected{%endif%}>S-Corp</option><option{%if client.entity_type=="C-Corp"%} selected{%endif%}>C-Corp</option><option{%if client.entity_type=="Partnership"%} selected{%endif%}>Partnership</option></select></div>
+<div><label>Filing Status</label><select name="filing_status"><option value="">--</option><option{%if client.filing_status=="Single"%} selected{%endif%}>Single</option><option{%if client.filing_status=="Married Filing Jointly"%} selected{%endif%}>Married Filing Jointly</option><option{%if client.filing_status=="Married Filing Separately"%} selected{%endif%}>Married Filing Separately</option><option{%if client.filing_status=="Head of Household"%} selected{%endif%}>Head of Household</option></select></div>
+<div><label>EIN</label><input type="text" name="ein" value="{{client.ein or""}}"></div>
+<div><label>SSN Last 4</label><input type="text" name="ssn_last4" value="{{client.ssn_last4 or""}}" maxlength="4"></div>
+<div><label>Date of Birth</label><input type="date" name="dob" value="{{client.dob or""}}"></div>
+<div><label>Occupation</label><input type="text" name="occupation" value="{{client.occupation or""}}"></div>
+<div><label>Spouse Name</label><input type="text" name="spouse_name" value="{{client.spouse_name or""}}"></div>
+<div><label>Service Package</label><input type="text" name="service_package" value="{{client.service_package or""}}"></div>
+<div><label>Preferred Contact</label><select name="preferred_contact"><option value="">--</option><option{%if client.preferred_contact=="Email"%} selected{%endif%}>Email</option><option{%if client.preferred_contact=="Phone"%} selected{%endif%}>Phone</option><option{%if client.preferred_contact=="Text"%} selected{%endif%}>Text</option></select></div>
+<div><label>Onboarding Status</label><select name="onboarding_status"><option{%if client.onboarding_status=="New"%} selected{%endif%}>New</option><option{%if client.onboarding_status=="In Progress"%} selected{%endif%}>In Progress</option><option{%if client.onboarding_status=="Complete"%} selected{%endif%}>Complete</option></select></div>
+<div style="grid-column:span 3"><label>Notes</label><textarea name="notes">{{client.notes or""}}</textarea></div>
+<div style="display:flex;gap:8px"><button type="submit">Save Changes</button><a href="/clients/{{client.id}}/actions" class="btn" style="background:#f1f5f9;color:#0f172a">Cancel</a></div>
+</div></form></div>{%endblock%}""", client=client)
 
 @app.route('/clients/<int:client_id>/update', methods=['POST'])
 @login_required

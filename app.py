@@ -810,6 +810,11 @@ def logout(): logout_user(); return redirect(url_for('login'))
 @admin_required
 def dashboard():
     counts={k:query_db(v,one=True)['c'] for k,v in {'clients':'SELECT COUNT(*) c FROM clients','open_invoices':"SELECT COUNT(*) c FROM invoices WHERE status!='Paid'",'documents':'SELECT COUNT(*) c FROM documents','returns':'SELECT COUNT(*) c FROM tax_returns','messages':"SELECT COUNT(*) c FROM messages WHERE status='Open'"}.items()}
+    income=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'",one=True)['total']
+    expenses=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'",one=True)['total']
+    unpaid=query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE status!='Paid'",one=True)['total']
+    recent_documents=query_db("SELECT d.*,COALESCE(d.document_name,d.name,'Document') display_name,cl.name client_name FROM documents d LEFT JOIN clients cl ON cl.id=d.client_id ORDER BY d.id DESC LIMIT 8")
+    open_messages=query_db("SELECT m.*,cl.name client_name FROM messages m LEFT JOIN clients cl ON cl.id=m.client_id WHERE m.status='Open' ORDER BY m.id DESC LIMIT 5")
     return render_template_string("""{%extends"base.html"%}{%block content%}
 <h1>📊 Dashboard</h1>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">

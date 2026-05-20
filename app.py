@@ -3672,20 +3672,44 @@ def client_dashboard_v2():
     if not current_user.client_id:
         return redirect(url_for("client_dashboard"))
     cid = current_user.client_id
-    ensure_announcements_table()
-    ensure_mega_tables()
-    ensure_savings_tables()
-    ensure_upgrade_tables()
-    ensure_ai_tables()
+    # Initialize all tables first
+    try: ensure_announcements_table()
+    except: pass
+    try: ensure_mega_tables()
+    except: pass
+    try: ensure_savings_tables()
+    except: pass
+    try: ensure_upgrade_tables()
+    except: pass
+    try: ensure_ai_tables()
+    except: pass
+    try: ensure_workflow_tables()
+    except: pass
+
     client = query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True)
     unpaid_invoices = query_db("SELECT * FROM invoices WHERE client_id=? AND status!='Paid' ORDER BY due_date ASC LIMIT 3", (cid,))
-    recent_docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND visible_to_client=1 ORDER BY id DESC LIMIT 5", (cid,))
+    try:
+        recent_docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND visible_to_client=1 ORDER BY id DESC LIMIT 5", (cid,))
+    except:
+        recent_docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? ORDER BY id DESC LIMIT 5", (cid,))
     next_appt = query_db("SELECT * FROM appointments WHERE client_id=? AND status IN ('Approved','Scheduled') ORDER BY start_at ASC LIMIT 1", (cid,), one=True)
-    open_letters = query_db("SELECT * FROM engagement_letters WHERE client_id=? AND status='Pending' ORDER BY id DESC", (cid,))
-    pending_docs = query_db("SELECT COUNT(*) c FROM document_requests WHERE client_id=? AND status!='Completed'", (cid,), one=True)["c"]
+    try:
+        open_letters = query_db("SELECT * FROM engagement_letters WHERE client_id=? AND status='Pending' ORDER BY id DESC", (cid,))
+    except:
+        open_letters = []
+    try:
+        pending_docs = query_db("SELECT COUNT(*) c FROM document_requests WHERE client_id=? AND status!='Completed'", (cid,), one=True)["c"]
+    except:
+        pending_docs = 0
     unread_msgs = query_db("SELECT COUNT(*) c FROM messages WHERE client_id=? AND sender_role='admin'", (cid,), one=True)["c"]
-    announcements = query_db("SELECT * FROM announcements WHERE is_active=1 ORDER BY id DESC LIMIT 3")
-    savings_goals = query_db("SELECT * FROM savings_goals WHERE client_id=? AND status='Active' ORDER BY id DESC LIMIT 3", (cid,))
+    try:
+        announcements = query_db("SELECT * FROM announcements WHERE is_active=1 ORDER BY id DESC LIMIT 3")
+    except:
+        announcements = []
+    try:
+        savings_goals = query_db("SELECT * FROM savings_goals WHERE client_id=? AND status='Active' ORDER BY id DESC LIMIT 3", (cid,))
+    except:
+        savings_goals = []
     tax_return = query_db("SELECT * FROM tax_returns WHERE client_id=? ORDER BY tax_year DESC LIMIT 1", (cid,), one=True)
     total_billed = query_db("SELECT COALESCE(SUM(amount),0) total FROM invoices WHERE client_id=?", (cid,), one=True)["total"]
     total_paid = query_db("SELECT COALESCE(SUM(amount),0) total FROM payments WHERE client_id=?", (cid,), one=True)["total"]

@@ -4,8 +4,6 @@
   <meta charset="utf-8">
   <title>PPT Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#11823b">
   <style>
     :root{--g:#123d22;--bg:#f4f6f4;--card:#fff;--line:#dfe7df;--text:#111827}
     *{box-sizing:border-box}
@@ -127,8 +125,6 @@
 {% else %}
   {% block login_content %}{% endblock %}
 {% endif %}
-<script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}
-</script>
+
 </body>
 </html>

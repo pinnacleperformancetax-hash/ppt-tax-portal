@@ -3675,6 +3675,8 @@ def client_dashboard_v2():
     ensure_announcements_table()
     ensure_mega_tables()
     ensure_savings_tables()
+    ensure_upgrade_tables()
+    ensure_ai_tables()
     client = query_db("SELECT * FROM clients WHERE id=?", (cid,), one=True)
     unpaid_invoices = query_db("SELECT * FROM invoices WHERE client_id=? AND status!='Paid' ORDER BY due_date ASC LIMIT 3", (cid,))
     recent_docs = query_db("SELECT *,COALESCE(document_name,name,'Document') display_name FROM documents WHERE client_id=? AND visible_to_client=1 ORDER BY id DESC LIMIT 5", (cid,))

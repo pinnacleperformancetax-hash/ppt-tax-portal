@@ -4104,12 +4104,7 @@ def pwa_manifest():
         ]
     })
 
-@app.route("/sw.js")
-def service_worker():
-    from flask import Response
-    # Minimal service worker - no caching to avoid auth issues
-    sw = "self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));"
-    return Response(sw, mimetype="application/javascript")
+
 
 # ============================================================
 # END PPT AI + ADVANCED FEATURES PACK

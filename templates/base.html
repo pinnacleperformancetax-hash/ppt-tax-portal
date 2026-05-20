@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>PPT Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#11823b">
   <style>
     :root{--g:#123d22;--bg:#f4f6f4;--card:#fff;--line:#dfe7df;--text:#111827}
     *{box-sizing:border-box}
@@ -74,6 +76,7 @@
         <a href="/invoices/bulk-create">📋 Bulk Invoices</a>
         <a href="/payments">💳 Payments</a>
         <a href="/admin/payment-plans">📆 Payment Plans</a>
+        <a href="/admin/quarterly-reminders">📅 Quarterly Reminders</a>
 
         <div class="nav-section">Files & Comms</div>
         <a href="/documents">📂 Documents</a>
@@ -99,11 +102,14 @@
         <a href="/my/return-progress">📊 Return Status</a>
         <a href="/my/bookkeeping">💰 Bookkeeping</a>
         <a href="/my/appointments">📅 Appointments</a>
-        <a href="/my/book-appointment">📅 Book Appointment</a>
+        <a href="/my/book-appointment">🗓 Book Appointment</a>
         <a href="/my/messages">✉️ Messages</a>
         <a href="/my/sign-documents" style="background:rgba(245,158,11,.25);border-radius:10px">✍️ Sign Documents</a>
         <a href="/my/tax-organizer">✅ Tax Organizer</a>
         <a href="/my/savings-planner">💡 Savings Planner</a>
+        <a href="/my/tax-estimate">🧮 Tax Estimate</a>
+        <a href="/my/ai-advisor">🤖 AI Tax Advisor</a>
+        <a href="/my/health-score">📈 Health Score</a>
         <a href="/my/year-end">📊 Year-End Summary</a>
         <a href="/my/crm">📋 My Requests</a>
         <a href="/notifications/list">🔔 Notifications</a>
@@ -121,5 +127,8 @@
 {% else %}
   {% block login_content %}{% endblock %}
 {% endif %}
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}
+</script>
 </body>
 </html>

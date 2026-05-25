@@ -5053,6 +5053,622 @@ def send_monthly_reports():
 # END PPT MEGA UPGRADES PACK 2
 # ============================================================
 
+
+# ============================================================
+# PPT PAYROLL SYSTEM
+# Employees | Pay Runs | Tax Calculations | Pay Stubs | Reports
+# ============================================================
+
+def ensure_payroll_tables():
+    db = get_db()
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS payroll_employees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        ssn_last4 TEXT,
+        dob TEXT,
+        hire_date TEXT,
+        employment_type TEXT DEFAULT 'Full-Time',
+        pay_type TEXT DEFAULT 'Hourly',
+        pay_rate REAL DEFAULT 0,
+        pay_schedule TEXT DEFAULT 'Biweekly',
+        federal_filing_status TEXT DEFAULT 'Single',
+        federal_allowances INTEGER DEFAULT 0,
+        state TEXT DEFAULT 'GA',
+        state_filing_status TEXT DEFAULT 'Single',
+        additional_federal_withholding REAL DEFAULT 0,
+        additional_state_withholding REAL DEFAULT 0,
+        bank_name TEXT,
+        account_last4 TEXT,
+        routing_last4 TEXT,
+        payment_method TEXT DEFAULT 'Direct Deposit',
+        status TEXT DEFAULT 'Active',
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS payroll_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER,
+        pay_period_start TEXT,
+        pay_period_end TEXT,
+        pay_date TEXT,
+        pay_schedule TEXT DEFAULT 'Biweekly',
+        status TEXT DEFAULT 'Draft',
+        total_gross REAL DEFAULT 0,
+        total_net REAL DEFAULT 0,
+        total_taxes REAL DEFAULT 0,
+        notes TEXT,
+        created_by TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS payroll_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id INTEGER,
+        client_id INTEGER,
+        employee_id INTEGER,
+        hours_worked REAL DEFAULT 0,
+        overtime_hours REAL DEFAULT 0,
+        gross_pay REAL DEFAULT 0,
+        federal_income_tax REAL DEFAULT 0,
+        social_security REAL DEFAULT 0,
+        medicare REAL DEFAULT 0,
+        state_income_tax REAL DEFAULT 0,
+        other_deductions REAL DEFAULT 0,
+        net_pay REAL DEFAULT 0,
+        ytd_gross REAL DEFAULT 0,
+        ytd_federal REAL DEFAULT 0,
+        ytd_ss REAL DEFAULT 0,
+        ytd_medicare REAL DEFAULT 0,
+        ytd_state REAL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    db.commit()
+
+def calculate_federal_withholding(gross, filing_status, allowances, pay_schedule):
+    """Simple federal withholding calculation based on 2024 tables"""
+    # Annualize the income
+    periods = {"Weekly":52,"Biweekly":26,"Semimonthly":24,"Monthly":12}
+    n = periods.get(pay_schedule, 26)
+    annual = gross * n
+    # Subtract allowances ($4300 each for 2024)
+    allowance_amount = allowances * 4300
+    adjusted = max(0, annual - allowance_amount)
+    # 2024 tax brackets
+    if filing_status in ["Married", "Married Filing Jointly"]:
+        if adjusted <= 11600: tax = adjusted * 0.10
+        elif adjusted <= 47150: tax = 1160 + (adjusted-11600)*0.12
+        elif adjusted <= 100525: tax = 5426 + (adjusted-47150)*0.22
+        elif adjusted <= 191950: tax = 17168.50 + (adjusted-100525)*0.24
+        elif adjusted <= 243725: tax = 39110.50 + (adjusted-191950)*0.32
+        else: tax = 55678.50 + (adjusted-243725)*0.35
+    else:
+        if adjusted <= 11600: tax = adjusted * 0.10
+        elif adjusted <= 47150: tax = 1160 + (adjusted-11600)*0.12
+        elif adjusted <= 100525: tax = 5426 + (adjusted-47150)*0.22
+        elif adjusted <= 191950: tax = 17168.50 + (adjusted-100525)*0.24
+        else: tax = 39110.50 + (adjusted-191950)*0.32
+    return round(tax / n, 2)
+
+def calculate_payroll_taxes(gross, pay_schedule, filing_status="Single", allowances=0,
+                             state="GA", add_federal=0, add_state=0):
+    """Calculate all payroll taxes"""
+    federal = calculate_federal_withholding(gross, filing_status, allowances, pay_schedule)
+    federal = max(0, federal + add_federal)
+    ss = round(min(gross * 0.062, 160200 * 0.062 / 26), 2)  # 6.2% up to wage base
+    medicare = round(gross * 0.0145, 2)  # 1.45%
+    # State tax (GA flat rate ~5.49%)
+    state_rates = {"GA":0.0549,"FL":0,"TX":0,"CA":0.093,"NY":0.0685,"NC":0.0499}
+    state_rate = state_rates.get(state, 0.05)
+    state_tax = round(gross * state_rate + add_state, 2)
+    return {
+        "federal": federal,
+        "social_security": ss,
+        "medicare": medicare,
+        "state": state_tax,
+        "total": round(federal + ss + medicare + state_tax, 2)
+    }
+
+# ── ADMIN PAYROLL PAGES ──────────────────────────────────────
+
+@app.route("/admin/payroll")
+@login_required
+@admin_required
+def admin_payroll():
+    ensure_payroll_tables()
+    clients = query_db("SELECT id,name FROM clients WHERE status='Active' ORDER BY name")
+    total_employees = query_db("SELECT COUNT(*) c FROM payroll_employees WHERE status='Active'", one=True)["c"]
+    total_runs = query_db("SELECT COUNT(*) c FROM payroll_runs", one=True)["c"]
+    recent_runs = query_db("""SELECT r.*,c.name client_name FROM payroll_runs r
+                              LEFT JOIN clients c ON c.id=r.client_id
+                              ORDER BY r.id DESC LIMIT 10""")
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>💼 Payroll</h1>
+<p class="sub">Manage employee payroll for all your clients.</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+<div class="metric"><span>Active Employees</span><strong>{{total_employees}}</strong></div>
+<div class="metric"><span>Total Pay Runs</span><strong>{{total_runs}}</strong></div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">⚡ Quick Actions</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+<a href="/admin/payroll/employees" class="btn" style="text-align:center;padding:12px;font-size:14px">👤 All Employees</a>
+<a href="/admin/payroll/run/new" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#0b5f2a">▶️ Run Payroll</a>
+<a href="/admin/payroll/reports" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📊 Reports</a>
+<a href="/admin/payroll/w2-prep" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 W-2 Prep</a>
+</div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">Clients with Payroll</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+{%for c in clients%}
+<a href="/admin/payroll/client/{{c.id}}" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f9fafb;color:#0f172a;border:1px solid #e5e7eb">
+{{c.name}}
+</a>
+{%endfor%}
+</div>
+</div>
+{%if recent_runs%}
+<div class="card">
+<h2 style="margin-top:0">Recent Pay Runs</h2>
+<div class="table-wrap"><table><thead><tr><th>Client</th><th>Period</th><th>Pay Date</th><th>Gross</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
+{%for r in recent_runs%}<tr>
+<td><strong>{{r.client_name or"--"}}</strong></td>
+<td style="font-size:12px">{{r.pay_period_start}} — {{r.pay_period_end}}</td>
+<td style="font-size:12px">{{r.pay_date}}</td>
+<td style="font-weight:900">${{"%.2f"|format(r.total_gross|float)}}</td>
+<td style="font-weight:900;color:#11823b">${{"%.2f"|format(r.total_net|float)}}</td>
+<td><span class="pill{%if r.status=='Draft'%} warn{%endif%}">{{r.status}}</span></td>
+<td><a href="/admin/payroll/run/{{r.id}}" class="btn" style="padding:4px 8px;font-size:11px">View</a></td>
+</tr>{%endfor%}
+</tbody></table></div>
+</div>
+{%endif%}
+{%endblock%}""", clients=clients, total_employees=total_employees, total_runs=total_runs, recent_runs=recent_runs)
+
+@app.route("/admin/payroll/client/<int:client_id>")
+@login_required
+@admin_required
+def admin_payroll_client(client_id):
+    ensure_payroll_tables()
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    employees = query_db("SELECT * FROM payroll_employees WHERE client_id=? ORDER BY last_name,first_name", (client_id,))
+    runs = query_db("SELECT * FROM payroll_runs WHERE client_id=? ORDER BY id DESC LIMIT 10", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/admin/payroll" style="color:#475569;font-size:13px">← Payroll</a></div>
+<h1>💼 Payroll — {{client.name}}</h1>
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+<a href="/admin/payroll/employee/new/{{client.id}}" class="btn" style="padding:10px 16px;font-size:14px;background:#0b5f2a">👤 Add Employee</a>
+<a href="/admin/payroll/run/new?client_id={{client.id}}" class="btn" style="padding:10px 16px;font-size:14px">▶️ Run Payroll</a>
+<a href="/admin/payroll/reports?client_id={{client.id}}" class="btn" style="padding:10px 16px;font-size:14px;background:#f1f5f9;color:#0f172a">📊 Reports</a>
+</div>
+<div class="card">
+<h2 style="margin-top:0">{{employees|length}} Employee{{"s"if employees|length!=1}}</h2>
+{%if employees%}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Pay Rate</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{%for e in employees%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong>{%if e.email%}<br><span style="font-size:11px;color:#475569">{{e.email}}</span>{%endif%}</td>
+<td style="font-size:12px">{{e.employment_type}}</td>
+<td style="font-weight:900">${{"%.2f"|format(e.pay_rate|float)}}{%if e.pay_type=="Hourly"%}/hr{%else%}/yr{%endif%}</td>
+<td style="font-size:12px">{{e.pay_schedule}}</td>
+<td><span class="pill{%if e.status!="Active"%} warn{%endif%}">{{e.status}}</span></td>
+<td style="display:flex;gap:4px">
+<a href="/admin/payroll/employee/{{e.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px;background:#f1f5f9;color:#0f172a">Edit</a>
+<a href="/admin/payroll/employee/{{e.id}}/stub" class="btn" style="padding:4px 8px;font-size:11px;background:#e8f5ec;color:#0b5f2a">Stub</a>
+</td>
+</tr>{%endfor%}
+</tbody></table></div>
+{%else%}<p style="color:#475569;text-align:center;padding:20px">No employees yet. <a href="/admin/payroll/employee/new/{{client.id}}" style="color:#11823b">Add first employee →</a></p>{%endif%}
+</div>
+{%if runs%}<div class="card"><h2 style="margin-top:0">Recent Pay Runs</h2>
+<div class="table-wrap"><table><thead><tr><th>Period</th><th>Pay Date</th><th>Gross</th><th>Taxes</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
+{%for r in runs%}<tr>
+<td style="font-size:12px">{{r.pay_period_start}} — {{r.pay_period_end}}</td>
+<td style="font-size:12px">{{r.pay_date}}</td>
+<td style="font-weight:900">${{"%.2f"|format(r.total_gross|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format(r.total_taxes|float)}}</td>
+<td style="font-weight:900;color:#11823b">${{"%.2f"|format(r.total_net|float)}}</td>
+<td><span class="pill{%if r.status=="Draft"%} warn{%endif%}">{{r.status}}</span></td>
+<td><a href="/admin/payroll/run/{{r.id}}" class="btn" style="padding:4px 8px;font-size:11px">View</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>{%endif%}
+{%endblock%}""", client=client, employees=employees, runs=runs)
+
+@app.route("/admin/payroll/employee/new/<int:client_id>", methods=["GET","POST"])
+@app.route("/admin/payroll/employee/<int:emp_id>/edit", methods=["GET","POST"])
+@login_required
+@admin_required
+def admin_payroll_employee(client_id=None, emp_id=None):
+    ensure_payroll_tables()
+    emp = query_db("SELECT * FROM payroll_employees WHERE id=?", (emp_id,), one=True) if emp_id else None
+    if emp: client_id = emp["client_id"]
+    client = query_db("SELECT * FROM clients WHERE id=?", (client_id,), one=True)
+    if not client: abort(404)
+    if request.method == "POST":
+        data = (request.form.get("first_name"), request.form.get("last_name"),
+                request.form.get("email"), request.form.get("phone"),
+                request.form.get("address"), request.form.get("ssn_last4"),
+                request.form.get("hire_date"), request.form.get("employment_type") or "Full-Time",
+                request.form.get("pay_type") or "Hourly",
+                money(request.form.get("pay_rate")),
+                request.form.get("pay_schedule") or "Biweekly",
+                request.form.get("federal_filing_status") or "Single",
+                int(request.form.get("federal_allowances") or 0),
+                request.form.get("state") or "GA",
+                money(request.form.get("additional_federal_withholding")),
+                money(request.form.get("additional_state_withholding")),
+                request.form.get("payment_method") or "Direct Deposit",
+                request.form.get("bank_name"), request.form.get("account_last4"),
+                request.form.get("notes"), request.form.get("status") or "Active")
+        if emp_id:
+            execute_db("""UPDATE payroll_employees SET first_name=?,last_name=?,email=?,phone=?,
+                         address=?,ssn_last4=?,hire_date=?,employment_type=?,pay_type=?,pay_rate=?,
+                         pay_schedule=?,federal_filing_status=?,federal_allowances=?,state=?,
+                         additional_federal_withholding=?,additional_state_withholding=?,
+                         payment_method=?,bank_name=?,account_last4=?,notes=?,status=? WHERE id=?""",
+                      data + (emp_id,))
+            flash("Employee updated.", "success")
+        else:
+            execute_db("""INSERT INTO payroll_employees(first_name,last_name,email,phone,address,
+                         ssn_last4,hire_date,employment_type,pay_type,pay_rate,pay_schedule,
+                         federal_filing_status,federal_allowances,state,additional_federal_withholding,
+                         additional_state_withholding,payment_method,bank_name,account_last4,notes,
+                         status,client_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      data + (client_id,))
+            flash("Employee added.", "success")
+        return redirect(url_for("admin_payroll_client", client_id=client_id))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/admin/payroll/client/{{client.id}}" style="color:#475569;font-size:13px">← {{client.name}} Payroll</a></div>
+<h1>{{"Edit"if emp else"Add"}} Employee — {{client.name}}</h1>
+<form method="POST"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div class="card"><h2 style="margin-top:0">Personal Info</h2><div class="grid grid-3">
+<div><label>First Name</label><input type="text" name="first_name" value="{{emp.first_name if emp else""}}" required></div>
+<div><label>Last Name</label><input type="text" name="last_name" value="{{emp.last_name if emp else""}}" required></div>
+<div><label>SSN Last 4</label><input type="text" name="ssn_last4" value="{{emp.ssn_last4 if emp else""}}" maxlength="4"></div>
+<div style="grid-column:span 2"><label>Email</label><input type="email" name="email" value="{{emp.email if emp else""}}"></div>
+<div><label>Phone</label><input type="tel" name="phone" value="{{emp.phone if emp else""}}"></div>
+<div style="grid-column:span 3"><label>Address</label><input type="text" name="address" value="{{emp.address if emp else""}}"></div>
+<div><label>Hire Date</label><input type="date" name="hire_date" value="{{emp.hire_date if emp else""}}"></div>
+<div><label>Status</label><select name="status"><option{%if not emp or emp.status=="Active"%} selected{%endif%}>Active</option><option{%if emp and emp.status=="Inactive"%} selected{%endif%}>Inactive</option><option{%if emp and emp.status=="Terminated"%} selected{%endif%}>Terminated</option></select></div>
+</div></div>
+<div class="card"><h2 style="margin-top:0">Pay Info</h2><div class="grid grid-3">
+<div><label>Employment Type</label><select name="employment_type"><option{%if not emp or emp.employment_type=="Full-Time"%} selected{%endif%}>Full-Time</option><option{%if emp and emp.employment_type=="Part-Time"%} selected{%endif%}>Part-Time</option><option{%if emp and emp.employment_type=="Contractor"%} selected{%endif%}>Contractor</option></select></div>
+<div><label>Pay Type</label><select name="pay_type" id="pay_type"><option value="Hourly"{%if not emp or emp.pay_type=="Hourly"%} selected{%endif%}>Hourly</option><option value="Salary"{%if emp and emp.pay_type=="Salary"%} selected{%endif%}>Salary</option></select></div>
+<div><label>Pay Rate ($)</label><input type="number" name="pay_rate" step="0.01" value="{{emp.pay_rate if emp else""}}"></div>
+<div><label>Pay Schedule</label><select name="pay_schedule"><option{%if not emp or emp.pay_schedule=="Biweekly"%} selected{%endif%}>Biweekly</option><option{%if emp and emp.pay_schedule=="Weekly"%} selected{%endif%}>Weekly</option><option{%if emp and emp.pay_schedule=="Semimonthly"%} selected{%endif%}>Semimonthly</option><option{%if emp and emp.pay_schedule=="Monthly"%} selected{%endif%}>Monthly</option></select></div>
+<div><label>State</label><select name="state"><option value="GA"{%if not emp or emp.state=="GA"%} selected{%endif%}>Georgia</option><option value="FL"{%if emp and emp.state=="FL"%} selected{%endif%}>Florida</option><option value="TX"{%if emp and emp.state=="TX"%} selected{%endif%}>Texas</option><option value="CA"{%if emp and emp.state=="CA"%} selected{%endif%}>California</option><option value="NY"{%if emp and emp.state=="NY"%} selected{%endif%}>New York</option><option value="NC"{%if emp and emp.state=="NC"%} selected{%endif%}>North Carolina</option></select></div>
+</div></div>
+<div class="card"><h2 style="margin-top:0">Tax Withholding (W-4)</h2><div class="grid grid-3">
+<div><label>Federal Filing Status</label><select name="federal_filing_status"><option{%if not emp or emp.federal_filing_status=="Single"%} selected{%endif%}>Single</option><option value="Married"{%if emp and emp.federal_filing_status=="Married"%} selected{%endif%}>Married</option><option value="Married Filing Separately"{%if emp and emp.federal_filing_status=="Married Filing Separately"%} selected{%endif%}>MFS</option></select></div>
+<div><label>Allowances</label><input type="number" name="federal_allowances" value="{{emp.federal_allowances if emp else 0}}" min="0"></div>
+<div><label>Extra Federal ($)</label><input type="number" name="additional_federal_withholding" step="0.01" value="{{emp.additional_federal_withholding if emp else 0}}"></div>
+<div><label>Extra State ($)</label><input type="number" name="additional_state_withholding" step="0.01" value="{{emp.additional_state_withholding if emp else 0}}"></div>
+</div></div>
+<div class="card"><h2 style="margin-top:0">Payment Method</h2><div class="grid grid-3">
+<div><label>Method</label><select name="payment_method"><option{%if not emp or emp.payment_method=="Direct Deposit"%} selected{%endif%}>Direct Deposit</option><option{%if emp and emp.payment_method=="Check"%} selected{%endif%}>Check</option><option{%if emp and emp.payment_method=="Cash"%} selected{%endif%}>Cash</option></select></div>
+<div><label>Bank Name</label><input type="text" name="bank_name" value="{{emp.bank_name if emp else""}}"></div>
+<div><label>Account Last 4</label><input type="text" name="account_last4" value="{{emp.account_last4 if emp else""}}" maxlength="4"></div>
+<div style="grid-column:span 3"><label>Notes</label><textarea name="notes">{{emp.notes if emp else""}}</textarea></div>
+<div style="display:flex;gap:8px"><button type="submit" style="font-size:15px;padding:13px 24px">Save Employee</button><a href="/admin/payroll/client/{{client.id}}" class="btn" style="background:#f1f5f9;color:#0f172a">Cancel</a></div>
+</div></div>
+</div></form>
+{%endblock%}""", client=client, emp=emp)
+
+@app.route("/admin/payroll/run/new", methods=["GET","POST"])
+@login_required
+@admin_required
+def admin_payroll_run_new():
+    ensure_payroll_tables()
+    client_id = request.args.get("client_id") or request.form.get("client_id")
+    clients = query_db("SELECT id,name FROM clients WHERE status='Active' ORDER BY name")
+    if request.method == "POST" and request.form.get("action") == "process":
+        client_id = request.form.get("client_id")
+        pay_period_start = request.form.get("pay_period_start")
+        pay_period_end = request.form.get("pay_period_end")
+        pay_date = request.form.get("pay_date")
+        pay_schedule = request.form.get("pay_schedule") or "Biweekly"
+        # Create pay run
+        run_id = execute_db("INSERT INTO payroll_runs(client_id,pay_period_start,pay_period_end,pay_date,pay_schedule,status,created_by) VALUES (?,?,?,?,?,'Processing',?)",
+                           (client_id, pay_period_start, pay_period_end, pay_date, pay_schedule, current_user.name))
+        employees = query_db("SELECT * FROM payroll_employees WHERE client_id=? AND status='Active'", (client_id,))
+        total_gross = total_net = total_taxes = 0
+        for emp in employees:
+            hours = money(request.form.get(f"hours_{emp['id']}") or 0)
+            overtime = money(request.form.get(f"overtime_{emp['id']}") or 0)
+            bonus = money(request.form.get(f"bonus_{emp['id']}") or 0)
+            other_deductions = money(request.form.get(f"deductions_{emp['id']}") or 0)
+            # Calculate gross pay
+            if emp["pay_type"] == "Salary":
+                periods = {"Weekly":52,"Biweekly":26,"Semimonthly":24,"Monthly":12}
+                gross = round(emp["pay_rate"] / periods.get(pay_schedule, 26), 2) + bonus
+            else:
+                regular_pay = hours * emp["pay_rate"]
+                overtime_pay = overtime * emp["pay_rate"] * 1.5
+                gross = round(regular_pay + overtime_pay + bonus, 2)
+            # Calculate taxes
+            taxes = calculate_payroll_taxes(
+                gross, pay_schedule,
+                emp["federal_filing_status"], emp["federal_allowances"],
+                emp["state"], emp["additional_federal_withholding"],
+                emp["additional_state_withholding"]
+            )
+            net = round(gross - taxes["total"] - other_deductions, 2)
+            # YTD totals
+            year = pay_date[:4] if pay_date else str(datetime.now().year)
+            ytd = query_db("""SELECT COALESCE(SUM(e.gross_pay),0) gross, COALESCE(SUM(e.federal_income_tax),0) fed,
+                              COALESCE(SUM(e.social_security),0) ss, COALESCE(SUM(e.medicare),0) med,
+                              COALESCE(SUM(e.state_income_tax),0) state
+                              FROM payroll_entries e JOIN payroll_runs r ON r.id=e.run_id
+                              WHERE e.employee_id=? AND substr(r.pay_date,1,4)=? AND r.status='Completed'""",
+                           (emp["id"], year), one=True)
+            execute_db("""INSERT INTO payroll_entries(run_id,client_id,employee_id,hours_worked,overtime_hours,
+                         gross_pay,federal_income_tax,social_security,medicare,state_income_tax,
+                         other_deductions,net_pay,ytd_gross,ytd_federal,ytd_ss,ytd_medicare,ytd_state)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (run_id, client_id, emp["id"], hours, overtime, gross,
+                       taxes["federal"], taxes["social_security"], taxes["medicare"],
+                       taxes["state"], other_deductions, net,
+                       money(ytd["gross"]) + gross, money(ytd["fed"]) + taxes["federal"],
+                       money(ytd["ss"]) + taxes["social_security"],
+                       money(ytd["med"]) + taxes["medicare"],
+                       money(ytd["state"]) + taxes["state"]))
+            total_gross += gross
+            total_taxes += taxes["total"]
+            total_net += net
+        execute_db("UPDATE payroll_runs SET status='Completed',total_gross=?,total_net=?,total_taxes=? WHERE id=?",
+                  (round(total_gross,2), round(total_net,2), round(total_taxes,2), run_id))
+        flash(f"Payroll processed! Total gross: ${total_gross:,.2f} | Net pay: ${total_net:,.2f}", "success")
+        return redirect(url_for("admin_payroll_run_view", run_id=run_id))
+    # GET - show form
+    employees = []
+    if client_id:
+        employees = query_db("SELECT * FROM payroll_employees WHERE client_id=? AND status='Active' ORDER BY last_name", (client_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/admin/payroll" style="color:#475569;font-size:13px">← Payroll</a></div>
+<h1>▶️ Run Payroll</h1>
+<form method="POST">
+<input type="hidden" name="action" value="process">
+<div class="card"><h2 style="margin-top:0">Pay Run Details</h2><div class="grid grid-3">
+<div><label>Client</label><select name="client_id" required onchange="this.form.submit()">
+<option value="">-- Select Client --</option>
+{%for c in clients%}<option value="{{c.id}}"{%if c.id|string==client_id|string%} selected{%endif%}>{{c.name}}</option>{%endfor%}
+</select></div>
+<div><label>Pay Period Start</label><input type="date" name="pay_period_start" required></div>
+<div><label>Pay Period End</label><input type="date" name="pay_period_end" required></div>
+<div><label>Pay Date</label><input type="date" name="pay_date" required></div>
+<div><label>Pay Schedule</label><select name="pay_schedule"><option>Biweekly</option><option>Weekly</option><option>Semimonthly</option><option>Monthly</option></select></div>
+</div></div>
+{%if employees%}
+<div class="card"><h2 style="margin-top:0">{{employees|length}} Employee{{"s"if employees|length!=1}}</h2>
+<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Pay Type</th><th>Rate</th><th>Reg Hours</th><th>OT Hours</th><th>Bonus</th><th>Deductions</th><th>Est. Gross</th></tr></thead><tbody>
+{%for e in employees%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong></td>
+<td style="font-size:12px">{{e.pay_type}}</td>
+<td style="font-size:12px">${{"%.2f"|format(e.pay_rate|float)}}{%if e.pay_type=="Hourly"%}/hr{%endif%}</td>
+<td>{%if e.pay_type=="Hourly"%}<input type="number" name="hours_{{e.id}}" step="0.5" value="80" style="width:70px;padding:6px" min="0">{%else%}<span style="color:#475569;font-size:12px">Salary</span><input type="hidden" name="hours_{{e.id}}" value="0">{%endif%}</td>
+<td><input type="number" name="overtime_{{e.id}}" step="0.5" value="0" style="width:60px;padding:6px" min="0"></td>
+<td><input type="number" name="bonus_{{e.id}}" step="0.01" value="0" style="width:80px;padding:6px" min="0" placeholder="0.00"></td>
+<td><input type="number" name="deductions_{{e.id}}" step="0.01" value="0" style="width:80px;padding:6px" min="0" placeholder="0.00"></td>
+<td style="font-weight:900;color:#11823b" id="gross_{{e.id}}">--</td>
+</tr>{%endfor%}
+</tbody></table></div>
+<div style="margin-top:16px"><button type="submit" style="font-size:16px;padding:14px 28px;background:#0b5f2a">Process Payroll ▶️</button></div>
+</div>
+{%elif client_id%}<div class="card"><p style="color:#475569;text-align:center;padding:20px">No active employees found for this client. <a href="/admin/payroll/client/{{client_id}}" style="color:#11823b">Add employees first →</a></p></div>
+{%endif%}
+</form>
+{%endblock%}""", clients=clients, employees=employees, client_id=client_id)
+
+@app.route("/admin/payroll/run/<int:run_id>")
+@login_required
+@admin_required
+def admin_payroll_run_view(run_id):
+    ensure_payroll_tables()
+    run = query_db("SELECT r.*,c.name client_name FROM payroll_runs r LEFT JOIN clients c ON c.id=r.client_id WHERE r.id=?", (run_id,), one=True)
+    if not run: abort(404)
+    entries = query_db("""SELECT e.*,emp.first_name,emp.last_name,emp.pay_type,emp.payment_method,emp.bank_name,emp.account_last4
+                          FROM payroll_entries e
+                          LEFT JOIN payroll_employees emp ON emp.id=e.employee_id
+                          WHERE e.run_id=? ORDER BY emp.last_name,emp.first_name""", (run_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><a href="/admin/payroll/client/{{run.client_id}}" style="color:#475569;font-size:13px">← {{run.client_name}} Payroll</a></div>
+<h1>💼 Pay Run — {{run.pay_period_start}} to {{run.pay_period_end}}</h1>
+<div style="display:flex;gap:10px;margin-bottom:16px">
+<span class="pill">{{run.status}}</span>
+<span style="font-size:13px;color:#475569">Pay Date: <strong>{{run.pay_date}}</strong></span>
+<a href="/admin/payroll/run/{{run.id}}/paystubs" class="btn" style="padding:6px 14px;font-size:13px;background:#0b5f2a">🖨️ Print All Pay Stubs</a>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+<div class="metric"><span>Total Gross</span><strong>${{"%.2f"|format(run.total_gross|float)}}</strong></div>
+<div class="metric"><span>Total Taxes</span><strong style="color:#b91c1c">${{"%.2f"|format(run.total_taxes|float)}}</strong></div>
+<div class="metric"><span>Total Net Pay</span><strong style="color:#11823b">${{"%.2f"|format(run.total_net|float)}}</strong></div>
+</div>
+<div class="card">
+<h2 style="margin-top:0">Pay Detail</h2>
+<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Gross</th><th>Fed Tax</th><th>SS</th><th>Medicare</th><th>State</th><th>Deductions</th><th>Net Pay</th><th>Method</th><th></th></tr></thead><tbody>
+{%for e in entries%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong>{%if e.hours_worked%}<br><span style="font-size:11px;color:#475569">{{e.hours_worked}}hrs{%if e.overtime_hours%}+{{e.overtime_hours}}OT{%endif%}</span>{%endif%}</td>
+<td style="font-weight:900">${{"%.2f"|format(e.gross_pay|float)}}</td>
+<td style="color:#b91c1c;font-size:12px">${{"%.2f"|format(e.federal_income_tax|float)}}</td>
+<td style="color:#b91c1c;font-size:12px">${{"%.2f"|format(e.social_security|float)}}</td>
+<td style="color:#b91c1c;font-size:12px">${{"%.2f"|format(e.medicare|float)}}</td>
+<td style="color:#b91c1c;font-size:12px">${{"%.2f"|format(e.state_income_tax|float)}}</td>
+<td style="font-size:12px">${{"%.2f"|format(e.other_deductions|float)}}</td>
+<td style="font-weight:900;color:#11823b;font-size:15px">${{"%.2f"|format(e.net_pay|float)}}</td>
+<td style="font-size:11px">{{e.payment_method}}{%if e.account_last4%}<br>****{{e.account_last4}}{%endif%}</td>
+<td><a href="/admin/payroll/paystub/{{e.id}}" target="_blank" class="btn" style="padding:4px 8px;font-size:11px">Stub</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%endblock%}""", run=run, entries=entries)
+
+@app.route("/admin/payroll/paystub/<int:entry_id>")
+@login_required
+def admin_payroll_paystub(entry_id):
+    ensure_payroll_tables()
+    entry = query_db("""SELECT e.*,emp.first_name,emp.last_name,emp.address,emp.pay_type,
+                        emp.payment_method,emp.bank_name,emp.account_last4,
+                        r.pay_period_start,r.pay_period_end,r.pay_date,
+                        c.name company_name,c.address company_address,c.ein company_ein
+                        FROM payroll_entries e
+                        LEFT JOIN payroll_employees emp ON emp.id=e.employee_id
+                        LEFT JOIN payroll_runs r ON r.id=e.run_id
+                        LEFT JOIN clients c ON c.id=e.client_id
+                        WHERE e.id=?""", (entry_id,), one=True)
+    if not entry: abort(404)
+    if current_user.role != "admin" and current_user.client_id != entry["client_id"]: abort(403)
+    return render_template_string("""<!doctype html><html><head><meta charset="utf-8"><title>Pay Stub</title>
+<style>body{font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#111}
+.header{background:#11823b;color:white;padding:20px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;align-items:center}
+.section{border:1px solid #e5e7eb;padding:16px;margin-top:-1px}
+.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:14px}
+.row:last-child{border-bottom:none}
+.total-row{display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:900}
+.no-print{background:#11823b;color:white;padding:10px 20px;margin:-20px -20px 20px;display:flex;justify-content:space-between}
+@media print{.no-print{display:none}}
+</style></head><body>
+<div class="no-print"><span style="font-weight:900">Pay Stub</span><button onclick="window.print()" style="background:white;color:#11823b;border:0;border-radius:8px;padding:6px 16px;font-weight:900;cursor:pointer">🖨️ Print</button></div>
+<div class="header">
+<div><div style="font-size:20px;font-weight:900">Pinnacle Performance Tax</div><div style="font-size:12px;opacity:.85">Pay Statement</div></div>
+<div style="text-align:right;font-size:13px"><div>Pay Date: <strong>{{entry.pay_date}}</strong></div><div>Period: {{entry.pay_period_start}} — {{entry.pay_period_end}}</div></div>
+</div>
+<div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div><div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#6b7280;margin-bottom:6px">Employer</div><div style="font-weight:900">{{entry.company_name or"--"}}</div><div style="font-size:13px;color:#475569">{{entry.company_address or""}}</div>{%if entry.company_ein%}<div style="font-size:12px;color:#475569">EIN: {{entry.company_ein}}</div>{%endif%}</div>
+<div><div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#6b7280;margin-bottom:6px">Employee</div><div style="font-weight:900;font-size:16px">{{entry.first_name}} {{entry.last_name}}</div><div style="font-size:13px;color:#475569">{{entry.address or""}}</div><div style="font-size:12px;color:#475569">{{entry.payment_method}}{%if entry.account_last4%} ****{{entry.account_last4}}{%endif%}</div></div>
+</div>
+<div class="section"><div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#6b7280;margin-bottom:10px">Earnings</div>
+<div class="row"><span>Regular Pay{%if entry.hours_worked%} ({{entry.hours_worked}} hrs){%endif%}</span><span>${{"%.2f"|format(entry.gross_pay|float)}}</span></div>
+{%if entry.overtime_hours%}<div class="row"><span>Overtime ({{entry.overtime_hours}} hrs)</span><span>included</span></div>{%endif%}
+<div class="total-row" style="border-top:2px solid #e5e7eb;margin-top:4px"><span>Gross Pay</span><span>${{"%.2f"|format(entry.gross_pay|float)}}</span></div>
+</div>
+<div class="section"><div style="font-size:11px;font-weight:900;text-transform:uppercase;color:#6b7280;margin-bottom:10px">Deductions</div>
+<div class="row"><span>Federal Income Tax</span><span style="color:#b91c1c">-${{"%.2f"|format(entry.federal_income_tax|float)}}</span></div>
+<div class="row"><span>Social Security (6.2%)</span><span style="color:#b91c1c">-${{"%.2f"|format(entry.social_security|float)}}</span></div>
+<div class="row"><span>Medicare (1.45%)</span><span style="color:#b91c1c">-${{"%.2f"|format(entry.medicare|float)}}</span></div>
+<div class="row"><span>State Income Tax</span><span style="color:#b91c1c">-${{"%.2f"|format(entry.state_income_tax|float)}}</span></div>
+{%if entry.other_deductions%}<div class="row"><span>Other Deductions</span><span style="color:#b91c1c">-${{"%.2f"|format(entry.other_deductions|float)}}</span></div>{%endif%}
+<div class="total-row" style="border-top:2px solid #e5e7eb;margin-top:4px;color:#b91c1c"><span>Total Deductions</span><span>-${{("%.2f"|format((entry.federal_income_tax+entry.social_security+entry.medicare+entry.state_income_tax+entry.other_deductions)|float))}}</span></div>
+</div>
+<div class="section" style="background:#f0fdf4"><div class="total-row" style="font-size:20px;color:#0b5f2a"><span>NET PAY</span><span>${{"%.2f"|format(entry.net_pay|float)}}</span></div></div>
+<div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:12px;color:#475569">
+<div><div style="font-weight:900;margin-bottom:6px">Year-to-Date</div>
+<div class="row"><span>YTD Gross</span><span>${{"%.2f"|format(entry.ytd_gross|float)}}</span></div>
+<div class="row"><span>YTD Federal Tax</span><span>${{"%.2f"|format(entry.ytd_federal|float)}}</span></div>
+<div class="row"><span>YTD Social Security</span><span>${{"%.2f"|format(entry.ytd_ss|float)}}</span></div>
+<div class="row"><span>YTD Medicare</span><span>${{"%.2f"|format(entry.ytd_medicare|float)}}</span></div>
+<div class="row"><span>YTD State Tax</span><span>${{"%.2f"|format(entry.ytd_state|float)}}</span></div>
+</div></div>
+</body></html>""", entry=entry)
+
+@app.route("/admin/payroll/reports")
+@login_required
+@admin_required
+def admin_payroll_reports():
+    ensure_payroll_tables()
+    client_id = request.args.get("client_id")
+    year = request.args.get("year") or str(datetime.now().year)
+    clients = query_db("SELECT id,name FROM clients ORDER BY name")
+    summary = []
+    if client_id:
+        summary = query_db("""SELECT emp.first_name,emp.last_name,
+                              COALESCE(SUM(e.gross_pay),0) ytd_gross,
+                              COALESCE(SUM(e.federal_income_tax),0) ytd_federal,
+                              COALESCE(SUM(e.social_security),0) ytd_ss,
+                              COALESCE(SUM(e.medicare),0) ytd_medicare,
+                              COALESCE(SUM(e.state_income_tax),0) ytd_state,
+                              COALESCE(SUM(e.net_pay),0) ytd_net
+                              FROM payroll_entries e
+                              JOIN payroll_employees emp ON emp.id=e.employee_id
+                              JOIN payroll_runs r ON r.id=e.run_id
+                              WHERE e.client_id=? AND substr(r.pay_date,1,4)=? AND r.status='Completed'
+                              GROUP BY emp.id ORDER BY emp.last_name""", (client_id, year))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>📊 Payroll Reports</h1>
+<div class="card"><form method="GET" class="grid grid-3">
+<div><label>Client</label><select name="client_id" onchange="this.form.submit()"><option value="">-- Select --</option>{%for c in clients%}<option value="{{c.id}}"{%if c.id|string==client_id%} selected{%endif%}>{{c.name}}</option>{%endfor%}</select></div>
+<div><label>Year</label><select name="year" onchange="this.form.submit()"><option value="2024"{%if year=="2024"%}selected{%endif%}>2024</option><option value="2025"{%if year=="2025"%}selected{%endif%}>2025</option><option value="2026"{%if year=="2026"%}selected{%endif%}>2026</option></select></div>
+</form></div>
+{%if summary%}
+<div class="card"><h2 style="margin-top:0">{{year}} YTD Summary — W-2 Prep</h2>
+<div class="table-wrap"><table><thead><tr><th>Employee</th><th>YTD Gross</th><th>Fed Tax</th><th>Soc Sec</th><th>Medicare</th><th>State Tax</th><th>YTD Net</th></tr></thead><tbody>
+{%for e in summary%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong></td>
+<td style="font-weight:900">${{"%.2f"|format(e.ytd_gross|float)}}</td>
+<td>${{"%.2f"|format(e.ytd_federal|float)}}</td>
+<td>${{"%.2f"|format(e.ytd_ss|float)}}</td>
+<td>${{"%.2f"|format(e.ytd_medicare|float)}}</td>
+<td>${{"%.2f"|format(e.ytd_state|float)}}</td>
+<td style="font-weight:900;color:#11823b">${{"%.2f"|format(e.ytd_net|float)}}</td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%elif client_id%}<div class="card"><p style="color:#475569;text-align:center;padding:20px">No payroll data found for {{year}}.</p></div>
+{%endif%}
+{%endblock%}""", clients=clients, summary=summary, client_id=client_id, year=year)
+
+@app.route("/my/payroll")
+@login_required
+@client_required
+def my_payroll():
+    ensure_payroll_tables()
+    cid = current_user.client_id
+    employees = query_db("SELECT * FROM payroll_employees WHERE client_id=? AND status='Active' ORDER BY last_name", (cid,))
+    recent_runs = query_db("SELECT * FROM payroll_runs WHERE client_id=? AND status='Completed' ORDER BY id DESC LIMIT 5", (cid,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>💼 Payroll</h1>
+<p class="sub">Your employee payroll history and pay stubs.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+<div class="metric"><span>Active Employees</span><strong>{{employees|length}}</strong></div>
+<div class="metric"><span>Pay Runs</span><strong>{{recent_runs|length}}</strong></div>
+</div>
+{%if recent_runs%}
+<div class="card"><h2 style="margin-top:0">Recent Pay Runs</h2>
+<div class="table-wrap"><table><thead><tr><th>Pay Period</th><th>Pay Date</th><th>Gross</th><th>Net</th><th></th></tr></thead><tbody>
+{%for r in recent_runs%}<tr>
+<td style="font-size:12px">{{r.pay_period_start}} — {{r.pay_period_end}}</td>
+<td style="font-size:12px">{{r.pay_date}}</td>
+<td style="font-weight:900">${{"%.2f"|format(r.total_gross|float)}}</td>
+<td style="font-weight:900;color:#11823b">${{"%.2f"|format(r.total_net|float)}}</td>
+<td><a href="/my/payroll/run/{{r.id}}" class="btn" style="padding:4px 8px;font-size:11px">View</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%else%}<div class="card"><p style="color:#475569;text-align:center;padding:30px">No payroll runs yet.</p></div>{%endif%}
+{%endblock%}""", employees=employees, recent_runs=recent_runs)
+
+@app.route("/my/payroll/run/<int:run_id>")
+@login_required
+@client_required
+def my_payroll_run(run_id):
+    ensure_payroll_tables()
+    cid = current_user.client_id
+    run = query_db("SELECT * FROM payroll_runs WHERE id=? AND client_id=?", (run_id, cid), one=True)
+    if not run: abort(404)
+    entries = query_db("""SELECT e.*,emp.first_name,emp.last_name FROM payroll_entries e
+                          LEFT JOIN payroll_employees emp ON emp.id=e.employee_id
+                          WHERE e.run_id=? ORDER BY emp.last_name""", (run_id,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<a href="/my/payroll" style="color:#475569;font-size:13px">← Payroll</a>
+<h1>Pay Run — {{run.pay_period_start}} to {{run.pay_period_end}}</h1>
+<p class="sub">Pay Date: <strong>{{run.pay_date}}</strong></p>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Gross</th><th>Taxes</th><th>Net Pay</th><th>Pay Stub</th></tr></thead><tbody>
+{%for e in entries%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong></td>
+<td style="font-weight:900">${{"%.2f"|format(e.gross_pay|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format((e.federal_income_tax+e.social_security+e.medicare+e.state_income_tax)|float)}}</td>
+<td style="font-weight:900;color:#11823b;font-size:15px">${{"%.2f"|format(e.net_pay|float)}}</td>
+<td><a href="/admin/payroll/paystub/{{e.id}}" target="_blank" class="btn" style="padding:4px 8px;font-size:11px">🖨️ Stub</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%endblock%}""", run=run, entries=entries)
+
+# ============================================================
+# END PPT PAYROLL SYSTEM
+# ============================================================
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

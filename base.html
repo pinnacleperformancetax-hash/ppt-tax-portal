@@ -10,7 +10,7 @@
     body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
     a{text-decoration:none;color:inherit}
     .layout{display:flex;min-height:100vh}
-    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow:auto}
+    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow-y:scroll;overflow-x:hidden}
     .brand{font-size:24px;font-weight:900;line-height:1.05;margin-bottom:18px}
     .contact{font-size:12px;line-height:1.4;margin-bottom:24px;opacity:.95}
     nav a{display:block;padding:11px 12px;border-radius:10px;font-weight:800;margin:3px 0}
@@ -48,7 +48,7 @@
 <body>
 {% if request.path != '/login' %}
 <div class="layout">
-  <aside style="background:#11823b !important; background-image:none !important; color:white !important; width:260px; min-height:100vh; padding:24px 18px; box-sizing:border-box;">
+  <aside style="background:#11823b !important; background-image:none !important; color:white !important; width:260px; height:100vh; padding:24px 18px; box-sizing:border-box; overflow-y:scroll; position:sticky; top:0;">
     <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
     <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
     <nav>

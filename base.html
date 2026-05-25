@@ -10,7 +10,7 @@
     body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
     a{text-decoration:none;color:inherit}
     .layout{display:flex;min-height:100vh}
-    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;scroll-behavior:auto}
+    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow:auto}
     .brand{font-size:24px;font-weight:900;line-height:1.05;margin-bottom:18px}
     .contact{font-size:12px;line-height:1.4;margin-bottom:24px;opacity:.95}
     nav a{display:block;padding:11px 12px;border-radius:10px;font-weight:800;margin:3px 0}
@@ -55,9 +55,7 @@
       {% if current_user.is_authenticated and current_user.role == 'admin' %}
         <div class="nav-section">Main</div>
         <a href="/dashboard">📊 Dashboard</a>
-        <a href="/command-center" style="background:rgba(255,255,255,.15);border-radius:10px">🎯 Command Center</a>
         <a href="/service-entry">⚡ Quick Entry</a>
-        <a href="/admin/engagement-letters" style="background:rgba(245,158,11,.3);border-radius:10px">✍️ E-Signatures</a>
 
         <div class="nav-section">Clients</div>
         <a href="/clients">👥 Clients</a>
@@ -83,14 +81,16 @@
         <a href="/admin/documents/upload">⬆️ Upload to Client</a>
         <a href="/messages">✉️ Messages</a>
         <a href="/appointments">📅 Appointments</a>
+        <a href="/admin/engagement-letters">✍️ E-Signatures</a>
         <a href="/admin/announcements">📢 Announcements</a>
+
+        <div class="nav-section">Payroll</div>
+        <a href="/admin/payroll">💼 Payroll Dashboard</a>
+        <a href="/admin/payroll/run/new">▶️ Run Payroll</a>
+        <a href="/admin/payroll/reports">📊 Payroll Reports</a>
 
         <div class="nav-section">Tools</div>
         <a href="/workflow">⚙️ Workflow Hub</a>
-        <a href="/admin/revenue-dashboard">📊 Revenue</a>
-        <a href="/admin/tax-deadlines">📅 Tax Deadlines</a>
-        <a href="/admin/invoice-templates">📋 Invoice Templates</a>
-        <a href="/admin/service-packages">📦 Service Packages</a>
         <a href="/admin/referrals">🤝 Referrals</a>
         <a href="/notifications/list">🔔 Notifications</a>
         <a href="/settings">🔧 Users</a>
@@ -110,8 +110,8 @@
         <a href="/my/sign-documents" style="background:rgba(245,158,11,.25);border-radius:10px">✍️ Sign Documents</a>
         <a href="/my/tax-organizer">✅ Tax Organizer</a>
         <a href="/my/savings-planner">💡 Savings Planner</a>
+        <a href="/my/payroll">💼 My Payroll</a>
         <a href="/my/tax-estimate">🧮 Tax Estimate</a>
-        <a href="/my/tax-deadlines">📅 Tax Deadlines</a>
         <a href="/my/ai-advisor">🤖 AI Tax Advisor</a>
         <a href="/my/health-score">📈 Health Score</a>
         <a href="/my/year-end">📊 Year-End Summary</a>
@@ -132,40 +132,5 @@
   {% block login_content %}{% endblock %}
 {% endif %}
 
-<script>
-// Run immediately - set scroll before browser paints
-var _sb = document.querySelector('aside');
-if(_sb){
-  var _pos = localStorage.getItem('ppt_sb');
-  if(_pos){ _sb.scrollTop = parseInt(_pos); }
-}
-</script>
-<script>
-(function(){
-  var sb = document.querySelector('aside');
-  if(!sb) return;
-  // Highlight active
-  var path = window.location.pathname;
-  sb.querySelectorAll('a').forEach(function(a){
-    if(a.getAttribute('href') === path){
-      a.style.background = 'rgba(255,255,255,.22)';
-      a.style.borderLeft = '3px solid rgba(255,255,255,.8)';
-    }
-  });
-  // Save on scroll
-  sb.addEventListener('scroll', function(){
-    localStorage.setItem('ppt_sb', sb.scrollTop);
-  });
-  // Save on click
-  sb.querySelectorAll('a').forEach(function(a){
-    a.addEventListener('mousedown', function(){
-      localStorage.setItem('ppt_sb', sb.scrollTop);
-    });
-  });
-  // Restore again after full load just in case
-  var pos = localStorage.getItem('ppt_sb');
-  if(pos) sb.scrollTop = parseInt(pos);
-})();
-</script>
 </body>
 </html>

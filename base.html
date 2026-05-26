@@ -55,7 +55,15 @@
       {% if current_user.is_authenticated and current_user.role == 'admin' %}
         <div class="nav-section">Main</div>
         <a href="/dashboard">📊 Dashboard</a>
+        <a href="/command-center" style="background:rgba(255,255,255,.15);border-radius:10px">🎯 Command Center</a>
         <a href="/service-entry">⚡ Quick Entry</a>
+        <a href="/admin/engagement-letters" style="background:rgba(245,158,11,.3);border-radius:10px">✍️ E-Signatures</a>
+
+        <div class="nav-section">💼 Payroll</div>
+        <a href="/admin/payroll">💼 Payroll Dashboard</a>
+        <a href="/admin/payroll/run/new">▶️ Run Payroll</a>
+        <a href="/admin/payroll/reports">📊 Payroll Reports</a>
+        <a href="/admin/payroll/w2-prep">📋 W-2 Prep</a>
 
         <div class="nav-section">Clients</div>
         <a href="/clients">👥 Clients</a>
@@ -83,11 +91,6 @@
         <a href="/appointments">📅 Appointments</a>
         <a href="/admin/engagement-letters">✍️ E-Signatures</a>
         <a href="/admin/announcements">📢 Announcements</a>
-
-        <div class="nav-section">Payroll</div>
-        <a href="/admin/payroll">💼 Payroll Dashboard</a>
-        <a href="/admin/payroll/run/new">▶️ Run Payroll</a>
-        <a href="/admin/payroll/reports">📊 Payroll Reports</a>
 
         <div class="nav-section">Tools</div>
         <a href="/workflow">⚙️ Workflow Hub</a>

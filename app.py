@@ -5177,60 +5177,129 @@ def calculate_payroll_taxes(gross, pay_schedule, filing_status="Single", allowan
 
 # ── ADMIN PAYROLL PAGES ──────────────────────────────────────
 
-@app.route("/admin/payroll")
+@app.route("/admin/payroll", methods=["GET","POST"])
 @login_required
 @admin_required
 def admin_payroll():
     ensure_payroll_tables()
     clients = query_db("SELECT id,name FROM clients WHERE status='Active' ORDER BY name")
-    total_employees = query_db("SELECT COUNT(*) c FROM payroll_employees WHERE status='Active'", one=True)["c"]
-    total_runs = query_db("SELECT COUNT(*) c FROM payroll_runs", one=True)["c"]
+    
+    # Handle add employee form
+    if request.method == "POST" and request.form.get("action") == "add_employee":
+        client_id = request.form.get("client_id")
+        execute_db("""INSERT INTO payroll_employees(first_name,last_name,email,phone,
+                     employment_type,pay_type,pay_rate,pay_schedule,
+                     federal_filing_status,federal_allowances,state,
+                     additional_federal_withholding,additional_state_withholding,
+                     payment_method,notes,status,client_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                  (request.form.get("first_name"), request.form.get("last_name"),
+                   request.form.get("email"), request.form.get("phone"),
+                   request.form.get("employment_type") or "Full-Time",
+                   request.form.get("pay_type") or "Hourly",
+                   money(request.form.get("pay_rate")),
+                   request.form.get("pay_schedule") or "Biweekly",
+                   request.form.get("federal_filing_status") or "Single",
+                   int(request.form.get("federal_allowances") or 0),
+                   request.form.get("state") or "GA",
+                   money(request.form.get("additional_federal_withholding")),
+                   money(request.form.get("additional_state_withholding")),
+                   request.form.get("payment_method") or "Direct Deposit",
+                   request.form.get("notes"), "Active", client_id))
+        flash(f"Employee {request.form.get('first_name')} {request.form.get('last_name')} added!", "success")
+        return redirect(url_for("admin_payroll"))
+
+    employees = query_db("""SELECT e.*,c.name client_name FROM payroll_employees e
+                            LEFT JOIN clients c ON c.id=e.client_id
+                            ORDER BY e.last_name,e.first_name""")
     recent_runs = query_db("""SELECT r.*,c.name client_name FROM payroll_runs r
                               LEFT JOIN clients c ON c.id=r.client_id
                               ORDER BY r.id DESC LIMIT 10""")
+    total_employees = len([e for e in employees if e["status"]=="Active"])
+    total_runs = len(recent_runs)
+
     return render_template_string("""{%extends"base.html"%}{%block content%}
-<h1>💼 Payroll</h1>
-<p class="sub">Manage employee payroll for all your clients.</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+<h1>💼 Payroll Dashboard</h1>
+<p class="sub">Manage employees and payroll for all clients — everything in one place.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
 <div class="metric"><span>Active Employees</span><strong>{{total_employees}}</strong></div>
-<div class="metric"><span>Total Pay Runs</span><strong>{{total_runs}}</strong></div>
+<div class="metric"><span>Pay Runs</span><strong>{{total_runs}}</strong></div>
 </div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+<a href="/admin/payroll/run/new" class="btn" style="padding:12px 20px;font-size:14px;background:#0b5f2a">▶️ Run Payroll</a>
+<a href="/admin/payroll/reports" class="btn" style="padding:12px 20px;font-size:14px;background:#f1f5f9;color:#0f172a">📊 Reports</a>
+<a href="/admin/payroll/w2-prep" class="btn" style="padding:12px 20px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 W-2 Prep</a>
+</div>
+
 <div class="card">
-<h2 style="margin-top:0">⚡ Quick Actions</h2>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
-<a href="/admin/payroll/employees" class="btn" style="text-align:center;padding:12px;font-size:14px">👤 All Employees</a>
-<a href="/admin/payroll/run/new" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#0b5f2a">▶️ Run Payroll</a>
-<a href="/admin/payroll/reports" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📊 Reports</a>
-<a href="/admin/payroll/w2-prep" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 W-2 Prep</a>
+<h2 style="margin-top:0">➕ Add New Employee</h2>
+<form method="POST">
+<input type="hidden" name="action" value="add_employee">
+<div class="grid grid-3">
+<div><label>Client / Employer</label><select name="client_id" required><option value="">-- Select Client --</option>{%for c in clients%}<option value="{{c.id}}">{{c.name}}</option>{%endfor%}</select></div>
+<div><label>First Name</label><input type="text" name="first_name" required placeholder="John"></div>
+<div><label>Last Name</label><input type="text" name="last_name" required placeholder="Smith"></div>
+<div><label>Email</label><input type="email" name="email" placeholder="john@example.com"></div>
+<div><label>Phone</label><input type="tel" name="phone" placeholder="478-555-0100"></div>
+<div><label>Employment Type</label><select name="employment_type"><option>Full-Time</option><option>Part-Time</option><option>Contractor</option></select></div>
+<div><label>Pay Type</label><select name="pay_type"><option value="Hourly">Hourly</option><option value="Salary">Salary</option></select></div>
+<div><label>Pay Rate ($)</label><input type="number" name="pay_rate" step="0.01" placeholder="15.00" required></div>
+<div><label>Pay Schedule</label><select name="pay_schedule"><option>Biweekly</option><option>Weekly</option><option>Semimonthly</option><option>Monthly</option></select></div>
+<div><label>Federal Filing Status</label><select name="federal_filing_status"><option>Single</option><option>Married</option></select></div>
+<div><label>Allowances</label><input type="number" name="federal_allowances" value="0" min="0"></div>
+<div><label>State</label><select name="state"><option value="GA">Georgia</option><option value="FL">Florida</option><option value="TX">Texas</option><option value="CA">California</option><option value="NY">New York</option><option value="NC">North Carolina</option></select></div>
+<div><label>Extra Fed Withholding ($)</label><input type="number" name="additional_federal_withholding" step="0.01" value="0"></div>
+<div><label>Extra State Withholding ($)</label><input type="number" name="additional_state_withholding" step="0.01" value="0"></div>
+<div><label>Payment Method</label><select name="payment_method"><option>Direct Deposit</option><option>Check</option><option>Cash</option></select></div>
+<div style="grid-column:span 3"><label>Notes</label><textarea name="notes" style="min-height:60px" placeholder="Optional notes about this employee"></textarea></div>
+<div><button type="submit" style="font-size:15px;padding:13px 24px">➕ Add Employee</button></div>
 </div>
+</form>
 </div>
+
 <div class="card">
-<h2 style="margin-top:0">Clients with Payroll</h2>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-{%for c in clients%}
-<a href="/admin/payroll/client/{{c.id}}" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f9fafb;color:#0f172a;border:1px solid #e5e7eb">
-{{c.name}}
-</a>
-{%endfor%}
+<h2 style="margin-top:0">👥 All Employees ({{employees|length}})</h2>
+{%if employees%}
+<div class="table-wrap"><table><thead><tr><th>Name</th><th>Client</th><th>Pay Type</th><th>Rate</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{%for e in employees%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong>{%if e.email%}<br><span style="font-size:11px;color:#475569">{{e.email}}</span>{%endif%}</td>
+<td style="font-size:12px">{{e.client_name or"--"}}</td>
+<td style="font-size:12px">{{e.pay_type}}</td>
+<td style="font-weight:900">${{"%.2f"|format(e.pay_rate|float)}}{%if e.pay_type=="Hourly"%}/hr{%else%}/yr{%endif%}</td>
+<td style="font-size:12px">{{e.pay_schedule}}</td>
+<td><span class="pill{%if e.status!="Active"%} warn{%endif%}">{{e.status}}</span></td>
+<td style="display:flex;gap:4px;flex-wrap:wrap">
+<a href="/admin/payroll/employee/{{e.id}}/edit" class="btn" style="padding:5px 10px;font-size:12px;background:#f1f5f9;color:#0f172a">✏️ Edit</a>
+<a href="/admin/payroll/run/new?client_id={{e.client_id}}" class="btn" style="padding:5px 10px;font-size:12px;background:#0b5f2a">▶️ Run</a>
+</td>
+</tr>{%endfor%}
+</tbody></table></div>
+{%else%}
+<p style="color:#475569;text-align:center;padding:30px">No employees yet. Add your first employee above.</p>
+{%endif%}
 </div>
-</div>
+
 {%if recent_runs%}
 <div class="card">
-<h2 style="margin-top:0">Recent Pay Runs</h2>
-<div class="table-wrap"><table><thead><tr><th>Client</th><th>Period</th><th>Pay Date</th><th>Gross</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
+<h2 style="margin-top:0">📋 Recent Pay Runs</h2>
+<div class="table-wrap"><table><thead><tr><th>Client</th><th>Period</th><th>Pay Date</th><th>Gross</th><th>Taxes</th><th>Net</th><th>Status</th><th></th></tr></thead><tbody>
 {%for r in recent_runs%}<tr>
 <td><strong>{{r.client_name or"--"}}</strong></td>
 <td style="font-size:12px">{{r.pay_period_start}} — {{r.pay_period_end}}</td>
 <td style="font-size:12px">{{r.pay_date}}</td>
 <td style="font-weight:900">${{"%.2f"|format(r.total_gross|float)}}</td>
+<td style="color:#b91c1c;font-size:12px">${{"%.2f"|format(r.total_taxes|float)}}</td>
 <td style="font-weight:900;color:#11823b">${{"%.2f"|format(r.total_net|float)}}</td>
-<td><span class="pill{%if r.status=='Draft'%} warn{%endif%}">{{r.status}}</span></td>
+<td><span class="pill{%if r.status=="Draft"%} warn{%endif%}">{{r.status}}</span></td>
 <td><a href="/admin/payroll/run/{{r.id}}" class="btn" style="padding:4px 8px;font-size:11px">View</a></td>
 </tr>{%endfor%}
 </tbody></table></div>
 </div>
 {%endif%}
-{%endblock%}""", clients=clients, total_employees=total_employees, total_runs=total_runs, recent_runs=recent_runs)
+
+{%endblock%}""", clients=clients, employees=employees, recent_runs=recent_runs,
+        total_employees=total_employees, total_runs=total_runs)
 
 @app.route("/admin/payroll/client/<int:client_id>")
 @login_required

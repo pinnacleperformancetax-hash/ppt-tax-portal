@@ -5610,6 +5610,78 @@ def admin_payroll_reports():
 {%endif%}
 {%endblock%}""", clients=clients, summary=summary, client_id=client_id, year=year)
 
+
+@app.route("/admin/payroll/employees")
+@login_required
+@admin_required
+def admin_payroll_employees():
+    ensure_payroll_tables()
+    employees = query_db("""SELECT e.*,c.name client_name FROM payroll_employees e
+                              LEFT JOIN clients c ON c.id=e.client_id
+                              ORDER BY e.last_name,e.first_name""")
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>All Employees</h1>
+<div class="card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>Client</th><th>Pay Type</th><th>Rate</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{%for e in employees%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong></td>
+<td style="font-size:12px">{{e.client_name or"--"}}</td>
+<td style="font-size:12px">{{e.pay_type}}</td>
+<td style="font-weight:900">${{"%.2f"|format(e.pay_rate|float)}}{%if e.pay_type=="Hourly"%}/hr{%endif%}</td>
+<td style="font-size:12px">{{e.pay_schedule}}</td>
+<td><span class="pill">{{e.status}}</span></td>
+<td><a href="/admin/payroll/employee/{{e.id}}/edit" class="btn" style="padding:4px 8px;font-size:11px">Edit</a></td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%endblock%}""", employees=employees)
+
+
+@app.route("/admin/payroll/w2-prep")
+@login_required
+@admin_required
+def admin_payroll_w2_prep():
+    ensure_payroll_tables()
+    year = request.args.get("year") or str(datetime.now().year)
+    summary = query_db("""SELECT emp.first_name,emp.last_name,emp.ssn_last4,
+                          emp.address,c.name company_name,c.ein company_ein,
+                          COALESCE(SUM(e.gross_pay),0) wages,
+                          COALESCE(SUM(e.federal_income_tax),0) federal_tax,
+                          COALESCE(SUM(e.social_security),0) ss_tax,
+                          COALESCE(SUM(e.medicare),0) medicare_tax,
+                          COALESCE(SUM(e.state_income_tax),0) state_tax
+                          FROM payroll_entries e
+                          JOIN payroll_employees emp ON emp.id=e.employee_id
+                          JOIN payroll_runs r ON r.id=e.run_id
+                          LEFT JOIN clients c ON c.id=e.client_id
+                          WHERE substr(r.pay_date,1,4)=? AND r.status='Completed'
+                          GROUP BY emp.id ORDER BY emp.last_name""", (year,))
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>W-2 Preparation — {{year}}</h1>
+<p class="sub">Year-end W-2 summary for all employees.</p>
+<div style="margin-bottom:16px"><form method="GET">
+<select name="year" onchange="this.form.submit()" style="padding:8px 12px;border-radius:10px;border:1px solid #cbd5d1">
+<option value="2024"{%if year=="2024"%} selected{%endif%}>2024</option>
+<option value="2025"{%if year=="2025"%} selected{%endif%}>2025</option>
+<option value="2026"{%if year=="2026"%} selected{%endif%}>2026</option>
+</select></form></div>
+{%if summary%}
+<div class="card"><h2 style="margin-top:0">{{summary|length}} Employees — {{year}}</h2>
+<div class="table-wrap"><table><thead><tr><th>Employee</th><th>SSN Last 4</th><th>Employer</th><th>Wages</th><th>Fed Tax</th><th>SS Tax</th><th>Medicare</th><th>State Tax</th></tr></thead><tbody>
+{%for e in summary%}<tr>
+<td><strong>{{e.first_name}} {{e.last_name}}</strong></td>
+<td style="font-size:12px">****{{e.ssn_last4 or"--"}}</td>
+<td style="font-size:12px">{{e.company_name or"--"}}</td>
+<td style="font-weight:900">${{"%.2f"|format(e.wages|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format(e.federal_tax|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format(e.ss_tax|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format(e.medicare_tax|float)}}</td>
+<td style="color:#b91c1c">${{"%.2f"|format(e.state_tax|float)}}</td>
+</tr>{%endfor%}
+</tbody></table></div></div>
+{%else%}
+<div class="card"><p style="color:#475569;text-align:center;padding:30px">No payroll data for {{year}}. Run payroll first.</p></div>
+{%endif%}
+{%endblock%}""", summary=summary, year=year)
+
 @app.route("/my/payroll")
 @login_required
 @client_required

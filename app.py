@@ -5810,6 +5810,170 @@ def my_payroll_run(run_id):
 # END PPT PAYROLL SYSTEM
 # ============================================================
 
+
+@app.route("/fix-sidebar")
+@login_required
+@admin_required
+def fix_sidebar():
+    """Write the correct base.html with payroll to the templates directory."""
+    import os
+    from pathlib import Path
+    
+    base_html = """<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PPT Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{--g:#123d22;--bg:#f4f6f4;--card:#fff;--line:#dfe7df;--text:#111827}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+    a{text-decoration:none;color:inherit}
+    .layout{display:flex;min-height:100vh}
+    aside{width:245px;background:var(--g);color:white;padding:28px 20px;position:sticky;top:0;height:100vh;overflow-y:scroll;overflow-x:hidden}
+    .brand{font-size:24px;font-weight:900;line-height:1.05;margin-bottom:18px}
+    .contact{font-size:12px;line-height:1.4;margin-bottom:24px;opacity:.95}
+    nav a{display:block;padding:11px 12px;border-radius:10px;font-weight:800;margin:3px 0}
+    nav a:hover{background:rgba(255,255,255,.13)}
+    nav .nav-section{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);padding:12px 12px 2px;margin-top:4px}
+    main{flex:1;padding:32px;overflow:auto}
+    h1{font-size:32px;margin:0 0 8px}
+    h2{margin:0 0 14px}
+    .sub{color:#475569;margin-top:0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin:18px 0;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+    .grid{display:grid;gap:14px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    label{display:block;font-size:13px;font-weight:800;margin:0 0 6px}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:white}
+    textarea{min-height:90px}
+    button,.btn{border:0;border-radius:12px;padding:12px 16px;background:var(--g);color:white;font-weight:900;display:inline-block;cursor:pointer}
+    .btn-dark{background:#0f172a}
+    .quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
+    .metric{background:white;border:1px solid var(--line);border-radius:18px;padding:18px}
+    .metric span{display:block;font-size:12px;font-weight:900;text-transform:uppercase;color:#64748b}
+    .metric strong{font-size:27px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;border-bottom:1px solid #e5e7eb;padding:10px;font-size:14px;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;color:#475569}
+    .pill{display:inline-block;border-radius:999px;background:#e8f5ec;color:#123d22;padding:5px 9px;font-size:12px;font-weight:900}
+    .pill.warn{background:#fff7ed;color:#9a3412}
+    .flash{padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;margin-bottom:12px}
+    .danger{background:#fef2f2;border-color:#fecaca}
+    @media(max-width:900px){.layout{display:block}aside{width:100%;height:auto;position:relative}.grid-2,.grid-3,.metric-grid{grid-template-columns:1fr}main{padding:20px}}
+  </style>
+</head>
+<body>
+{% if request.path != '/login' %}
+<div class="layout">
+  <aside style="background:#11823b !important; background-image:none !important; color:white !important; width:260px; height:100vh; padding:24px 18px; box-sizing:border-box; overflow-y:scroll; position:sticky; top:0;">
+    <div class="brand">Pinnacle<br>Performance Tax<br>and Accounting</div>
+    <div class="contact">{{ brand.website }}<br>{{ brand.email }}<br>{{ brand.phone }}</div>
+    <nav>
+      {% if current_user.is_authenticated and current_user.role == 'admin' %}
+        <div class="nav-section">Main</div>
+        <a href="/dashboard">📊 Dashboard</a>
+        <a href="/command-center" style="background:rgba(255,255,255,.15);border-radius:10px">🎯 Command Center</a>
+        <a href="/service-entry">⚡ Quick Entry</a>
+        <a href="/admin/engagement-letters" style="background:rgba(245,158,11,.3);border-radius:10px">✍️ E-Signatures</a>
+        <div class="nav-section">💼 Payroll</div>
+        <a href="/admin/payroll">💼 Payroll Dashboard</a>
+        <a href="/admin/payroll/run/new">▶️ Run Payroll</a>
+        <a href="/admin/payroll/reports">📊 Payroll Reports</a>
+        <a href="/admin/payroll/w2-prep">📋 W-2 Prep</a>
+        <div class="nav-section">Clients</div>
+        <a href="/clients">👥 Clients</a>
+        <a href="/crm">📋 CRM</a>
+        <a href="/client-workflow">🔄 Workflow</a>
+        <div class="nav-section">Bookkeeping</div>
+        <a href="/transactions">💰 Transactions</a>
+        <a href="/bookkeeping/csv-import">📥 CSV Import</a>
+        <a href="/bookkeeping/recurring">🔁 Recurring</a>
+        <a href="/bookkeeping/rules">🏷 Auto-Rules</a>
+        <div class="nav-section">Tax & Billing</div>
+        <a href="/tax-returns">📁 Tax Returns</a>
+        <a href="/invoices">🧾 Invoices</a>
+        <a href="/invoices/bulk-create">📋 Bulk Invoices</a>
+        <a href="/payments">💳 Payments</a>
+        <a href="/admin/payment-plans">📆 Payment Plans</a>
+        <a href="/admin/quarterly-reminders">📅 Quarterly Reminders</a>
+        <div class="nav-section">Files & Comms</div>
+        <a href="/documents">📂 Documents</a>
+        <a href="/admin/documents/upload">⬆️ Upload to Client</a>
+        <a href="/messages">✉️ Messages</a>
+        <a href="/appointments">📅 Appointments</a>
+        <a href="/admin/engagement-letters">✍️ E-Signatures</a>
+        <a href="/admin/announcements">📢 Announcements</a>
+        <div class="nav-section">Tools</div>
+        <a href="/workflow">⚙️ Workflow Hub</a>
+        <a href="/admin/referrals">🤝 Referrals</a>
+        <a href="/notifications/list">🔔 Notifications</a>
+        <a href="/settings">🔧 Users</a>
+      {% elif current_user.is_authenticated %}
+        <div class="nav-section">My Portal</div>
+        <a href="/client">🏠 Dashboard</a>
+        <a href="/my/documents">📂 My Documents</a>
+        <a href="/my/invoices">🧾 My Invoices</a>
+        <a href="/my/payment-plan">📆 Payment Plan</a>
+        <a href="/my/tax-returns">📁 Tax Returns</a>
+        <a href="/my/return-progress">📊 Return Status</a>
+        <a href="/my/bookkeeping">💰 Bookkeeping</a>
+        <a href="/my/appointments">📅 Appointments</a>
+        <a href="/my/book-appointment">🗓 Book Appointment</a>
+        <a href="/my/messages">✉️ Messages</a>
+        <a href="/my/sign-documents" style="background:rgba(245,158,11,.25);border-radius:10px">✍️ Sign Documents</a>
+        <a href="/my/tax-organizer">✅ Tax Organizer</a>
+        <a href="/my/savings-planner">💡 Savings Planner</a>
+        <a href="/my/payroll">💼 My Payroll</a>
+        <a href="/my/tax-estimate">🧮 Tax Estimate</a>
+        <a href="/my/ai-advisor">🤖 AI Tax Advisor</a>
+        <a href="/my/health-score">📈 Health Score</a>
+        <a href="/my/year-end">📊 Year-End Summary</a>
+        <a href="/my/crm">📋 My Requests</a>
+        <a href="/notifications/list">🔔 Notifications</a>
+      {% endif %}
+      {% if current_user.is_authenticated %}<a href="/logout" style="margin-top:8px;opacity:.7">🚪 Sign Out</a>{% endif %}
+    </nav>
+  </aside>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat,msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  {% block login_content %}{% endblock %}
+{% endif %}
+</body>
+</html>"""
+
+    # Write to all possible template locations
+    locations = [
+        BASE_DIR / "templates" / "base.html",
+        Path("/var/data/templates/base.html"),
+    ]
+    
+    written = []
+    for loc in locations:
+        try:
+            loc.parent.mkdir(parents=True, exist_ok=True)
+            loc.write_text(base_html)
+            written.append(str(loc))
+        except Exception as e:
+            written.append(f"FAILED {loc}: {e}")
+    
+    # Also reload template
+    try:
+        app.jinja_env.cache.clear()
+    except:
+        pass
+        
+    return "FIXED! Written to: " + " | ".join(written) + " — Now go to /dashboard"
+
 if __name__=='__main__':
     with app.app_context():
         init_db()

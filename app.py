@@ -4190,9 +4190,12 @@ Give specific dollar amounts or percentages when helpful.
 Always recommend consulting with their tax advisor (PPT) for final decisions.
 Keep response under 200 words."""
             try:
-                import urllib.request, json
-                payload = json.dumps({
-                    "model": "claude-opus-4-5",
+                import urllib.request, urllib.error, json as _json
+                api_key = os.environ.get("ANTHROPIC_API_KEY","")
+                if not api_key:
+                    raise ValueError("No API key")
+                payload = _json.dumps({
+                    "model": "claude-haiku-4-5-20251001",
                     "max_tokens": 400,
                     "system": ctx,
                     "messages": [{"role": "user", "content": question}]
@@ -4201,20 +4204,19 @@ Keep response under 200 words."""
                     "https://api.anthropic.com/v1/messages",
                     data=payload,
                     headers={
-                        "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
+                        "x-api-key": api_key,
                         "anthropic-version": "2023-06-01",
                         "content-type": "application/json"
                     },
                     method="POST"
                 )
-                result = json.loads(urllib.request.urlopen(req, timeout=30).read())
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    result = _json.loads(resp.read())
                 answer = result["content"][0]["text"]
+            except ValueError:
+                answer = "⚠️ AI Advisor is not configured. Please contact the office at 478-338-1632."
             except Exception as e:
-                api_key = os.environ.get("ANTHROPIC_API_KEY","")
-                if not api_key:
-                    answer = "⚠️ AI Advisor is not configured yet. Please contact the office at 478-338-1632 or pinnacleperformancetax@gmail.com for assistance."
-                else:
-                    answer = f"I'm having trouble connecting right now ({type(e).__name__}). Please contact the office directly at 478-338-1632 or pinnacleperformancetax@gmail.com for immediate assistance."
+                answer = f"Sorry, I could not connect right now ({type(e).__name__}: {str(e)[:80]}). Please contact the office at 478-338-1632."
             execute_db("INSERT INTO ai_conversations(client_id,question,answer) VALUES (?,?,?)", (cid, question, answer))
             history = query_db("SELECT * FROM ai_conversations WHERE client_id=? ORDER BY id DESC LIMIT 20", (cid,))
     return render_template_string("""{%extends"base.html"%}{%block content%}

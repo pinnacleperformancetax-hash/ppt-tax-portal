@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Business — AI Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0d1b2a;
+    --gold: #c9a84c;
+    --gold-light: #e8c87a;
+    --cream: #f5f0e8;
+    --white: #ffffff;
+    --text-muted: #8a9ab0;
+  }
+
+  body {
+    background: var(--navy);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 20%, rgba(201,168,76,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 10% 80%, rgba(201,168,76,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .section {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 40px 100px;
+  }
+
+  /* Header */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .eyebrow::before {
+    content: '';
+    display: block;
+    width: 28px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 18px;
+    letter-spacing: -0.02em;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--gold);
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    max-width: 480px;
+    line-height: 1.7;
+    margin-bottom: 64px;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 60px;
+  }
+
+  @media (max-width: 860px) {
+    .cards { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 16px;
+    padding: 36px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+    cursor: default;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(201,168,76,0.5);
+    background: rgba(255,255,255,0.07);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(201,168,76,0.12);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-size: 22px;
+  }
+
+  .card-number {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: rgba(201,168,76,0.08);
+    line-height: 1;
+    user-select: none;
+  }
+
+  .card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .card-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(201,168,76,0.1);
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-bottom: 16px;
+  }
+
+  .card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.75;
+  }
+
+  .card p strong {
+    color: rgba(255,255,255,0.75);
+    font-weight: 500;
+  }
+
+  /* Benefit pills */
+  .benefit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--gold-light);
+    margin-top: 18px;
+    background: rgba(201,168,76,0.08);
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+
+  .benefit::before {
+    content: '✦';
+    font-size: 8px;
+  }
+
+  /* CTA bar */
+  .cta-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04));
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 16px;
+    padding: 32px 40px;
+    flex-wrap: wrap;
+  }
+
+  .cta-bar-text h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+  }
+
+  .cta-bar-text p {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gold);
+    color: var(--navy);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    padding: 14px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    background: var(--gold-light);
+    transform: translateY(-2px);
+  }
+
+  /* Animate in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow   { animation: fadeUp 0.5s ease both; }
+  h1         { animation: fadeUp 0.5s 0.1s ease both; }
+  .subtitle  { animation: fadeUp 0.5s 0.2s ease both; }
+  .card:nth-child(1) { animation: fadeUp 0.5s 0.3s ease both; }
+  .card:nth-child(2) { animation: fadeUp 0.5s 0.4s ease both; }
+  .card:nth-child(3) { animation: fadeUp 0.5s 0.5s ease both; }
+  .cta-bar   { animation: fadeUp 0.5s 0.6s ease both; }
+</style>
+</head>
+<body>
+<section class="section">
+
+  <div class="eyebrow">AI-Powered Services</div>
+
+  <h1>Work Smarter.<br><em>Grow Faster.</em></h1>
+  <p class="subtitle">Three intelligent tools built for tax professionals — designed to attract clients, eliminate paperwork, and keep your book of business growing year after year.</p>
+
+  <div class="cards">
+
+    <!-- Card 1 -->
+    <div class="card">
+      <div class="card-number">01</div>
+      <div class="card-icon">💬</div>
+      <div class="card-tag">Lead Generation</div>
+      <h3>AI Tax Assistant Chatbot</h3>
+      <p>Answers <strong>basic tax questions for free</strong> around the clock — then naturally guides curious visitors toward booking a paid consultation with your firm.</p>
+      <span class="benefit">Converts visitors into clients</span>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card">
+      <div class="card-number">02</div>
+      <div class="card-icon">📂</div>
+      <div class="card-tag">Time Savings</div>
+      <h3>Document Intake Automation</h3>
+      <p>Clients upload their documents and our AI <strong>extracts, validates, and organizes</strong> all the data automatically — saving your team hours of manual entry per return.</p>
+      <span class="benefit">Saves hours per client</span>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card">
+      <div class="card-number">03</div>
+      <div class="card-icon">🔔</div>
+      <div class="card-tag">Client Retention</div>
+      <h3>Automated Follow-Up System</h3>
+      <p>AI sends <strong>personalized reminders</strong> to past clients before every tax season — keeping your name top of mind and bringing them back without any manual outreach.</p>
+      <span class="benefit">Brings clients back every year</span>
+    </div>
+
+  </div>
+
+  <div class="cta-bar">
+    <div class="cta-bar-text">
+      <h4>Ready to add AI to your practice?</h4>
+      <p>Let's build the right setup for your firm — no tech experience required.</p>
+    </div>
+    <a href="#" class="btn">Get Started →</a>
+  </div>
+
+</section>
+</body>
+</html>

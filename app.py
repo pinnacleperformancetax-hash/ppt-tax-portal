@@ -4167,7 +4167,7 @@ def my_ai_advisor():
                                FROM transactions t LEFT JOIN categories c ON c.id=t.category_id
                                WHERE t.client_id=? AND t.type='expense' AND substr(t.date,1,4)=?
                                GROUP BY category ORDER BY total DESC LIMIT 5""", (cid, year))
-    history = query_db("SELECT * FROM ai_conversations WHERE client_id=? ORDER BY id DESC LIMIT 10", (cid,))
+    history = query_db("SELECT * FROM ai_conversations WHERE client_id=? ORDER BY id DESC LIMIT 20", (cid,))
     answer = None
     question = None
     if request.method == "POST":
@@ -4210,9 +4210,13 @@ Keep response under 200 words."""
                 result = json.loads(urllib.request.urlopen(req, timeout=30).read())
                 answer = result["content"][0]["text"]
             except Exception as e:
-                answer = f"I'm having trouble connecting right now. Please contact the office directly at 478-338-1632 or pinnacleperformancetax@gmail.com for immediate assistance."
+                api_key = os.environ.get("ANTHROPIC_API_KEY","")
+                if not api_key:
+                    answer = "⚠️ AI Advisor is not configured yet. Please contact the office at 478-338-1632 or pinnacleperformancetax@gmail.com for assistance."
+                else:
+                    answer = f"I'm having trouble connecting right now ({type(e).__name__}). Please contact the office directly at 478-338-1632 or pinnacleperformancetax@gmail.com for immediate assistance."
             execute_db("INSERT INTO ai_conversations(client_id,question,answer) VALUES (?,?,?)", (cid, question, answer))
-        return redirect(url_for("my_ai_advisor"))
+            history = query_db("SELECT * FROM ai_conversations WHERE client_id=? ORDER BY id DESC LIMIT 20", (cid,))
     return render_template_string("""{%extends"base.html"%}{%block content%}
 <h1>💬 AI Tax Advisor</h1>
 <p class="sub">Ask me anything about your taxes, deductions, or bookkeeping.</p>

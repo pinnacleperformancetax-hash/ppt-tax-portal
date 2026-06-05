@@ -1071,7 +1071,7 @@ table{background:#fff!important}th{background:#f7faf8!important;color:#475569!im
 
 @app.route('/logout')
 @login_required
-def logout(): logout_user(); return redirect(url_for('login'))
+def logout(): logout_user(); return redirect(url_for('home'))
 @app.route('/dashboard')
 @login_required
 @admin_required

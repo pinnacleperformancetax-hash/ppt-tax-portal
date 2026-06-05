@@ -869,6 +869,7 @@ def logout(): logout_user(); return redirect(url_for('login'))
 @login_required
 @admin_required
 def dashboard():
+    ensure_messages_table()
     counts={k:query_db(v,one=True)['c'] for k,v in {'clients':'SELECT COUNT(*) c FROM clients','open_invoices':"SELECT COUNT(*) c FROM invoices WHERE status!='Paid'",'documents':'SELECT COUNT(*) c FROM documents','returns':'SELECT COUNT(*) c FROM tax_returns','messages':"SELECT COUNT(*) c FROM messages WHERE status='Open'"}.items()}
     income=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='income'",one=True)['total']
     expenses=query_db("SELECT COALESCE(SUM(amount),0) total FROM transactions WHERE type='expense'",one=True)['total']

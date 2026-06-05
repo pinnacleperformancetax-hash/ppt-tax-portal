@@ -4224,6 +4224,17 @@ Keep response under 200 words."""
 <p class="sub">Ask me anything about your taxes, deductions, or bookkeeping.</p>
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
 <div>
+{%if history%}
+<div class="card" style="background:#f0fdf4;border:2px solid #bbf7d0;margin-bottom:4px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+<span style="font-size:20px">🤖</span>
+<strong style="font-size:15px;color:#0b5f2a">Latest Answer</strong>
+<span style="font-size:11px;color:#9ca3af;margin-left:auto">{{history[0].created_at[:16]}}</span>
+</div>
+<div style="font-weight:700;color:#0f172a;margin-bottom:8px;font-size:14px">Q: {{history[0].question}}</div>
+<div style="font-size:14px;color:#1a2e1a;background:white;border-radius:10px;padding:14px;line-height:1.7;border:1px solid #bbf7d0">{{history[0].answer}}</div>
+</div>
+{%endif%}
 <div class="card">
 <h2 style="margin-top:0">Ask a Question</h2>
 <form method="POST">
@@ -4233,10 +4244,10 @@ Keep response under 200 words."""
 <button type="submit" style="font-size:15px;padding:13px 24px">Ask AI Advisor →</button>
 </form>
 </div>
-{%if history%}
+{%if history|length > 1%}
 <div class="card">
-<h2 style="margin-top:0">Recent Questions</h2>
-{%for h in history%}
+<h2 style="margin-top:0">Previous Questions</h2>
+{%for h in history[1:]%}
 <div style="border-bottom:1px solid #f3f4f6;padding:14px 0{%if loop.last%};border-bottom:none{%endif%}">
 <div style="font-weight:900;color:#0f172a;margin-bottom:6px">Q: {{h.question}}</div>
 <div style="font-size:13px;color:#374151;background:#f9fafb;border-radius:10px;padding:12px;line-height:1.6">{{h.answer}}</div>

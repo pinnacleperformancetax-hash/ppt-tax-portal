@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 import os, sqlite3
 from datetime import datetime
@@ -326,7 +327,214 @@ def elite_log(client_id, event_type, title, details=""):
 @app.route('/init')
 def init_route(): init_db(); ensure_elite_operations_tables(); ensure_workflow_tables(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
-def home(): return redirect(url_for('login')) if not current_user.is_authenticated else redirect(url_for('dashboard') if current_user.role=='admin' else url_for('client_dashboard'))
+def home():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard') if current_user.role == 'admin' else url_for('client_dashboard'))
+    return render_template_string(LANDING_PAGE_HTML)
+
+LANDING_PAGE_HTML = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pinnacle Performance Tax and Accounting</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#11823b;--dark:#0b5f2a;--navy:#0d1b2a;--gold:#c9a84c;--gold-light:#e8c87a;--cream:#f5f0e8;--white:#fff;--muted:#8a9ab0}
+body{font-family:'DM Sans',sans-serif;color:var(--white);background:var(--navy);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 10%,rgba(17,130,59,.12) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 5% 90%,rgba(201,168,76,.07) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 48px;background:rgba(13,27,42,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-brand{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;line-height:1.2;color:var(--white)}
+.nav-brand span{color:var(--gold)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{color:rgba(255,255,255,.7);text-decoration:none;font-size:.9rem;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--white)}
+.nav-cta{background:var(--green);color:var(--white)!important;padding:10px 22px;border-radius:8px;font-weight:700!important;transition:background .2s!important}
+.nav-cta:hover{background:var(--dark)!important}
+
+/* HERO */
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;padding:120px 48px 80px}
+.hero-inner{max-width:1100px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 420px;gap:60px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:20px}
+.eyebrow::before{content:'';display:block;width:28px;height:1px;background:var(--gold)}
+h1{font-family:'Playfair Display',serif;font-size:clamp(2.6rem,5vw,4.2rem);font-weight:900;line-height:1.08;letter-spacing:-.02em;margin-bottom:20px}
+h1 em{font-style:normal;color:var(--gold)}
+.hero-sub{font-size:1.05rem;color:var(--muted);line-height:1.75;margin-bottom:36px;max-width:480px}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:var(--white);font-weight:700;font-size:.95rem;padding:15px 30px;border-radius:10px;text-decoration:none;transition:background .2s,transform .2s}
+.btn-primary:hover{background:var(--dark);transform:translateY(-2px)}
+.btn-outline{display:inline-flex;align-items:center;gap:8px;background:transparent;color:var(--white);font-weight:600;font-size:.95rem;padding:15px 30px;border-radius:10px;text-decoration:none;border:1px solid rgba(255,255,255,.2);transition:border-color .2s,transform .2s}
+.btn-outline:hover{border-color:rgba(255,255,255,.5);transform:translateY(-2px)}
+
+/* HERO CARD */
+.hero-card{background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.2);border-radius:20px;padding:32px;position:relative;overflow:hidden}
+.hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.hero-card h3{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:18px;color:var(--white)}
+.stat-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:20px}
+.stat{text-align:center;flex:1}
+.stat strong{display:block;font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--gold);line-height:1}
+.stat span{font-size:.75rem;color:var(--muted);margin-top:4px;display:block}
+.divider{height:1px;background:rgba(255,255,255,.08);margin:18px 0}
+.feature-list{display:flex;flex-direction:column;gap:10px}
+.feature-item{display:flex;align-items:center;gap:10px;font-size:.88rem;color:rgba(255,255,255,.8)}
+.feature-item::before{content:'✓';min-width:20px;height:20px;background:rgba(17,130,59,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--gold-light);text-align:center;line-height:20px}
+
+/* SERVICES */
+.services{position:relative;z-index:1;padding:100px 48px}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-header{text-align:center;margin-bottom:64px}
+.section-header h2{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:14px}
+.section-header p{color:var(--muted);font-size:1rem;max-width:480px;margin:0 auto;line-height:1.7}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:36px 28px;position:relative;overflow:hidden;transition:transform .3s,border-color .3s,background .3s}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s}
+.card:hover{transform:translateY(-6px);border-color:rgba(201,168,76,.45);background:rgba(255,255,255,.07)}
+.card:hover::before{opacity:1}
+.card-num{position:absolute;top:20px;right:22px;font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:900;color:rgba(201,168,76,.07);line-height:1;user-select:none}
+.card-icon{width:48px;height:48px;background:rgba(201,168,76,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
+.card-tag{display:inline-block;font-size:10px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);background:rgba(201,168,76,.1);border-radius:4px;padding:3px 8px;margin-bottom:14px}
+.card h3{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:10px;line-height:1.3}
+.card p{font-size:.88rem;color:var(--muted);line-height:1.75}
+.card p strong{color:rgba(255,255,255,.75);font-weight:500}
+.benefit{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--gold-light);margin-top:16px;background:rgba(201,168,76,.08);border-radius:20px;padding:5px 12px}
+.benefit::before{content:'✦';font-size:8px}
+
+/* CTA SECTION */
+.cta-section{position:relative;z-index:1;padding:0 48px 100px}
+.cta-box{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;background:linear-gradient(135deg,rgba(17,130,59,.18),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.25);border-radius:20px;padding:40px 48px;flex-wrap:wrap}
+.cta-box h3{font-family:'Playfair Display',serif;font-size:1.6rem;margin-bottom:8px}
+.cta-box p{color:var(--muted);font-size:.9rem}
+.btn-gold{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--navy);font-weight:700;font-size:.95rem;padding:15px 30px;border-radius:10px;text-decoration:none;transition:background .2s,transform .2s;white-space:nowrap}
+.btn-gold:hover{background:var(--gold-light);transform:translateY(-2px)}
+
+/* FOOTER */
+footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);padding:40px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.footer-brand{font-family:'Playfair Display',serif;font-size:.95rem;color:rgba(255,255,255,.6)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:.85rem;color:var(--muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--white)}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.hero-left>*{animation:fadeUp .55s ease both}
+.hero-left>*:nth-child(1){animation-delay:.05s}
+.hero-left>*:nth-child(2){animation-delay:.15s}
+.hero-left>*:nth-child(3){animation-delay:.25s}
+.hero-left>*:nth-child(4){animation-delay:.35s}
+.hero-card{animation:fadeUp .55s .4s ease both}
+.card:nth-child(1){animation:fadeUp .5s .1s ease both}
+.card:nth-child(2){animation:fadeUp .5s .2s ease both}
+.card:nth-child(3){animation:fadeUp .5s .3s ease both}
+
+@media(max-width:900px){
+  nav{padding:16px 24px}.hero{padding:100px 24px 60px}.hero-inner{grid-template-columns:1fr}.hero-card{display:none}
+  .services,.cta-section{padding-left:24px;padding-right:24px}.cards{grid-template-columns:1fr}
+  .cta-box{padding:28px 24px}.footer-links{display:none}footer{padding:28px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">Pinnacle <span>Performance</span><br>Tax &amp; Accounting</div>
+  <div class="nav-links">
+    <a href="#services">Services</a>
+    <a href="tel:4783381632">478-338-1632</a>
+    <a href="/login" class="nav-cta">Client Login →</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="eyebrow">Macon, Georgia</div>
+      <h1>Tax &amp; Accounting<br>Built for <em>Your Business</em></h1>
+      <p class="hero-sub">Pinnacle Performance Tax and Accounting helps individuals and small businesses file with confidence, stay organized, and grow — backed by AI-powered tools that save time and reduce stress.</p>
+      <div class="hero-btns">
+        <a href="mailto:pinnacleperformancetax@gmail.com" class="btn-primary">Get Started Today →</a>
+        <a href="/login" class="btn-outline">Client Portal</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h3>Why Pinnacle Performance?</h3>
+      <div class="stat-row">
+        <div class="stat"><strong>100%</strong><span>Secure Portal</span></div>
+        <div class="stat"><strong>AI</strong><span>Powered Tools</span></div>
+        <div class="stat"><strong>24/7</strong><span>Document Access</span></div>
+      </div>
+      <div class="divider"></div>
+      <div class="feature-list">
+        <div class="feature-item">Personal &amp; Business Tax Filing</div>
+        <div class="feature-item">Year-Round Bookkeeping</div>
+        <div class="feature-item">Payroll Processing</div>
+        <div class="feature-item">Quarterly Tax Estimates</div>
+        <div class="feature-item">Secure Document Upload</div>
+        <div class="feature-item">AI Tax Assistant</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="services" id="services">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="eyebrow" style="justify-content:center">AI-Powered Services</div>
+      <h2>Work Smarter.<br><span style="color:var(--gold)">Grow Faster.</span></h2>
+      <p>Three intelligent tools built into your experience — designed to save time, eliminate paperwork, and keep your tax life on track year after year.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-num">01</div>
+        <div class="card-icon">💬</div>
+        <div class="card-tag">Available Now</div>
+        <h3>AI Tax Assistant</h3>
+        <p>Get <strong>instant answers to common tax questions</strong> anytime — then connect directly with our team when you're ready to file.</p>
+        <span class="benefit">Available inside your portal</span>
+      </div>
+      <div class="card">
+        <div class="card-num">02</div>
+        <div class="card-icon">📂</div>
+        <div class="card-tag">Time Savings</div>
+        <h3>Document Intake Automation</h3>
+        <p>Upload your documents and our system <strong>organizes everything automatically</strong> — no more chasing paperwork or manual data entry.</p>
+        <span class="benefit">Saves hours per return</span>
+      </div>
+      <div class="card">
+        <div class="card-num">03</div>
+        <div class="card-icon">🔔</div>
+        <div class="card-tag">Client Retention</div>
+        <h3>Automated Follow-Up</h3>
+        <p>We send <strong>personalized reminders before every tax season</strong> so you never miss a deadline and we never lose touch.</p>
+        <span class="benefit">Never miss a deadline</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="cta-box">
+    <div>
+      <h3>Ready to get started?</h3>
+      <p>Call us at 478-338-1632 or email pinnacleperformancetax@gmail.com — we'll get you set up fast.</p>
+    </div>
+    <a href="mailto:pinnacleperformancetax@gmail.com" class="btn-gold">Contact Us Today →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">© 2026 Pinnacle Performance Tax and Accounting · www.pinnacleperformancetax.com</div>
+  <div class="footer-links">
+    <a href="/login">Client Login</a>
+    <a href="tel:4783381632">478-338-1632</a>
+    <a href="mailto:pinnacleperformancetax@gmail.com">Email Us</a>
+  </div>
+</footer>
+
+</body>
+</html>"""
 
 
 @app.route('/login-test')

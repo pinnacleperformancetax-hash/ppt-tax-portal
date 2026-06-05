@@ -453,8 +453,8 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
       <h1>Tax &amp; Accounting<br>Built for <em>Your Business</em></h1>
       <p class="hero-sub">Pinnacle Performance Tax and Accounting helps individuals and small businesses file with confidence, stay organized, and grow — backed by AI-powered tools that save time and reduce stress.</p>
       <div class="hero-btns">
-        <a href="mailto:pinnacleperformancetax@gmail.com" class="btn-primary">Get Started Today →</a>
-        <a href="/login" class="btn-outline">Client Portal</a>
+        <a href="#contact" class="btn-primary">Get Started Today →</a>
+        <a href="/login" class="btn-outline" onclick="window.location.href='/login';return false;">Client Portal</a>
       </div>
     </div>
     <div class="hero-card">
@@ -513,11 +513,11 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
   </div>
 </section>
 
-<section class="cta-section">
+<section class="cta-section" id="contact">
   <div class="cta-box">
     <div>
       <h3>Ready to get started?</h3>
-      <p>Call us at 478-338-1632 or email pinnacleperformancetax@gmail.com — we'll get you set up fast.</p>
+      <p><a href="tel:4783381632" style="color:var(--gold-light);text-decoration:none;font-weight:600">📞 478-338-1632</a> &nbsp;·&nbsp; <a href="mailto:pinnacleperformancetax@gmail.com" style="color:var(--gold-light);text-decoration:none;font-weight:600">✉️ pinnacleperformancetax@gmail.com</a></p>
     </div>
     <a href="mailto:pinnacleperformancetax@gmail.com" class="btn-gold">Contact Us Today →</a>
   </div>

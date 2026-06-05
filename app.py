@@ -4173,12 +4173,13 @@ def my_ai_advisor():
     if request.method == "POST":
         question = request.form.get("question") or ""
         if question:
+            client_dict = dict(client) if client else {}
             # Build context for AI
             ctx = f"""You are a helpful tax and bookkeeping advisor for Pinnacle Performance Tax and Accounting.
-Client: {client['name'] if client else 'Client'}
-Business: {client.get('business_name','') if client else ''} 
-Entity Type: {client.get('entity_type','') if client else ''}
-Filing Status: {client.get('filing_status','') if client else ''}
+Client: {client_dict.get('name','Client')}
+Business: {client_dict.get('business_name','')} 
+Entity Type: {client_dict.get('entity_type','')}
+Filing Status: {client_dict.get('filing_status','')}
 {year} Income so far: ${income:,.2f}
 {year} Expenses so far: ${expenses:,.2f}
 Net Profit: ${income-expenses:,.2f}

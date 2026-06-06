@@ -101,7 +101,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS crm_leads (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,phone TEXT,email TEXT,status TEXT DEFAULT 'New',source TEXT,follow_up_date TEXT,notes TEXT,client_id INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT,client_id INTEGER,sender_role TEXT,sender_name TEXT,subject TEXT,body TEXT,status TEXT DEFAULT 'Open',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     ''')
-    for table,column,definition in [("users","client_id","INTEGER"),("clients","business_name","TEXT"),("clients","email","TEXT"),("clients","phone","TEXT"),("clients","address","TEXT"),("clients","client_type","TEXT DEFAULT 'Individual'"),("clients","status","TEXT DEFAULT 'Active'"),("clients","notes","TEXT"),("invoices","paid_at","TEXT"),("payments","method","TEXT DEFAULT 'Manual Entry'"),("payments","reference","TEXT"),("payments","client_id","INTEGER"),("tax_returns","invoice_id","INTEGER"),("tax_returns","completed_at","TEXT"),("documents","document_name","TEXT DEFAULT 'Document'"),("documents","name","TEXT"),("documents","filename","TEXT"),("documents","tax_year","TEXT"),("documents","status","TEXT DEFAULT 'Received'"),("documents","notes","TEXT"),("documents","category","TEXT DEFAULT 'Tax Documents'"),("documents","uploaded_by","TEXT DEFAULT 'Admin'"),("documents","reviewed_at","TEXT"),("crm_leads","client_id","INTEGER"),("messages","status","TEXT DEFAULT 'Open'")]: add_column_if_missing(table,column,definition)
+    for table,column,definition in [("users","client_id","INTEGER"),("clients","business_name","TEXT"),("clients","email","TEXT"),("clients","phone","TEXT"),("clients","address","TEXT"),("clients","client_type","TEXT DEFAULT 'Individual'"),("clients","status","TEXT DEFAULT 'Active'"),("clients","notes","TEXT"),("invoices","paid_at","TEXT"),("payments","method","TEXT DEFAULT 'Manual Entry'"),("payments","reference","TEXT"),("payments","client_id","INTEGER"),("tax_returns","invoice_id","INTEGER"),("tax_returns","completed_at","TEXT"),("documents","document_name","TEXT DEFAULT 'Document'"),("documents","name","TEXT"),("documents","filename","TEXT"),("documents","tax_year","TEXT"),("documents","status","TEXT DEFAULT 'Received'"),("documents","notes","TEXT"),("documents","category","TEXT DEFAULT 'Tax Documents'"),("documents","uploaded_by","TEXT DEFAULT 'Admin'"),("documents","reviewed_at","TEXT"),("crm_leads","client_id","INTEGER"),("messages","status","TEXT DEFAULT 'Open'"),("documents","ai_summary","TEXT"),("documents","ai_extracted_at","TEXT")]: add_column_if_missing(table,column,definition)
     cats=[("Tax Preparation Income","income"),("Bookkeeping Income","income"),("Consulting Income","income"),("Sales Income","income"),("Office Supplies","expense"),("Software & Subscriptions","expense"),("Advertising & Marketing","expense"),("Meals","expense"),("Travel","expense"),("Payroll","expense"),("Contract Labor","expense"),("Bank Fees","expense"),("Professional Fees","expense"),("Vehicle & Mileage","expense"),("Rent","expense"),("Utilities","expense"),("Insurance","expense"),("Other Expense","expense")]
     for name,kind in cats:
         if not db.execute("SELECT id FROM categories WHERE LOWER(TRIM(name))=LOWER(TRIM(?)) AND kind=?",(name,kind)).fetchone(): db.execute("INSERT INTO categories(name,kind) VALUES (?,?)",(name,kind))
@@ -1169,6 +1169,7 @@ def dashboard():
 <a href="/service-entry" class="btn" style="text-align:center;padding:12px;font-size:14px">⚡ Quick Entry</a>
 <a href="/invoices/bulk-create" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">📋 Bulk Invoice</a>
 <a href="/admin/documents/upload" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">⬆️ Upload Doc</a>
+<a href="/admin/ai-intake" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#dcfce7;color:#15803d">🤖 AI Intake</a>
 <a href="/messages" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#f1f5f9;color:#0f172a">✉️ Messages</a>
 <a href="/admin/engagement-letters" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#fff7ed;color:#9a3412">✍️ E-Signatures</a>
 <a href="/admin/revenue-dashboard" class="btn" style="text-align:center;padding:12px;font-size:14px;background:#e8f5ec;color:#0b5f2a">📊 Revenue</a>
@@ -1231,9 +1232,137 @@ def client_dashboard():
 def client_upload():
     f=request.files.get('file')
     if not f or not f.filename or not allowed_file(f.filename): flash('Choose a valid file.','danger'); return redirect(url_for('client_dashboard'))
-    filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(f.filename)}"; f.save(UPLOAD_DIR/filename); doc=request.form.get('document_name') or f.filename
-    execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,'Uploaded by Client',?,?, 'Client')",(current_user.client_id,doc,doc,filename,request.form.get('tax_year'),request.form.get('notes'),request.form.get('category') or 'Tax Documents'))
-    flash('Document uploaded.','success'); return redirect(url_for('client_dashboard'))
+    filename=f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{current_user.client_id}_{secure_filename(f.filename)}"
+    f.save(UPLOAD_DIR/filename)
+    doc=request.form.get('document_name') or f.filename
+    category = request.form.get('category') or 'Tax Documents'
+    doc_id = execute_db("INSERT INTO documents(client_id,document_name,name,filename,tax_year,status,notes,category,uploaded_by) VALUES (?,?,?,?,?,'Uploaded by Client',?,?,?)",
+        (current_user.client_id,doc,doc,filename,request.form.get('tax_year'),request.form.get('notes'),category,'Client'))
+    # AI extraction - try to extract text and summarize
+    try:
+        ai_summary = _ai_extract_document(UPLOAD_DIR/filename, f.filename, category)
+        if ai_summary:
+            execute_db("UPDATE documents SET ai_summary=?, ai_extracted_at=?, status='AI Reviewed' WHERE id=?",
+                (ai_summary, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), doc_id))
+    except Exception:
+        pass
+    flash('Document uploaded and analyzed by AI. ✅','success')
+    return redirect(url_for('client_dashboard'))
+
+def _ai_extract_document(filepath, filename, category):
+    """Use Claude to extract key info from uploaded document."""
+    import urllib.request as _ur, json as _j, base64 as _b64
+    api_key = os.environ.get("ANTHROPIC_API_KEY","")
+    if not api_key: return None
+    ext = filename.rsplit('.',1)[-1].lower() if '.' in filename else ''
+    # Build prompt based on file type
+    prompt = f"""You are a tax document processor for Pinnacle Performance Tax and Accounting.
+A client uploaded a file named: {filename}
+Category: {category}
+
+Based on the filename and category, provide a structured summary with:
+1. Document Type (e.g. W-2, 1099-NEC, Bank Statement, Receipt, etc.)
+2. Tax Year (if identifiable)
+3. Key Data Points to look for (e.g. employer name, total wages, interest income)
+4. Action Required (what PPT staff should do with this document)
+5. Missing Info (anything the client should also provide)
+
+Keep it concise - 5 bullet points max. Start each with the label in bold."""
+
+    # For PDFs/images, try to read content
+    content_blocks = [{"type":"text","text":prompt}]
+    if ext in ('png','jpg','jpeg') and filepath.exists():
+        try:
+            raw = filepath.read_bytes()
+            if len(raw) < 4*1024*1024:  # under 4MB
+                b64 = _b64.b64encode(raw).decode()
+                mime = 'image/jpeg' if ext in ('jpg','jpeg') else 'image/png'
+                content_blocks = [
+                    {"type":"image","source":{"type":"base64","media_type":mime,"data":b64}},
+                    {"type":"text","text":f"This is a tax document uploaded by a client (filename: {filename}, category: {category}). Extract and summarize: 1) Document type 2) Tax year 3) Key figures/amounts 4) Payer/employer name 5) Action required for tax preparer. Be concise."}
+                ]
+        except Exception: pass
+
+    payload = _j.dumps({
+        "model": "claude-haiku-4-5-20251001",
+        "max_tokens": 400,
+        "messages": [{"role":"user","content":content_blocks}]
+    }).encode()
+    req = _ur.Request("https://api.anthropic.com/v1/messages", data=payload,
+        headers={"x-api-key":api_key,"anthropic-version":"2023-06-01","content-type":"application/json"},
+        method="POST")
+    with _ur.urlopen(req, timeout=20) as resp:
+        result = _j.loads(resp.read())
+    return result["content"][0]["text"]
+@app.route('/admin/ai-intake')
+@login_required
+@admin_required
+def ai_intake():
+    docs = query_db("""
+        SELECT d.*, COALESCE(d.document_name,d.name,'Document') display_name, cl.name client_name
+        FROM documents d
+        LEFT JOIN clients cl ON cl.id=d.client_id
+        ORDER BY d.id DESC
+    """)
+    return render_template_string("""{%extends"base.html"%}{%block content%}
+<h1>📥 AI Document Intake</h1>
+<p class="sub">Documents uploaded by clients — AI extracted summaries shown below.</p>
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+  <a href="/documents" class="btn" style="background:#f1f5f9;color:#0f172a">All Documents</a>
+</div>
+{%if docs%}
+<div style="display:flex;flex-direction:column;gap:16px">
+{%for d in docs%}
+<div class="card" style="border-left:4px solid {{'#11823b' if d.ai_summary else '#e2e8f0'}}">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+        <strong style="font-size:1rem">{{d.display_name}}</strong>
+        {%if d.ai_summary%}<span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🤖 AI Reviewed</span>{%else%}<span style="background:#f1f5f9;color:#64748b;font-size:11px;padding:2px 8px;border-radius:20px">Pending Review</span>{%endif%}
+        <span style="background:#e0f2fe;color:#0369a1;font-size:11px;padding:2px 8px;border-radius:20px">{{d.category or 'Tax Documents'}}</span>
+      </div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:10px">
+        Client: <strong>{{d.client_name or '--'}}</strong> &nbsp;·&nbsp;
+        Uploaded: {{d.created_at[:10] if d.created_at else '--'}} &nbsp;·&nbsp;
+        Tax Year: {{d.tax_year or '--'}}
+      </div>
+      {%if d.ai_summary%}
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:#1a2e1a;white-space:pre-line">{{d.ai_summary}}</div>
+      {%else%}
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:13px;color:#94a3b8;font-style:italic">No AI summary yet — uploaded before AI intake was enabled.</div>
+      {%endif%}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:120px">
+      {%if d.filename%}<a href="/documents/download/{{d.id}}" class="btn" style="padding:8px 14px;font-size:13px;text-align:center">↓ Download</a>{%endif%}
+      <form method="POST" action="/admin/ai-intake/{{d.id}}/reanalyze">
+        <button type="submit" style="width:100%;padding:8px 14px;font-size:12px;background:#e0f2fe;color:#0369a1;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600">🔄 Re-analyze</button>
+      </form>
+    </div>
+  </div>
+</div>
+{%endfor%}
+</div>
+{%else%}
+<div class="card" style="text-align:center;padding:40px;color:#94a3b8">No documents uploaded yet.</div>
+{%endif%}
+{%endblock%}""", docs=docs)
+
+@app.route('/admin/ai-intake/<int:doc_id>/reanalyze', methods=['POST'])
+@login_required
+@admin_required
+def ai_intake_reanalyze(doc_id):
+    doc = query_db("SELECT * FROM documents WHERE id=?", (doc_id,), one=True)
+    if doc and doc['filename']:
+        try:
+            summary = _ai_extract_document(UPLOAD_DIR/doc['filename'], doc['filename'], doc['category'] or 'Tax Documents')
+            if summary:
+                execute_db("UPDATE documents SET ai_summary=?, ai_extracted_at=?, status='AI Reviewed' WHERE id=?",
+                    (summary, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), doc_id))
+                flash('Document re-analyzed by AI. ✅', 'success')
+        except Exception as e:
+            flash(f'AI analysis failed: {str(e)[:80]}', 'danger')
+    return redirect(url_for('ai_intake'))
+
 @app.route('/documents/download/<int:document_id>')
 @login_required
 def download_document(document_id):

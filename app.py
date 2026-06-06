@@ -514,14 +514,68 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
 </section>
 
 <section class="cta-section" id="contact">
-  <div class="cta-box">
-    <div>
-      <h3>Ready to get started?</h3>
-      <p><a href="tel:4783381632" style="color:var(--gold-light);text-decoration:none;font-weight:600">📞 478-338-1632</a> &nbsp;·&nbsp; <a href="mailto:pinnacleperformancetax@gmail.com" style="color:var(--gold-light);text-decoration:none;font-weight:600">✉️ pinnacleperformancetax@gmail.com</a></p>
+  <div class="section-inner">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;background:linear-gradient(135deg,rgba(17,130,59,.18),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.25);border-radius:20px;padding:48px;flex-wrap:wrap">
+      <div>
+        <div class="eyebrow">Get In Touch</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;margin-bottom:16px;line-height:1.2">Ready to get<br><span style="color:var(--gold)">started?</span></h2>
+        <p style="color:var(--muted);line-height:1.75;margin-bottom:28px">Fill out the form and we'll reach out within 1 business day to get you set up. No commitment required.</p>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <a href="tel:4783381632" style="display:flex;align-items:center;gap:10px;color:var(--white);text-decoration:none;font-weight:500"><span style="font-size:18px">📞</span> 478-338-1632</a>
+          <a href="mailto:pinnacleperformancetax@gmail.com" style="display:flex;align-items:center;gap:10px;color:var(--white);text-decoration:none;font-weight:500"><span style="font-size:18px">✉️</span> pinnacleperformancetax@gmail.com</a>
+          <span style="display:flex;align-items:center;gap:10px;color:var(--muted);font-weight:500"><span style="font-size:18px">📍</span> Macon, Georgia</span>
+        </div>
+      </div>
+      <div>
+        <div id="lead-form-wrap">
+          <form action="/contact" method="POST" onsubmit="submitLead(event)">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <input type="text" name="name" placeholder="Your Full Name *" required style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;color:var(--white);font-size:.95rem;font-family:'DM Sans',sans-serif;outline:none">
+              <input type="email" name="email" placeholder="Email Address *" required style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;color:var(--white);font-size:.95rem;font-family:'DM Sans',sans-serif;outline:none">
+              <input type="tel" name="phone" placeholder="Phone Number" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;color:var(--white);font-size:.95rem;font-family:'DM Sans',sans-serif;outline:none">
+              <select name="service" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px;color:var(--white);font-size:.95rem;font-family:'DM Sans',sans-serif;outline:none">
+                <option value="" style="background:#0d1b2a">What service are you interested in?</option>
+                <option value="Personal Tax Filing" style="background:#0d1b2a">Personal Tax Filing</option>
+                <option value="Business Tax Filing" style="background:#0d1b2a">Business Tax Filing</option>
+                <option value="Bookkeeping" style="background:#0d1b2a">Bookkeeping</option>
+                <option value="Payroll" style="background:#0d1b2a">Payroll</option>
+                <option value="AI Tax Assistant" style="background:#0d1b2a">AI Tax Assistant</option>
+                <option value="Other" style="background:#0d1b2a">Other / Not Sure</option>
+              </select>
+              <button type="submit" class="btn-gold" style="width:100%;justify-content:center;font-size:1rem;padding:16px">Send Message →</button>
+            </div>
+          </form>
+        </div>
+        <div id="lead-success" style="display:none;background:rgba(17,130,59,.2);border:1px solid rgba(17,130,59,.4);border-radius:12px;padding:28px;text-align:center">
+          <div style="font-size:2.5rem;margin-bottom:12px">✅</div>
+          <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:8px">Thanks! We'll be in touch soon.</h3>
+          <p style="color:var(--muted);font-size:.9rem">We typically respond within 1 business day. You can also call us at 478-338-1632.</p>
+        </div>
+      </div>
     </div>
-    <a href="mailto:pinnacleperformancetax@gmail.com" class="btn-gold">Contact Us Today →</a>
   </div>
 </section>
+<style>
+#contact input::placeholder,#contact select::placeholder{color:rgba(255,255,255,.45)}
+#contact input:focus,#contact select:focus,#contact textarea:focus{border-color:rgba(201,168,76,.6)!important;background:rgba(255,255,255,.12)!important}
+@media(max-width:860px){#contact .section-inner>div{grid-template-columns:1fr!important;padding:28px 20px!important}}
+</style>
+<script>
+function submitLead(e){
+  e.preventDefault();
+  var form = e.target;
+  var data = new FormData(form);
+  fetch('/contact',{method:'POST',body:data})
+    .then(function(r){
+      if(r.ok){
+        document.getElementById('lead-form-wrap').style.display='none';
+        document.getElementById('lead-success').style.display='block';
+      }
+    }).catch(function(){
+      form.submit();
+    });
+}
+</script>
 
 <footer>
   <div class="footer-brand">© 2026 Pinnacle Performance Tax and Accounting · www.pinnacleperformancetax.com</div>
@@ -535,6 +589,21 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
 </body>
 </html>"""
 
+
+@app.route('/contact', methods=['POST'])
+def contact():
+    name = request.form.get('name','').strip()
+    email = request.form.get('email','').strip()
+    phone = request.form.get('phone','').strip()
+    service = request.form.get('service','').strip()
+    if name and email:
+        notes = f"Interested in: {service}" if service else ""
+        execute_db(
+            "INSERT INTO crm_leads(name,phone,email,status,source,notes) VALUES (?,?,?,?,?,?)",
+            (name, phone, email, 'New', 'Landing Page', notes)
+        )
+    from flask import jsonify
+    return jsonify({"ok": True}), 200
 
 @app.route('/login-test')
 def login_test():

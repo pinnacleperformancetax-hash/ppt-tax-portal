@@ -1363,6 +1363,18 @@ def ai_intake_reanalyze(doc_id):
             flash(f'AI analysis failed: {str(e)[:80]}', 'danger')
     return redirect(url_for('ai_intake'))
 
+@app.route('/invoice/<int:invoice_id>/pay')
+@login_required
+def invoice_pay(invoice_id):
+    inv = query_db("SELECT * FROM invoices WHERE id=?", (invoice_id,), one=True)
+    if not inv: abort(404)
+    if current_user.role != 'admin' and inv['client_id'] != current_user.client_id: abort(403)
+    if inv['status'] == 'Paid':
+        flash('This invoice is already paid.', 'info')
+        return redirect(url_for('my_invoices'))
+    # Redirect to Stripe payment link
+    return redirect("https://buy.stripe.com/00wbJ020x1dQ5C4aHJbV600")
+
 @app.route('/documents/download/<int:document_id>')
 @login_required
 def download_document(document_id):

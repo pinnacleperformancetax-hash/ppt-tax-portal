@@ -513,7 +513,7 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
   </div>
 </section>
 
-<section class="cta-section" id="contact">
+<section class="cta-section contact-form-section" id="contact">
   <div class="section-inner">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;background:linear-gradient(135deg,rgba(17,130,59,.18),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.25);border-radius:20px;padding:48px;flex-wrap:wrap">
       <div>
@@ -556,9 +556,9 @@ footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.07);pa
   </div>
 </section>
 <style>
-#contact input::placeholder,#contact select::placeholder{color:rgba(255,255,255,.45)}
-#contact input:focus,#contact select:focus,#contact textarea:focus{border-color:rgba(201,168,76,.6)!important;background:rgba(255,255,255,.12)!important}
-@media(max-width:860px){#contact .section-inner>div{grid-template-columns:1fr!important;padding:28px 20px!important}}
+.contact-form-section input::placeholder,.contact-form-section select::placeholder{color:rgba(255,255,255,.45)}
+.contact-form-section input:focus,.contact-form-section select:focus,.contact-form-section textarea:focus{border-color:rgba(201,168,76,.6)!important;background:rgba(255,255,255,.12)!important}
+@media(max-width:860px){.contact-form-section .section-inner>div{grid-template-columns:1fr!important;padding:28px 20px!important}}
 </style>
 <script>
 function submitLead(e){
@@ -1210,6 +1210,7 @@ def client_dashboard():
     except: open_letters = []
     try: pending_docs = query_db("SELECT COUNT(*) c FROM document_requests WHERE client_id=? AND status!='Completed'", (cid,), one=True)["c"]
     except: pending_docs = 0
+    ensure_messages_table()
     unread_msgs = query_db("SELECT COUNT(*) c FROM messages WHERE client_id=? AND sender_role='admin'", (cid,), one=True)["c"]
     try: announcements = query_db("SELECT * FROM announcements WHERE is_active=1 ORDER BY id DESC LIMIT 3")
     except: announcements = []

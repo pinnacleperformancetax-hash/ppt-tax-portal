@@ -7328,8 +7328,10 @@ def test_missed_call():
 #    Data: { "caller_name": "<parsed from email>",
 #            "caller_phone": "<parsed from email>" }
 # Free Zapier gives you 100 tasks/month which is plenty.
-# ────────────────────────────────────────────────────────────if __name__=='__main__':
+# ────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
     with app.app_context():
         init_db()
         ensure_upgrade_tables()
-    app.run(host='0.0.0.0',port=int(os.environ.get('PORT',5000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

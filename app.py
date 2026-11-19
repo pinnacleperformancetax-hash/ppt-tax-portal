@@ -102,6 +102,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT,client_id INTEGER,sender_role TEXT,sender_name TEXT,subject TEXT,body TEXT,status TEXT DEFAULT 'Open',created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     ''')
     for table,column,definition in [("users","client_id","INTEGER"),("clients","business_name","TEXT"),("clients","email","TEXT"),("clients","phone","TEXT"),("clients","address","TEXT"),("clients","client_type","TEXT DEFAULT 'Individual'"),("clients","status","TEXT DEFAULT 'Active'"),("clients","notes","TEXT"),("invoices","paid_at","TEXT"),("payments","method","TEXT DEFAULT 'Manual Entry'"),("payments","reference","TEXT"),("payments","client_id","INTEGER"),("tax_returns","invoice_id","INTEGER"),("tax_returns","completed_at","TEXT"),("documents","document_name","TEXT DEFAULT 'Document'"),("documents","name","TEXT"),("documents","filename","TEXT"),("documents","tax_year","TEXT"),("documents","status","TEXT DEFAULT 'Received'"),("documents","notes","TEXT"),("documents","category","TEXT DEFAULT 'Tax Documents'"),("documents","uploaded_by","TEXT DEFAULT 'Admin'"),("documents","reviewed_at","TEXT"),("crm_leads","client_id","INTEGER"),("messages","status","TEXT DEFAULT 'Open'"),("documents","ai_summary","TEXT"),("documents","ai_extracted_at","TEXT")]: add_column_if_missing(table,column,definition)
+    add_column_if_missing("clients", "ein", "TEXT")
     cats=[("Tax Preparation Income","income"),("Bookkeeping Income","income"),("Consulting Income","income"),("Sales Income","income"),("Office Supplies","expense"),("Software & Subscriptions","expense"),("Advertising & Marketing","expense"),("Meals","expense"),("Travel","expense"),("Payroll","expense"),("Contract Labor","expense"),("Bank Fees","expense"),("Professional Fees","expense"),("Vehicle & Mileage","expense"),("Rent","expense"),("Utilities","expense"),("Insurance","expense"),("Other Expense","expense")]
     for name,kind in cats:
         if not db.execute("SELECT id FROM categories WHERE LOWER(TRIM(name))=LOWER(TRIM(?)) AND kind=?",(name,kind)).fetchone(): db.execute("INSERT INTO categories(name,kind) VALUES (?,?)",(name,kind))
@@ -111,11 +112,10 @@ def init_db():
             db.execute("UPDATE transactions SET category_id=? WHERE category_id=?",(d["keep_id"],r["id"])); db.execute("DELETE FROM categories WHERE id=?",(r["id"],))
     db.commit()
     admin_email="admin@pinnacleperformancetax.com"; admin_pw=os.environ.get("ADMIN_PASSWORD","ChangeMe123")
-    if db.execute("SELECT id FROM users WHERE lower(email)=?",(admin_email,)).fetchone(): db.execute("UPDATE users SET name=?,password_hash=?,role='admin',is_active=1 WHERE lower(email)=?",("PPT Admin",generate_password_hash(admin_pw),admin_email))
-    else: db.execute("INSERT INTO users(name,email,password_hash,role,is_active) VALUES (?,?,?,'admin',1)",("PPT Admin",admin_email,generate_password_hash(admin_pw)))
-    if db.execute("SELECT COUNT(*) c FROM clients").fetchone()["c"]==0:
-        cid=db.execute("INSERT INTO clients(name,business_name,email,phone,client_type,status,notes) VALUES (?,?,?,?,?,?,?)",("Sample Client","Sample Business LLC","client@example.com","478-555-0110","Full Service","Active","Demo client")).lastrowid
-        db.execute("INSERT OR IGNORE INTO users(name,email,password_hash,role,client_id,is_active) VALUES (?,?,?,'client',?,1)",("Sample Client","client@example.com",generate_password_hash("Temp123!"),cid))
+    if not db.execute("SELECT id FROM users WHERE lower(email)=?", (admin_email,)).fetchone():
+        if not os.environ.get("ADMIN_PASSWORD"):
+            raise RuntimeError("ADMIN_PASSWORD environment variable is required for initial admin setup")
+        db.execute("INSERT INTO users(name,email,password_hash,role,is_active) VALUES (?,?,?,'admin',1)", ("PPT Admin",admin_email,generate_password_hash(admin_pw)))
     db.commit()
 
 LOGIN_PAGE_HTML = """
@@ -324,6 +324,8 @@ def elite_log(client_id, event_type, title, details=""):
 # === PPT ELITE OPERATIONS SUITE V2.2 END ===
 
 @app.route('/init')
+@login_required
+@admin_required
 def init_route(): init_db(); ensure_elite_operations_tables(); ensure_workflow_tables(); ensure_client_template_columns(); ensure_messages_table(); return 'INIT COMPLETE - client modules repaired and categories deduped'
 @app.route('/')
 def home():
@@ -2555,6 +2557,8 @@ def auto_maintenance():
 # ── INIT ROUTE UPDATE ────────────────────────────────────────
 
 @app.route("/init-upgrade")
+@login_required
+@admin_required
 def init_upgrade_route():
     with app.app_context():
         init_db()
@@ -4616,7 +4620,7 @@ def admin_quarterly_reminders():
                 push_notification(cid, "invoice", f"Quarterly tax payment due {due_date} — ~${q_estimate:,.2f}", "/my/tax-estimate")
                 if client.get("email"):
                     send_email(client["email"], f"Quarterly Tax Reminder — {quarter} Due {due_date}",
-                              f"<h2>Quarterly Tax Reminder</h2><p>Hi {client['name']},</p><p>Your {quarter} estimated tax payment of approximately <strong>${q_estimate:,.2f}</strong> is due <strong>{due_date}</strong>.</p><p>Log in to your portal to see your full breakdown: <a href='https://ppt-tax-portal.onrender.com/my/tax-estimate'>View Tax Estimate</a></p><p>Contact us with any questions!</p>")
+                              f"<h2>Quarterly Tax Reminder</h2><p>Hi {client['name']},</p><p>Your {quarter} estimated tax payment of approximately <strong>${q_estimate:,.2f}</strong> is due <strong>{due_date}</strong>.</p><p>Log in to your portal to see your full breakdown: <a href='https://ppt-tax-portal-dkk9.onrender.com/my/tax-estimate'>View Tax Estimate</a></p><p>Contact us with any questions!</p>")
                 sent += 1
             flash(f"Sent {quarter} reminders to {sent} clients.", "success")
         return redirect(url_for("admin_quarterly_reminders"))
@@ -5435,7 +5439,7 @@ def late_payment_check():
         execute_db("INSERT INTO messages(client_id,sender_role,sender_name,subject,body,status) VALUES (?,?,?,?,?,'Open')",
                   (inv["client_id"], "admin", "Pinnacle Performance Tax", subject, msg))
         push_notification(inv["client_id"], "invoice", f"Invoice {inv['invoice_number']} is overdue — please pay now.", "/my/invoices")
-        send_email(inv["client_email"], subject, f"<h2>{subject}</h2><p>{msg}</p><p><a href='https://ppt-tax-portal.onrender.com/my/invoices'>Pay Now →</a></p>")
+        send_email(inv["client_email"], subject, f"<h2>{subject}</h2><p>{msg}</p><p><a href='https://ppt-tax-portal-dkk9.onrender.com/my/invoices'>Pay Now →</a></p>")
     flash(f"Late payment escalation complete: {sent30} 30-day, {sent60} 60-day, {sent90} 90-day notices sent.", "success")
     return redirect(url_for("invoices"))
 
@@ -5478,7 +5482,7 @@ def send_monthly_reports():
             </div>
           </div>
           {f'<p style="background:#fef2f2;border-radius:8px;padding:12px;color:#991b1b">⚠️ You have <strong>{unpaid_count} unpaid invoice(s)</strong>. Please log in to view and pay.</p>' if unpaid_count > 0 else ''}
-          <p style="margin-top:16px"><a href="https://ppt-tax-portal.onrender.com/my/bookkeeping" style="background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900">View Full Details →</a></p>
+          <p style="margin-top:16px"><a href="https://ppt-tax-portal-dkk9.onrender.com/my/bookkeeping" style="background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900">View Full Details →</a></p>
           <p style="font-size:12px;color:#9ca3af;margin-top:20px">Pinnacle Performance Tax and Accounting | 478-338-1632</p>
         </div></div>"""
         if send_email(client["email"], subject, body):
@@ -6417,7 +6421,19 @@ def fix_sidebar():
 # Review Request Automation | Off-Season Campaign Sequences
 # ============================================================
 # PASTE THIS ENTIRE BLOCK INTO YOUR app.py
-# Place it just before the final if __name__ == '__main__': block
+# Place it just before the final # Initialize schema when Gunicorn imports this application.
+with app.app_context():
+    init_db()
+    ensure_upgrade_tables()
+    ensure_payroll_tables()
+    ensure_elite_operations_tables()
+    ensure_workflow_tables()
+    ensure_client_template_columns()
+    ensure_messages_table()
+
+
+
+if __name__ == '__main__': block
 # ============================================================
 
 
@@ -6481,7 +6497,7 @@ def notify_owner_sms(message):
 
 # ── SETMORE WEBHOOK ──────────────────────────────────────────
 # In Setmore: Apps & Integrations → Webhooks → New Webhook
-# URL: https://ppt-tax-portal.onrender.com/webhook/setmore
+# URL: https://ppt-tax-portal-dkk9.onrender.com/webhook/setmore
 # Events: booking_created, booking_updated, booking_cancelled
 
 @app.route("/webhook/setmore", methods=["POST"])
@@ -7052,7 +7068,7 @@ CAMPAIGNS_HTML = """{%extends"base.html"%}{%block content%}
 <input type="hidden" name="name" value="Q2 Estimated Tax Reminder">
 <input type="hidden" name="campaign_type" value="Quarterly">
 <input type="hidden" name="subject" value="⏰ Reminder: Q2 estimated tax payment due June 15">
-<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#f59e0b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;⏰ Q2 Estimated Tax Due June 15&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;Just a friendly reminder that your &lt;strong&gt;Q2 estimated tax payment is due June 15&lt;/strong&gt;.&lt;/p&gt;&lt;p&gt;If you're self-employed or have significant non-W2 income, paying quarterly helps you avoid IRS penalties at year-end.&lt;/p&gt;&lt;p&gt;Log in to your portal to see your estimated tax amount:&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal.onrender.com/my/tax-estimate' style='background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900'&gt;View My Tax Estimate →&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Need help calculating your quarterly payment? Reply to this email or call 478-338-1632.&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
+<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#f59e0b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;⏰ Q2 Estimated Tax Due June 15&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;Just a friendly reminder that your &lt;strong&gt;Q2 estimated tax payment is due June 15&lt;/strong&gt;.&lt;/p&gt;&lt;p&gt;If you're self-employed or have significant non-W2 income, paying quarterly helps you avoid IRS penalties at year-end.&lt;/p&gt;&lt;p&gt;Log in to your portal to see your estimated tax amount:&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal-dkk9.onrender.com/my/tax-estimate' style='background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900'&gt;View My Tax Estimate →&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Need help calculating your quarterly payment? Reply to this email or call 478-338-1632.&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
 <button type="submit" style="width:100%;padding:12px;text-align:left;background:#fff7ed;color:#9a3412;border:2px solid #fde68a;border-radius:12px;font-weight:900;cursor:pointer">
 ⏰ Quarterly Tax Reminder
 </button></form>
@@ -7062,7 +7078,7 @@ CAMPAIGNS_HTML = """{%extends"base.html"%}{%block content%}
 <input type="hidden" name="name" value="Year-End Tax Planning Strategy Call">
 <input type="hidden" name="campaign_type" value="Planning">
 <input type="hidden" name="subject" value="💡 Reduce your 2025 tax bill — book a strategy call">
-<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#11823b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;💡 Year-End Tax Planning&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;The best time to reduce your tax bill is &lt;strong&gt;before December 31&lt;/strong&gt; — not in April.&lt;/p&gt;&lt;p&gt;Book a year-end tax planning strategy call with us and we'll help you:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Maximize deductions before year-end&lt;/li&gt;&lt;li&gt;Decide on retirement contributions (SEP IRA, Solo 401k)&lt;/li&gt;&lt;li&gt;Plan for next year's estimated payments&lt;/li&gt;&lt;li&gt;Review your business structure for tax savings&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal.onrender.com/my/book-appointment' style='background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900'&gt;Book Strategy Call →&lt;/a&gt;&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
+<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#11823b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;💡 Year-End Tax Planning&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;The best time to reduce your tax bill is &lt;strong&gt;before December 31&lt;/strong&gt; — not in April.&lt;/p&gt;&lt;p&gt;Book a year-end tax planning strategy call with us and we'll help you:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Maximize deductions before year-end&lt;/li&gt;&lt;li&gt;Decide on retirement contributions (SEP IRA, Solo 401k)&lt;/li&gt;&lt;li&gt;Plan for next year's estimated payments&lt;/li&gt;&lt;li&gt;Review your business structure for tax savings&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal-dkk9.onrender.com/my/book-appointment' style='background:#11823b;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:900'&gt;Book Strategy Call →&lt;/a&gt;&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
 <button type="submit" style="width:100%;padding:12px;text-align:left;background:#f0f9ff;color:#0369a1;border:2px solid #bae6fd;border-radius:12px;font-weight:900;cursor:pointer">
 💡 Strategy Call Invite
 </button></form>
@@ -7072,7 +7088,7 @@ CAMPAIGNS_HTML = """{%extends"base.html"%}{%block content%}
 <input type="hidden" name="name" value="Returning Client Early-Bird">
 <input type="hidden" name="campaign_type" value="Retention">
 <input type="hidden" name="subject" value="🎯 Book early for tax season — returning client priority">
-<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#11823b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;🎯 Reserve Your Spot — Tax Season Is Coming&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;As a returning client, you get &lt;strong&gt;first access&lt;/strong&gt; to our tax season appointment slots before we open to the public.&lt;/p&gt;&lt;p&gt;Tax season fills up fast — book now to guarantee your preferred time.&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal.onrender.com/my/book-appointment' style='background:#11823b;color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:900;font-size:16px'&gt;Reserve My Appointment →&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Log in to your portal to upload documents early and make the process even faster:&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal.onrender.com' style='color:#11823b'&gt;ppt-tax-portal.onrender.com&lt;/a&gt;&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632 | pinnacleperformancetax@gmail.com&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
+<input type="hidden" name="body" value="&lt;div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'&gt;&lt;div style='background:#11823b;padding:20px;border-radius:12px 12px 0 0'&gt;&lt;h2 style='color:white;margin:0'&gt;🎯 Reserve Your Spot — Tax Season Is Coming&lt;/h2&gt;&lt;/div&gt;&lt;div style='background:#f9fafb;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb'&gt;&lt;p&gt;Hi {{name}},&lt;/p&gt;&lt;p&gt;As a returning client, you get &lt;strong&gt;first access&lt;/strong&gt; to our tax season appointment slots before we open to the public.&lt;/p&gt;&lt;p&gt;Tax season fills up fast — book now to guarantee your preferred time.&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal-dkk9.onrender.com/my/book-appointment' style='background:#11823b;color:white;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:900;font-size:16px'&gt;Reserve My Appointment →&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Log in to your portal to upload documents early and make the process even faster:&lt;/p&gt;&lt;p&gt;&lt;a href='https://ppt-tax-portal.onrender.com' style='color:#11823b'&gt;ppt-tax-portal.onrender.com&lt;/a&gt;&lt;/p&gt;&lt;p style='font-size:12px;color:#9ca3af'&gt;Pinnacle Performance Tax | 478-338-1632 | pinnacleperformancetax@gmail.com&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;">
 <button type="submit" style="width:100%;padding:12px;text-align:left;background:#faf5ff;color:#6b21a8;border:2px solid #e9d5ff;border-radius:12px;font-weight:900;cursor:pointer">
 🎯 Early-Bird Invite
 </button></form>
@@ -7210,7 +7226,7 @@ def send_appointment_reminders():
                     📍 {appt['location'] or 'Pinnacle Performance Tax'}
                   </div>
                   <p>Please have your documents ready. You can upload them now in your portal:</p>
-                  <p><a href="https://ppt-tax-portal.onrender.com/my/documents"
+                  <p><a href="https://ppt-tax-portal-dkk9.onrender.com/my/documents"
                         style="background:#11823b;color:white;padding:10px 20px;
                                border-radius:8px;text-decoration:none;font-weight:900">
                     Upload Documents →</a></p>
@@ -7303,18 +7319,18 @@ def test_missed_call():
 # Go to uptimerobot.com → Create monitors:
 #
 # Monitor 1: Appointment Reminders (daily)
-#   URL: https://ppt-tax-portal.onrender.com/send-appointment-reminders?token=ppt2025
+#   URL: https://ppt-tax-portal-dkk9.onrender.com/send-appointment-reminders?token=ppt2025
 #   Interval: Every 24 hours
 #
 # Monitor 2: Missed-Call Polling (every 5 min, optional)
-#   URL: https://ppt-tax-portal.onrender.com/poll-missed-calls?token=ppt2025
+#   URL: https://ppt-tax-portal-dkk9.onrender.com/poll-missed-calls?token=ppt2025
 #   Interval: Every 5 minutes
 #
 # ── SETMORE WEBHOOK SETUP ────────────────────────────────────
 # 1. Log into Setmore
 # 2. Go to Apps & Integrations → Webhooks
 # 3. Click Add New Webhook
-# 4. URL: https://ppt-tax-portal.onrender.com/webhook/setmore
+# 4. URL: https://ppt-tax-portal-dkk9.onrender.com/webhook/setmore
 # 5. Events: booking_created, booking_updated, booking_cancelled
 # 6. Save
 #
@@ -7323,12 +7339,29 @@ def test_missed_call():
 # 2. Trigger: Gmail → New Email Matching Search
 #    Search: from:voice-noreply@google.com subject:"Missed call"
 # 3. Action: Webhooks by Zapier → POST
-#    URL: https://ppt-tax-portal.onrender.com/webhook/missed-call
+#    URL: https://ppt-tax-portal-dkk9.onrender.com/webhook/missed-call
 #    Payload type: JSON
 #    Data: { "caller_name": "<parsed from email>",
 #            "caller_phone": "<parsed from email>" }
 # Free Zapier gives you 100 tasks/month which is plenty.
 # ────────────────────────────────────────────────────────────
+@app.route("/google37a98cf35e7f0a6f.html")
+def google_site_verification():
+    return app.send_static_file("google37a98cf35e7f0a6f.html")
+
+
+
+# Initialize schema when Gunicorn imports this application.
+with app.app_context():
+    init_db()
+    ensure_upgrade_tables()
+    ensure_payroll_tables()
+    ensure_elite_operations_tables()
+    ensure_workflow_tables()
+    ensure_client_template_columns()
+    ensure_messages_table()
+
+
 
 if __name__ == '__main__':
     with app.app_context():
